@@ -68,19 +68,34 @@ def create_project(
     project_data: dict,
     db: Session = Depends(get_db)
 ):
-    first_user = db.query(models.User).first()
-    owner_id = first_user.id if first_user else 1
+    try:
+        # التأكد من وجود مستخدم واحد على الأقل لربطه بالمشروع كمالك
+        owner = db.query(models.User).first()
+        if not owner:
+            owner = models.User(
+                full_name="Al-Quds Admin",
+                email="admin@alquds.edu",
+                password_hash=utils.hash_password("admin123"),
+                role="business"
+            )
+            db.add(owner)
+            db.commit()
+            db.refresh(owner)
 
-    db_project = models.Project(
-        title=project_data.get("title", "مشروع جديد"),
-        description=project_data.get("description", ""),
-        required_skills=project_data.get("required_skills", ""),
-        created_by=owner_id
-    )
-    db.add(db_project)
-    db.commit()
-    db.refresh(db_project)
-    return db_project
+        db_project = models.Project(
+            title=project_data.get("title", "مشروع جديد"),
+            description=project_data.get("description", ""),
+            required_skills=project_data.get("required_skills", ""),
+            created_by=owner.id
+        )
+        db.add(db_project)
+        db.commit()
+        db.refresh(db_project)
+        return db_project
+    except Exception as e:
+        db.rollback()
+        print(f"Error creating project: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
 
 # 4. جلب جميع المشاريع
 @app.get("/projects/", response_model=List[schemas.ProjectResponse])
