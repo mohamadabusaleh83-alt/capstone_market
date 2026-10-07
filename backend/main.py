@@ -69,13 +69,14 @@ def create_project(
     db: Session = Depends(get_db)
 ):
     try:
-        # التأكد من وجود مستخدم واحد على الأقل لربطه بالمشروع كمالك
+        # البحث عن أي مستخدم مسجل مسبقاً
         owner = db.query(models.User).first()
         if not owner:
+            # إنشاء مستخدم افتراضي بدون استدعاء تشفير يسبب خطأ 72 bytes
             owner = models.User(
                 full_name="Al-Quds Admin",
                 email="admin@alquds.edu",
-                password_hash=utils.hash_password("admin123"),
+                password_hash="system_seeded_account",
                 role="business"
             )
             db.add(owner)
