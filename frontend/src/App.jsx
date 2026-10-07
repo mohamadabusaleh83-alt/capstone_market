@@ -3,20 +3,21 @@ import {
   Briefcase, CheckCircle, Clock, Search, PlusCircle, 
   Users, BarChart2, Bell, X, Check, Sparkles,
   Calendar, Award, TrendingUp, Download, Megaphone, ArrowUpRight,
-  Star, MessageSquare, Layers, LogIn, LogOut, Store, UserCheck
+  Star, MessageSquare, Layers, LogIn, LogOut, Store, UserCheck,
+  Menu, ShieldCheck, GraduationCap
 } from 'lucide-react';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 export default function App() {
-  // إدارة حالة المستخدم الحالي (student أو business)
+  // إدارة الجلسة والدور الحالي (طالب / تاجر / مشرف)
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('app_user_role');
-    return saved ? JSON.parse(saved) : {
-      role: 'student',
-      name: 'أحمد محمود',
-      title: 'طالب هندسة حاسوب'
-    };
+    return saved ? JSON.parse(saved) : null; // null يعني زائر غير مسجل
   });
+
+  // حالة فتح وإغلاق القائمة الجانبية (خصوصاً للهواتف)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState('match');
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,12 +44,12 @@ export default function App() {
   // نافذة التقديم
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
-  const [applicantName, setApplicantName] = useState(currentUser.name || '');
-  const [applicantRole, setApplicantRole] = useState('مطور واجهات ومساعد برمجي');
+  const [applicantName, setApplicantName] = useState('');
+  const [applicantRole, setApplicantRole] = useState('مطور أنظمة وواجهات');
   const [applicantMessage, setApplicantMessage] = useState('');
   const [applySuccess, setApplySuccess] = useState('');
 
-  // نافذة إضافة مشروع (مخصصة للمحلات والطلاب)
+  // نافذة إضافة مشروع (مخصصة للمحلات والمشرفين)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newProject, setNewProject] = useState({
     title: '',
@@ -63,15 +64,33 @@ export default function App() {
   // نافذة تسجيل الدخول والتبديل
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // حفظ المستخدم عند تغييره
-  const switchRole = (roleType) => {
-    const newUser = roleType === 'student' 
-      ? { role: 'student', name: 'أحمد محمود', title: 'طالب سنة رابعة - هندسة برمجيات' }
-      : { role: 'business', name: 'شركة النور للمواد الغذائية', title: 'متجر ومستودع تجاري - نابلس' };
-    setCurrentUser(newUser);
-    localStorage.setItem('app_user_role', JSON.stringify(newUser));
+  // تسجيل الدخول وتحديد الدور
+  const handleLogin = (roleType) => {
+    let userObj = null;
+    if (roleType === 'student') {
+      userObj = { role: 'student', name: 'أحمد محمود', title: 'طالب سنة رابعة - هندسة برمجيات' };
+      setActiveTab('match');
+    } else if (roleType === 'business') {
+      userObj = { role: 'business', name: 'شركة النور للمواد الغذائية', title: 'متجر ومستودع تجاري - نابلس' };
+      setActiveTab('business_projects');
+    } else if (roleType === 'supervisor') {
+      userObj = { role: 'supervisor', name: 'د. خالد التميمي', title: 'مشرف أكاديمي - كلية التكنولوجيا' };
+      setActiveTab('supervisor_review');
+    }
+
+    setCurrentUser(userObj);
+    localStorage.setItem('app_user_role', JSON.stringify(userObj));
     setShowAuthModal(false);
-    setActiveTab(roleType === 'student' ? 'match' : 'business_projects');
+    setIsSidebarOpen(false);
+  };
+
+  // تسجيل الخروج ومسح الجلسة
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('app_user_role');
+    localStorage.removeItem('token');
+    setActiveTab('browse');
+    setIsSidebarOpen(false);
   };
 
   // جلب المشاريع وحساب نسب المطابقة
@@ -121,9 +140,7 @@ export default function App() {
       .then((data) => {
         if (Array.isArray(data)) setApplications(data);
       })
-      .catch(() => {
-        // حماية من الأخطاء في حال عدم التوفر
-      });
+      .catch(() => {});
   };
 
   useEffect(() => {
@@ -167,6 +184,26 @@ export default function App() {
         prev.map((app) => (app.id === appId ? { ...app, status: newStatus } : app))
       );
     }
+  };
+
+  // معالجة فتح نافذة التقديم مع فحص تسجيل الدخول
+  const triggerApply = (project) => {
+    if (!currentUser) {
+      setShowAuthModal(true);
+      return;
+    }
+    setSelectedProject(project);
+    setApplicantName(currentUser.name);
+    setIsApplyModalOpen(true);
+  };
+
+  // معالجة إضافة مشروع مع فحص تسجيل الدخول
+  const triggerCreateProject = () => {
+    if (!currentUser) {
+      setShowAuthModal(true);
+      return;
+    }
+    setIsCreateModalOpen(true);
   };
 
   const handleApplySubmit = async (e) => {
@@ -244,12 +281,11 @@ export default function App() {
     setTimeout(() => {
       setChatMessages((prev) => [
         ...prev,
-        { sender: 'lead', text: 'أهلاً بك! تم استلام رسالتك وسيتم التواصل والتنسيق معك قريباً.' }
+        { sender: 'lead', text: 'أهلاً بك! تم استلام استفسارك وسيتم الرد عليك قريباً.' }
       ]);
     }, 900);
   };
 
-  // فلترة المشاريع
   const filteredProjects = (matchedProjects || [])
     .filter((p) => {
       const matchSearch = 
@@ -268,96 +304,152 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans" dir="rtl">
-      {/* 1. شريط الإعلانات التفاعلي */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-xs py-2 px-6 shadow-md flex items-center justify-between border-b border-indigo-500/30">
+      
+      {/* 1. الشريط العلوي الإخباري (هوية جامعة القدس) */}
+      <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-xs py-2 px-4 md:px-6 shadow-md flex items-center justify-between border-b border-amber-500/20">
         <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap">
-          <span className="flex items-center gap-1.5 bg-rose-500 text-white font-bold px-2 py-0.5 rounded-full text-[10px] animate-pulse">
-            <Megaphone className="w-3 h-3" /> هام
+          <span className="flex items-center gap-1.5 bg-amber-500 text-slate-950 font-bold px-2.5 py-0.5 rounded-full text-[10px]">
+            <Megaphone className="w-3 h-3" /> بوابة الشراكة والتدريب
           </span>
-          <span className="text-blue-100 font-medium tracking-wide">
-            {currentUser.role === 'business'
-              ? '🏢 إعلان لأصحاب الأعمال: يمكنكم الآن طرح مشاكل مشاريعكم ليقوم طلاب التخرج بحلها مجاناً كمشاريع هندسية.'
-              : '🎓 تنبيه للطلاب: آخر موعد لتثبيت الفرق والمقترحات مع المشرفين نهاية الأسبوع الجاري.'}
+          <span className="text-slate-200 text-xs truncate">
+            {currentUser?.role === 'business'
+              ? '🏢 بوابة القطاع الخاص: اطرح التحديات البرمجية ليحلها طلاب مشاريع التخرج تحت إشراف أكاديمي.'
+              : currentUser?.role === 'supervisor'
+              ? '📋 بوابة الإشراف الأكاديمي: مراجعة المشاريع واعتماد الفرق الهندسية للفصل الحالي.'
+              : '🎓 بوابة الطلاب: استعرض مشاكل الشركات والمحلات الحقيقية وحوّلها لمشروع تخرج معتمد.'}
           </span>
         </div>
-        <div className="hidden md:flex items-center gap-4 text-indigo-200">
+        <div className="hidden md:flex items-center gap-4 text-amber-300/80 text-xs">
           <span className="flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5" /> الفصل الدراسي الحالي
+            <Calendar className="w-3.5 h-3.5" /> العام الأكاديمي 2026/2027
           </span>
         </div>
       </div>
 
-      {/* 2. رأس الصفحة (الهيدر) */}
-      <header className="border-b border-slate-800/80 bg-slate-900/70 backdrop-blur sticky top-0 z-30 px-6 py-3.5 flex items-center justify-between">
+      {/* 2. رأس الصفحة (الهيدر مع زر الهمبرغر والتحكم) */}
+      <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-30 px-4 md:px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center font-black text-white shadow-lg shadow-blue-500/20">
-            {currentUser.role === 'business' ? <Store className="w-5 h-5 text-white" /> : <Sparkles className="w-5 h-5 text-white" />}
+          {/* زر فتح القائمة الجانبية للشاشات الصغيرة والمتوسطة */}
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="md:hidden p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition"
+            aria-label="القائمة"
+          >
+            {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+
+          <div className="w-10 h-10 rounded-xl bg-blue-900 border border-amber-500/30 flex items-center justify-center font-black text-amber-400 shadow-md">
+            {currentUser?.role === 'business' ? <Store className="w-5 h-5" /> : currentUser?.role === 'supervisor' ? <ShieldCheck className="w-5 h-5" /> : <GraduationCap className="w-5 h-5" />}
           </div>
           <div>
-            <h1 className="text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-              منصة مشاريع التخرج وسوق العمل
+            <h1 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
+              منصة جامعة القدس لمشاريع التخرج
             </h1>
-            <p className="text-xs text-slate-400">
-              {currentUser.role === 'business' ? 'بوابة الشركات والمحلات لطرح المشاريع' : 'ملتقى العقول وبناء الفرق الهندسية'}
+            <p className="text-[11px] text-slate-400">
+              ربط مشاريع الطلاب بسوق العمل والمصالح التجارية
             </p>
           </div>
         </div>
 
-        {/* أزرار الهيدر والتحكم بالحساب */}
-        <div className="flex items-center gap-3">
-          {currentUser.role === 'student' && (
+        {/* أزرار الهيدر والتحكم بالجلسة */}
+        <div className="flex items-center gap-2 md:gap-3">
+          {currentUser && currentUser.role === 'student' && (
             <button
               onClick={() => setShowSkillsModal(true)}
-              className="hidden sm:flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer"
+              className="hidden lg:flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer"
             >
-              <Award className="w-4 h-4 text-amber-400" />
+              <Award className="w-3.5 h-3.5 text-amber-400" />
               مهاراتي ({userSkills.length})
             </button>
           )}
 
           <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md shadow-blue-600/20 transition cursor-pointer"
+            onClick={triggerCreateProject}
+            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-3 md:px-4 py-2 rounded-xl text-xs font-semibold shadow-md transition cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
-            {currentUser.role === 'business' ? 'طرح مشروع للمحل / الشركة' : 'إضافة مشروع'}
+            <span className="hidden sm:inline">
+              {currentUser?.role === 'business' ? 'طرح مشكلة لمتجرك' : 'طرح فكرة مشروع'}
+            </span>
+            <span className="sm:hidden">إضافة</span>
           </button>
 
-          {/* زر تبديل الحساب السريع */}
-          <button
-            onClick={() => setShowAuthModal(true)}
-            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-indigo-500/40 text-indigo-300 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer"
-          >
-            <UserCheck className="w-4 h-4" />
-            {currentUser.role === 'business' ? 'حساب تجاري' : 'حساب طالب'}
-          </button>
+          {/* زر الدخول / الخروج */}
+          {currentUser ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer"
+              >
+                <UserCheck className="w-4 h-4 text-emerald-400" />
+                <span className="hidden sm:inline">{currentUser.name.split(' ')[0]}</span>
+              </button>
+              <button
+                onClick={handleLogout}
+                className="p-2 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-300 rounded-xl transition cursor-pointer"
+                title="تسجيل الخروج"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+            >
+              <LogIn className="w-4 h-4" />
+              تسجيل الدخول
+            </button>
+          )}
         </div>
       </header>
 
       {/* 3. جسم المنصة الرئيسي */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* القائمة الجانبية المخصصة حسب نوع الحساب */}
-        <aside className="w-64 border-l border-slate-800/80 bg-slate-900/40 p-4 flex flex-col justify-between">
-          <div className="space-y-2">
-            <div className="p-3 bg-slate-800/40 border border-slate-800 rounded-xl mb-4">
-              <span className="text-[10px] text-slate-400 block mb-0.5">أنت مسجل كـ:</span>
+      <div className="flex-1 flex relative overflow-hidden">
+        
+        {/* خلفية معتمة للجوال عند فتح القائمة */}
+        {isSidebarOpen && (
+          <div 
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-35 md:hidden"
+          />
+        )}
+
+        {/* القائمة الجانبية (Sidebar) متجاوبة مع الهاتف والكمبيوتر */}
+        <aside className={`
+          fixed md:static inset-y-0 right-0 z-40 w-64 bg-slate-900 border-l border-slate-800 p-4 
+          flex flex-col justify-between transition-transform duration-300 ease-in-out
+          ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
+        `}>
+          <div className="space-y-3">
+            {/* معلومات المستخدم */}
+            <div className="p-3 bg-slate-800/50 border border-slate-700/60 rounded-xl mb-4">
+              <span className="text-[10px] text-slate-400 block mb-0.5">الحالة الحالية:</span>
               <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                {currentUser.role === 'business' ? <Store className="w-3.5 h-3.5 text-blue-400" /> : <Award className="w-3.5 h-3.5 text-amber-400" />}
-                {currentUser.name}
+                {currentUser?.role === 'business' ? (
+                  <Store className="w-3.5 h-3.5 text-blue-400" />
+                ) : currentUser?.role === 'supervisor' ? (
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                ) : (
+                  <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
+                )}
+                {currentUser ? currentUser.name : 'زائر المنصة (غير مسجل)'}
               </p>
-              <span className="text-[10px] text-slate-400 block mt-1">{currentUser.title}</span>
+              <span className="text-[10px] text-slate-400 block mt-1">
+                {currentUser ? currentUser.title : 'قم بتسجيل الدخول للاستفادة من كامل الميزات'}
+              </span>
             </div>
 
-            <p className="text-[11px] font-semibold text-slate-500 uppercase px-3 mb-1">لوحة التحكم</p>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase px-2">لوحة التحكم والتنقل</p>
             
-            {currentUser.role === 'business' ? (
-              /* روابط خاصة بأصحاب الأعمال */
+            {/* روابط صاحب العمل */}
+            {currentUser?.role === 'business' && (
               <>
                 <button
-                  onClick={() => setActiveTab('business_projects')}
-                  className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                  onClick={() => { setActiveTab('business_projects'); setIsSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
                     activeTab === 'business_projects'
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                      ? 'bg-blue-600 text-white shadow-md'
                       : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
                   }`}
                 >
@@ -369,8 +461,9 @@ export default function App() {
                   onClick={() => {
                     fetchApplications();
                     setShowApplicationsModal(true);
+                    setIsSidebarOpen(false);
                   }}
-                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium bg-slate-800/60 hover:bg-slate-800 text-slate-300 transition cursor-pointer"
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium bg-slate-800/60 hover:bg-slate-800 text-slate-300 transition cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
                     <Users className="w-4 h-4 text-emerald-400" />
@@ -382,128 +475,147 @@ export default function App() {
                     </span>
                   )}
                 </button>
-
-                <button
-                  onClick={() => setActiveTab('stats')}
-                  className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
-                    activeTab === 'stats'
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                      : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-                  }`}
-                >
-                  <BarChart2 className="w-4 h-4" />
-                  إحصائيات الكفاءات والطلاب
-                </button>
               </>
-            ) : (
-              /* روابط خاصة بالطلاب */
+            )}
+
+            {/* روابط المشرف الأكاديمي */}
+            {currentUser?.role === 'supervisor' && (
               <>
                 <button
-                  onClick={() => setActiveTab('match')}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
-                    activeTab === 'match'
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                  onClick={() => { setActiveTab('supervisor_review'); setIsSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                    activeTab === 'supervisor_review'
+                      ? 'bg-blue-600 text-white shadow-md'
                       : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
                   }`}
                 >
-                  <div className="flex items-center gap-2.5">
-                    <Sparkles className="w-4 h-4" />
-                    المطابقة الذكية
-                  </div>
-                  <span className="text-[10px] bg-blue-500/20 border border-blue-400/30 px-1.5 py-0.5 rounded text-blue-200">AI</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('browse')}
-                  className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
-                    activeTab === 'browse'
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                      : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-                  }`}
-                >
-                  <Briefcase className="w-4 h-4" />
-                  تصفح كل المشاريع
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('favorites')}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
-                    activeTab === 'favorites'
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                      : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Star className="w-4 h-4 text-amber-400" />
-                    المشاريع المحفوظة
-                  </div>
-                  <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">{favorites.length}</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('milestones')}
-                  className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
-                    activeTab === 'milestones'
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                      : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-                  }`}
-                >
-                  <CheckCircle className="w-4 h-4 text-emerald-400" />
-                  مراحل التخرج
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('stats')}
-                  className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
-                    activeTab === 'stats'
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                      : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-                  }`}
-                >
-                  <BarChart2 className="w-4 h-4" />
-                  الإحصائيات والتحليلات
+                  <ShieldCheck className="w-4 h-4 text-amber-400" />
+                  اعتماد المشاريع الأكاديمية
                 </button>
               </>
             )}
+
+            {/* الروابط العامة والطلابية */}
+            <button
+              onClick={() => { setActiveTab('match'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                activeTab === 'match'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Sparkles className="w-4 h-4" />
+                المطابقة الذكية
+              </div>
+              <span className="text-[10px] bg-blue-500/20 border border-blue-400/30 px-1.5 py-0.5 rounded text-blue-200">AI</span>
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('browse'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                activeTab === 'browse'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <Briefcase className="w-4 h-4" />
+              تصفح كل المشاريع
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('favorites'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                activeTab === 'favorites'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Star className="w-4 h-4 text-amber-400" />
+                المشاريع المحفوظة
+              </div>
+              <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">{favorites.length}</span>
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('milestones'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                activeTab === 'milestones'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <CheckCircle className="w-4 h-4 text-emerald-400" />
+              مراحل التخرج
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('stats'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                activeTab === 'stats'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <BarChart2 className="w-4 h-4" />
+              الإحصائيات
+            </button>
           </div>
 
-          <div className="p-3 bg-gradient-to-br from-indigo-900/30 to-blue-900/20 border border-indigo-500/20 rounded-xl text-[11px] text-indigo-300">
-            {currentUser.role === 'business'
-              ? '💼 نصيحة لصاحب العمل: وضح المشكلة التي تواجهها وسيتكفل فريق الطلاب بهندسة الحل المناسب.'
-              : '💡 نصيحة للطالب: تواصل مع صاحب الفكرة عبر المحادثة الفورية لمعرفة المتطلبات قبل التقديم.'}
+          <div className="pt-4 border-t border-slate-800 space-y-2">
+            {currentUser ? (
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 bg-rose-950/40 hover:bg-rose-900/50 border border-rose-800/60 text-rose-300 py-2 rounded-xl text-xs font-semibold transition cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                تسجيل الخروج
+              </button>
+            ) : (
+              <button
+                onClick={() => { setShowAuthModal(true); setIsSidebarOpen(false); }}
+                className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 py-2 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                تسجيل الدخول / حساب جديد
+              </button>
+            )}
+            <div className="p-2.5 bg-blue-950/30 border border-blue-900/50 rounded-xl text-[10px] text-slate-400 text-center">
+              جامعة القدس - ملتقى التخرج وسوق العمل
+            </div>
           </div>
         </aside>
 
-        {/* المساحة الرئيسية */}
-        <main className="flex-1 p-6 overflow-y-auto">
+        {/* المساحة الرئيسية للمحتوى */}
+        <main className="flex-1 p-4 md:p-6 overflow-y-auto">
           {activeTab === 'business_projects' ? (
             /* واجهة أصحاب الأعمال الحصرية */
             <div className="space-y-6 max-w-5xl mx-auto">
-              <div className="bg-gradient-to-r from-blue-900/40 via-indigo-900/30 to-slate-900 border border-indigo-500/30 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-slate-900 border border-blue-800/50 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Store className="w-5 h-5 text-blue-400" />
-                    مرحباً بك، {currentUser.name}
+                    <Store className="w-5 h-5 text-amber-400" />
+                    مرحباً بك، {currentUser?.name}
                   </h2>
                   <p className="text-xs text-slate-300 mt-1.5 max-w-xl leading-relaxed">
-                    من هنا يمكنك متابعة مشاريعك التي طرحتها للطلاب، واستعراض طلبات الانضمام لاختيار الفريق الهندسي المناسب لمتجرك أو شركتك.
+                    من هنا يمكنك متابعة مشاريعك التي طرحتها للطلاب، واستعراض طلبات الانضمام لاختيار الفريق الهندسي الأنسب.
                   </p>
                 </div>
                 <button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition shadow-lg shadow-blue-600/25 flex items-center gap-2 cursor-pointer"
+                  onClick={triggerCreateProject}
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition shadow-lg flex items-center gap-2 cursor-pointer"
                 >
                   <PlusCircle className="w-4 h-4" />
                   طرح فكرة مشروع جديدة
                 </button>
               </div>
 
-              {/* قائمة المشاريع الخاصة بالجهة */}
               <div>
                 <h3 className="font-bold text-base text-white mb-4">المشاريع التي طرحتها على الطلاب</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {matchedProjects.slice(0, 2).map((p) => (
-                    <div key={p.id} className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between">
+                    <div key={p.id} className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between">
                       <div>
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-[11px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-0.5 rounded-md">
@@ -515,7 +627,7 @@ export default function App() {
                         <p className="text-xs text-slate-400 line-clamp-3 mb-4">{p.description}</p>
                       </div>
 
-                      <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                      <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
                         <button
                           onClick={() => {
                             fetchApplications();
@@ -532,51 +644,81 @@ export default function App() {
                 </div>
               </div>
             </div>
-          ) : activeTab === 'stats' ? (
-            /* قسم الإحصائيات */
+          ) : activeTab === 'supervisor_review' ? (
+            /* واجهة المشرف الأكاديمي */
             <div className="space-y-6 max-w-5xl mx-auto">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-white">لوحة الإحصائيات وسوق العمل</h2>
-                  <p className="text-xs text-slate-400 mt-1">نظرة شاملة على العرض والطلب والمهارات التقنية المطلوبة</p>
-                </div>
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-2">
+                  <ShieldCheck className="w-5 h-5 text-amber-400" />
+                  مراجعة واعتماد مشاريع التخرج الأكاديمية
+                </h2>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  بصفتك مشرفاً أكاديمياً، يمكنك تدقيق مدى ملاءمة المشاكل المطروحة من المحلات والشركات لتكون مشاريع تخرج صالحة للتقييم الأكاديمي ومنحها علامة الاعتماد.
+                </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl">
-                  <p className="text-xs text-slate-400">إجمالي المشاريع</p>
+              <div className="grid grid-cols-1 gap-4">
+                {matchedProjects.map((p) => (
+                  <div key={p.id} className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-bold text-white">{p.title}</span>
+                        <span className="text-[10px] bg-slate-800 text-amber-400 px-2 py-0.5 rounded border border-slate-700">{p.category}</span>
+                      </div>
+                      <p className="text-xs text-slate-400 line-clamp-2">{p.description}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5" /> اعتماد كـ Capstone
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : activeTab === 'stats' ? (
+            /* الإحصائيات */
+            <div className="space-y-6 max-w-5xl mx-auto">
+              <div>
+                <h2 className="text-xl font-bold text-white">لوحة مؤشرات سوق مشاريع التخرج</h2>
+                <p className="text-xs text-slate-400 mt-1">نظرة عامة على العرض والطلب والشراكات مع قطاع الأعمال</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+                  <p className="text-xs text-slate-400">إجمالي المشاريع المطروحة</p>
                   <p className="text-2xl font-black mt-2 text-blue-400">{matchedProjects.length}</p>
-                  <span className="text-[10px] text-emerald-400 mt-1 block">نشطة ومتاحة</span>
+                  <span className="text-[10px] text-emerald-400 mt-1 block">نشطة وقابلة للتطبيق</span>
                 </div>
-                <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl">
-                  <p className="text-xs text-slate-400">المهارة الأكثر طلباً</p>
-                  <p className="text-2xl font-black mt-2 text-emerald-400">Python & React</p>
-                  <span className="text-[10px] text-slate-400 mt-1 block">في سوق المنصة</span>
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+                  <p className="text-xs text-slate-400">المهارات الأكثر طلباً</p>
+                  <p className="text-2xl font-black mt-2 text-amber-400">Python & React</p>
+                  <span className="text-[10px] text-slate-400 mt-1 block">في طلبات المحلات والمتاجر</span>
                 </div>
-                <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl">
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
                   <p className="text-xs text-slate-400">الطلبات المسجلة</p>
-                  <p className="text-2xl font-black mt-2 text-amber-400">{applications.length}</p>
-                  <span className="text-[10px] text-amber-400/80 mt-1 block">قيد المعالجة</span>
+                  <p className="text-2xl font-black mt-2 text-emerald-400">{applications.length}</p>
+                  <span className="text-[10px] text-slate-400 mt-1 block">طلبات انضمام للفرق</span>
                 </div>
               </div>
             </div>
           ) : activeTab === 'milestones' ? (
-            /* تتبع مراحل التخرج */
+            /* خريطة طريق التخرج */
             <div className="max-w-4xl mx-auto space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-white">خريطة طريق التخرج (Milestones Tracker)</h2>
-                <p className="text-xs text-slate-400 mt-1">متابعة دقيقة للخطوات الرسمية وصولاً إلى المناقشة والتسليم النهائي</p>
+                <p className="text-xs text-slate-400 mt-1">متابعة دقيقة للخطوات المعتمدة لدى كلية الهندسة والتكنولوجيا</p>
               </div>
 
               <div className="space-y-4">
                 {[
-                  { stage: 'المرحلة 1: تشكيل الفريق وتثبيت الفكرة مع المشرف أو المحل', status: 'مكتمل', desc: 'الاتفاق على متطلبات النظام وتوقيع المقترح.', progress: 100, color: 'bg-emerald-500' },
-                  { stage: 'المرحلة 2: وثيقة المتطلبات والتصميم (SRS)', status: 'قيد التنفيذ', desc: 'كتابة حالات الاستخدام ومخطط قواعد البيانات والمعمارية.', progress: 65, color: 'bg-blue-500' },
-                  { stage: 'المرحلة 3: تطوير النموذج الأولي (Prototype)', status: 'قريباً', desc: 'بناء واجهات المستخدم والـ API الأساسي للربط.', progress: 20, color: 'bg-amber-500' },
-                  { stage: 'المرحلة 4: الفحص والتحسين والاختبار', status: 'معلق', desc: 'فحص الأداء والتوافق مع متطلبات المتجر الفعلي.', progress: 0, color: 'bg-slate-700' },
-                  { stage: 'المرحلة 5: المناقشة وتسليم التقرير النهائي', status: 'معلق', desc: 'العرض التقديمي أمام لجنة التحكيم والمشرفين.', progress: 0, color: 'bg-slate-700' }
+                  { stage: 'المرحلة 1: تشكيل الفريق وتثبيت المشكلة مع المحل التجاري', status: 'مكتمل', desc: 'الاتفاق على متطلبات النظام وتوقيع المقترح المبدئي.', progress: 100, color: 'bg-emerald-500' },
+                  { stage: 'المرحلة 2: اعتماد المشروع والمشرف الأكاديمي', status: 'قيد التنفيذ', desc: 'موافقة القسم الأكاديمي على مطابقة العمل لشروط مشروع التخرج.', progress: 70, color: 'bg-blue-500' },
+                  { stage: 'المرحلة 3: وثيقة التصميم والنموذج الأولي (SRS & Prototype)', status: 'قريباً', desc: 'بناء الواجهات وقاعدة البيانات ومسارات الـ API.', progress: 25, color: 'bg-amber-500' },
+                  { stage: 'المرحلة 4: الفحص والتشغيل الفعلي لدى صاحب المتجر', status: 'معلق', desc: 'تجربة النظام في بيئة العمل الحقيقية وقياس الكفاءة.', progress: 0, color: 'bg-slate-700' },
+                  { stage: 'المرحلة 5: المناقشة وتسليم التقرير النهائي', status: 'معلق', desc: 'العرض التقديمي أمام لجنة المناقشين.', progress: 0, color: 'bg-slate-700' }
                 ].map((m, idx) => (
-                  <div key={idx} className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div key={idx} className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-3">
                         <h4 className="font-bold text-sm text-white">{m.stage}</h4>
@@ -604,10 +746,9 @@ export default function App() {
               </div>
             </div>
           ) : (
-            /* كروت المشاريع (تصفح / ذكي / مفضلة) */
+            /* بطاقات المشاريع */
             <div className="space-y-6">
-              {/* شريط البحث والفلاتر */}
-              <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-900/50 p-4 rounded-2xl border border-slate-800">
+              <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
                 <div className="relative w-full md:w-80">
                   <Search className="w-4 h-4 absolute right-3.5 top-3 text-slate-400" />
                   <input
@@ -615,7 +756,7 @@ export default function App() {
                     placeholder="ابحث بالعنوان، المهارة أو التخصص..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-slate-800/70 border border-slate-700/80 rounded-xl pr-10 pl-4 py-2 text-xs focus:outline-none focus:border-blue-500 text-white placeholder-slate-400"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pr-10 pl-4 py-2 text-xs focus:outline-none focus:border-blue-500 text-white placeholder-slate-400"
                   />
                 </div>
 
@@ -627,7 +768,7 @@ export default function App() {
                       className={`text-xs px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition cursor-pointer ${
                         selectedCategory === cat
                           ? 'bg-blue-600 text-white'
-                          : 'bg-slate-800/60 text-slate-400 hover:bg-slate-800 hover:text-white'
+                          : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
                       }`}
                     >
                       {cat}
@@ -636,7 +777,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* عرض البطاقات */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filteredProjects.map((project) => {
                   const isFull = project.currentMembers >= project.maxMembers;
@@ -645,7 +785,7 @@ export default function App() {
                   return (
                     <div
                       key={project.id}
-                      className="bg-slate-900/50 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 hover:shadow-xl hover:shadow-blue-900/5 group relative"
+                      className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 group"
                     >
                       <div>
                         <div className="flex items-center justify-between mb-3">
@@ -681,7 +821,7 @@ export default function App() {
                           {project.description}
                         </p>
 
-                        <div className="flex items-center gap-3 text-[11px] text-slate-400 mb-3 bg-slate-800/30 p-2 rounded-lg">
+                        <div className="flex items-center gap-3 text-[11px] text-slate-400 mb-3 bg-slate-800/40 p-2 rounded-lg">
                           <span className="flex items-center gap-1">
                             <Layers className="w-3.5 h-3.5 text-blue-400" /> {project.difficulty}
                           </span>
@@ -690,14 +830,14 @@ export default function App() {
                           </span>
                         </div>
 
-                        <div className="mb-4 bg-slate-800/50 p-2.5 rounded-xl border border-slate-800">
+                        <div className="mb-4 bg-slate-800/40 p-2.5 rounded-xl border border-slate-800">
                           <div className="flex justify-between text-[11px] text-slate-400 mb-1">
                             <span className="flex items-center gap-1"><Users className="w-3 h-3" /> مقاعد الفريق</span>
                             <span className={`font-semibold ${isFull ? 'text-rose-400' : 'text-slate-300'}`}>
                               {isFull ? 'الفريق مكتمل' : `${project.currentMembers} من ${project.maxMembers} طلاب`}
                             </span>
                           </div>
-                          <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                          <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
                             <div
                               className={`h-1.5 rounded-full ${isFull ? 'bg-rose-500' : 'bg-blue-500'}`}
                               style={{ width: `${(project.currentMembers / project.maxMembers) * 100}%` }}
@@ -711,7 +851,7 @@ export default function App() {
                               key={index}
                               type="button"
                               onClick={() => setSearchQuery(skill)}
-                              className="text-[11px] bg-slate-800/80 hover:bg-blue-600/30 border border-slate-700/60 hover:border-blue-500/40 text-slate-300 hover:text-blue-200 px-2.5 py-0.5 rounded-md transition cursor-pointer"
+                              className="text-[11px] bg-slate-800 hover:bg-blue-600/30 border border-slate-700 text-slate-300 px-2.5 py-0.5 rounded-md transition cursor-pointer"
                             >
                               #{skill}
                             </button>
@@ -722,13 +862,10 @@ export default function App() {
                       <div className="flex items-center gap-2">
                         <button
                           disabled={isFull}
-                          onClick={() => {
-                            setSelectedProject(project);
-                            setIsApplyModalOpen(true);
-                          }}
+                          onClick={() => triggerApply(project)}
                           className={`flex-1 py-2 rounded-xl text-xs font-semibold shadow-md transition flex items-center justify-center gap-1.5 ${
                             isFull
-                              ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'
+                              ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                               : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20 cursor-pointer'
                           }`}
                         >
@@ -757,44 +894,59 @@ export default function App() {
         </main>
       </div>
 
-      {/* نافذة تبديل الحساب السريع (طالب أم متجر) */}
+      {/* نافذة تسجيل الدخول واختيار المستوى (طالب / متجر / مشرف) */}
       {showAuthModal && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative">
             <button onClick={() => setShowAuthModal(false)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
               <X className="w-5 h-5" />
             </button>
-            <h2 className="text-base font-bold mb-2 text-white">اختر نوع الحساب للتجربة والعرض</h2>
-            <p className="text-xs text-slate-400 mb-6">تبديل الواجهة بنقرة واحدة لتناسب احتياجات كل مستخدم:</p>
+            <h2 className="text-base font-bold mb-1 text-white">تسجيل الدخول / اختيار الحساب</h2>
+            <p className="text-xs text-slate-400 mb-5">اختر مستواك للدخول واستعراض الواجهة والصلاحيات المخصصة لك:</p>
 
             <div className="space-y-3">
               <button
-                onClick={() => switchRole('student')}
-                className={`w-full p-4 rounded-xl border text-right transition flex items-center gap-3.5 cursor-pointer ${
-                  currentUser.role === 'student' ? 'border-blue-500 bg-blue-500/10' : 'border-slate-800 bg-slate-800/40 hover:bg-slate-800'
+                onClick={() => handleLogin('student')}
+                className={`w-full p-3.5 rounded-xl border text-right transition flex items-center gap-3.5 cursor-pointer ${
+                  currentUser?.role === 'student' ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-800 bg-slate-800/40 hover:bg-slate-800'
                 }`}
               >
-                <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold">
                   🎓
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-white">حساب طالب خريج</h4>
-                  <p className="text-xs text-slate-400 mt-0.5">البحث عن مشاريع، فحص المهارات، وتقديم طلبات الانضمام</p>
+                  <h4 className="font-bold text-xs md:text-sm text-white">حساب طالب خريج</h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">تصفح الفرص، فحص مطابقة المهارات، وتقديم طلبات الانضمام</p>
                 </div>
               </button>
 
               <button
-                onClick={() => switchRole('business')}
-                className={`w-full p-4 rounded-xl border text-right transition flex items-center gap-3.5 cursor-pointer ${
-                  currentUser.role === 'business' ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-800 bg-slate-800/40 hover:bg-slate-800'
+                onClick={() => handleLogin('business')}
+                className={`w-full p-3.5 rounded-xl border text-right transition flex items-center gap-3.5 cursor-pointer ${
+                  currentUser?.role === 'business' ? 'border-blue-500 bg-blue-500/10' : 'border-slate-800 bg-slate-800/40 hover:bg-slate-800'
                 }`}
               >
-                <div className="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold">
                   🏢
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-white">حساب متجر أو شركة تجارية</h4>
-                  <p className="text-xs text-slate-400 mt-0.5">طرح مشاكل وأفكار مشاريع، واستعراض وقبول الطلاب المتقدمين</p>
+                  <h4 className="font-bold text-xs md:text-sm text-white">حساب قطاع أعمال ومصالح تجارية</h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">طرح مشاكل ومشاريع للمحل، وقبول وانتقاء فرق الطلاب</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleLogin('supervisor')}
+                className={`w-full p-3.5 rounded-xl border text-right transition flex items-center gap-3.5 cursor-pointer ${
+                  currentUser?.role === 'supervisor' ? 'border-amber-500 bg-amber-500/10' : 'border-slate-800 bg-slate-800/40 hover:bg-slate-800'
+                }`}
+              >
+                <div className="w-10 h-10 rounded-xl bg-amber-600/20 text-amber-400 flex items-center justify-center font-bold">
+                  🏛️
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs md:text-sm text-white">حساب مشرف أكاديمي (جامعة القدس)</h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">مراجعة أفكار المشاريع والاعتماد الأكاديمي لمشاريع التخرج</p>
                 </div>
               </button>
             </div>
@@ -924,7 +1076,7 @@ export default function App() {
                 />
                 <button
                   type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-500 py-2.5 rounded-xl font-semibold text-xs text-white transition shadow-lg shadow-blue-600/20 cursor-pointer"
+                  className="w-full bg-blue-600 hover:bg-blue-500 py-2.5 rounded-xl font-semibold text-xs text-white transition shadow-lg cursor-pointer"
                 >
                   إرسال الطلب
                 </button>
@@ -942,7 +1094,7 @@ export default function App() {
               <X className="w-5 h-5" />
             </button>
             <h2 className="text-base font-bold mb-4 text-white">
-              {currentUser.role === 'business' ? 'طرح مشكلة أو فكرة مشروع لمتجرك' : 'إضافة فكرة مشروع تخرج'}
+              {currentUser?.role === 'business' ? 'طرح مشكلة أو فكرة مشروع لمتجرك' : 'إضافة فكرة مشروع تخرج'}
             </h2>
             {createSuccess ? (
               <p className="text-emerald-400 text-center font-bold py-6 text-sm">{createSuccess}</p>
@@ -950,7 +1102,7 @@ export default function App() {
               <form onSubmit={handleCreateProject} className="space-y-3.5">
                 <input
                   type="text"
-                  placeholder={currentUser.role === 'business' ? 'عنوان المشكلة (مثال: نظام جرد مستودع ومبيعات للمحل)' : 'عنوان المشروع'}
+                  placeholder={currentUser?.role === 'business' ? 'عنوان المشكلة (مثال: نظام جرد مستودع ومبيعات للمحل)' : 'عنوان المشروع'}
                   required
                   value={newProject.title}
                   onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
@@ -978,7 +1130,7 @@ export default function App() {
                   </select>
                 </div>
                 <textarea
-                  placeholder={currentUser.role === 'business' ? 'اشرح ما تحتاجه ببساطة (مثال: نريد برنامجاً يربط الكاشير بالمستودع ويسهل طباعة الفواتير)...' : 'وصف الفكرة وأهداف المشروع التقنية...'}
+                  placeholder={currentUser?.role === 'business' ? 'اشرح ما تحتاجه ببساطة (مثال: نريد برنامجاً يربط الكاشير بالمستودع ويسهل طباعة الفواتير)...' : 'وصف الفكرة وأهداف المشروع التقنية...'}
                   rows={3}
                   required
                   value={newProject.description}
@@ -995,9 +1147,9 @@ export default function App() {
                 />
                 <button
                   type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-500 py-2.5 rounded-xl font-semibold text-xs text-white transition shadow-lg shadow-blue-600/20 cursor-pointer"
+                  className="w-full bg-blue-600 hover:bg-blue-500 py-2.5 rounded-xl font-semibold text-xs text-white transition shadow-lg cursor-pointer"
                 >
-                  {currentUser.role === 'business' ? 'نشر المشكلة للطلاب' : 'حفظ ونشر المشروع'}
+                  {currentUser?.role === 'business' ? 'نشر المشكلة للطلاب' : 'حفظ ونشر المشروع'}
                 </button>
               </form>
             )}
@@ -1013,7 +1165,7 @@ export default function App() {
               <X className="w-5 h-5" />
             </button>
             <h2 className="text-base font-bold mb-4 text-white">
-              {currentUser.role === 'business' ? 'طلبات الطلاب المتقدمين لمشاريع محلك' : 'الطلبات المستلمة للفرق'}
+              {currentUser?.role === 'business' ? 'طلبات الطلاب المتقدمين لمشاريع محلك' : 'الطلبات المستلمة للفرق'}
             </h2>
             <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
               {applications.length === 0 ? (
