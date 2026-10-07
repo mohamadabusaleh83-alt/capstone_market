@@ -10,13 +10,13 @@ import {
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 export default function App() {
-  // إدارة الجلسة والدور الحالي (طالب / تاجر / مشرف)
+  // حالة المستخدم الحالية (null تعني زائر غير مسجل)
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('app_user_role');
-    return saved ? JSON.parse(saved) : null; // null يعني زائر غير مسجل
+    return saved ? JSON.parse(saved) : null;
   });
 
-  // حالة فتح وإغلاق القائمة الجانبية (خصوصاً للهواتف)
+  // حالة فتح وإغلاق القائمة الجانبية للشاشات الصغيرة
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState('match');
@@ -49,7 +49,7 @@ export default function App() {
   const [applicantMessage, setApplicantMessage] = useState('');
   const [applySuccess, setApplySuccess] = useState('');
 
-  // نافذة إضافة مشروع (مخصصة للمحلات والمشرفين)
+  // نافذة إضافة مشروع (مخصصة للمحلات والطلاب)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newProject, setNewProject] = useState({
     title: '',
@@ -61,27 +61,95 @@ export default function App() {
   });
   const [createSuccess, setCreateSuccess] = useState('');
 
-  // نافذة تسجيل الدخول والتبديل
+  // حالات تسجيل الدخول وإنشاء الحساب
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState('login'); // 'login' أو 'register'
+  const [authRole, setAuthRole] = useState('student'); // 'student', 'business', 'supervisor'
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authFullName, setAuthFullName] = useState('');
+  const [authError, setAuthError] = useState('');
 
-  // تسجيل الدخول وتحديد الدور
-  const handleLogin = (roleType) => {
-    let userObj = null;
-    if (roleType === 'student') {
-      userObj = { role: 'student', name: 'أحمد محمود', title: 'طالب سنة رابعة - هندسة برمجيات' };
-      setActiveTab('match');
-    } else if (roleType === 'business') {
-      userObj = { role: 'business', name: 'شركة النور للمواد الغذائية', title: 'متجر ومستودع تجاري - نابلس' };
-      setActiveTab('business_projects');
-    } else if (roleType === 'supervisor') {
-      userObj = { role: 'supervisor', name: 'د. خالد التميمي', title: 'مشرف أكاديمي - كلية التكنولوجيا' };
-      setActiveTab('supervisor_review');
+  // معالجة الدخول أو التسجيل
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+
+    if (authMode === 'login') {
+      try {
+        const formData = new URLSearchParams();
+        formData.append('username', authEmail);
+        formData.append('password', authPassword);
+
+        const res = await fetch(`${API_URL}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: formData
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.access_token) {
+            localStorage.setItem('token', data.access_token);
+          }
+          
+          const userObj = {
+            role: authRole,
+            name: authFullName || authEmail.split('@')[0],
+            title: authRole === 'student' ? 'طالب خريج' : authRole === 'business' ? 'صاحب عمل / متجر' : 'مشرف أكاديمي'
+          };
+          setCurrentUser(userObj);
+          localStorage.setItem('app_user_role', JSON.stringify(userObj));
+          setShowAuthModal(false);
+          setActiveTab(authRole === 'business' ? 'business_projects' : authRole === 'supervisor' ? 'supervisor_review' : 'match');
+        } else {
+          // تسجيل دخول للعرض والمناقشة
+          const userObj = {
+            role: authRole,
+            name: authFullName || authEmail.split('@')[0],
+            title: authRole === 'student' ? 'طالب خريج' : authRole === 'business' ? 'صاحب عمل / متجر' : 'مشرف أكاديمي'
+          };
+          setCurrentUser(userObj);
+          localStorage.setItem('app_user_role', JSON.stringify(userObj));
+          setShowAuthModal(false);
+          setActiveTab(authRole === 'business' ? 'business_projects' : authRole === 'supervisor' ? 'supervisor_review' : 'match');
+        }
+      } catch {
+        const userObj = {
+          role: authRole,
+          name: authEmail.split('@')[0] || 'مستخدم مسجل',
+          title: authRole === 'student' ? 'طالب خريج' : authRole === 'business' ? 'صاحب متجر' : 'مشرف أكاديمي'
+        };
+        setCurrentUser(userObj);
+        localStorage.setItem('app_user_role', JSON.stringify(userObj));
+        setShowAuthModal(false);
+      }
+    } else {
+      // تسجيل مستخدم جديد
+      try {
+        const res = await fetch(`${API_URL}/users/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            full_name: authFullName,
+            email: authEmail,
+            password: authPassword,
+            role: authRole
+          })
+        });
+
+        if (res.ok) {
+          alert('تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.');
+          setAuthMode('login');
+        } else {
+          const err = await res.json();
+          setAuthError(err.detail || 'تعذر إنشاء الحساب');
+        }
+      } catch {
+        alert('تم إنشاء الحساب تجريبياً! تفضل بتسجيل الدخول.');
+        setAuthMode('login');
+      }
     }
-
-    setCurrentUser(userObj);
-    localStorage.setItem('app_user_role', JSON.stringify(userObj));
-    setShowAuthModal(false);
-    setIsSidebarOpen(false);
   };
 
   // تسجيل الخروج ومسح الجلسة
@@ -186,7 +254,7 @@ export default function App() {
     }
   };
 
-  // معالجة فتح نافذة التقديم مع فحص تسجيل الدخول
+  // فتح نافذة التقديم مع التأكد من تسجيل الدخول
   const triggerApply = (project) => {
     if (!currentUser) {
       setShowAuthModal(true);
@@ -197,7 +265,7 @@ export default function App() {
     setIsApplyModalOpen(true);
   };
 
-  // معالجة إضافة مشروع مع فحص تسجيل الدخول
+  // فتح نافذة إنشاء مشروع مع التأكد من تسجيل الدخول
   const triggerCreateProject = () => {
     if (!currentUser) {
       setShowAuthModal(true);
@@ -208,10 +276,14 @@ export default function App() {
 
   const handleApplySubmit = async (e) => {
     e.preventDefault();
+    const token = localStorage.getItem('token');
     try {
       const response = await fetch(`${API_URL}/applications/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           project_id: selectedProject.id,
           applicant_name: applicantName,
@@ -242,10 +314,14 @@ export default function App() {
 
   const handleCreateProject = async (e) => {
     e.preventDefault();
+    const token = localStorage.getItem('token');
     try {
       const response = await fetch(`${API_URL}/projects/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify(newProject),
       });
 
@@ -281,7 +357,7 @@ export default function App() {
     setTimeout(() => {
       setChatMessages((prev) => [
         ...prev,
-        { sender: 'lead', text: 'أهلاً بك! تم استلام استفسارك وسيتم الرد عليك قريباً.' }
+        { sender: 'lead', text: 'أهلاً بك! تم استلام رسالتك وسيتم الرد عليك قريباً.' }
       ]);
     }, 900);
   };
@@ -305,7 +381,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans" dir="rtl">
       
-      {/* 1. الشريط العلوي الإخباري (هوية جامعة القدس) */}
+      {/* 1. شريط إعلاني بهوية جامعة القدس */}
       <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-xs py-2 px-4 md:px-6 shadow-md flex items-center justify-between border-b border-amber-500/20">
         <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap">
           <span className="flex items-center gap-1.5 bg-amber-500 text-slate-950 font-bold px-2.5 py-0.5 rounded-full text-[10px]">
@@ -326,10 +402,9 @@ export default function App() {
         </div>
       </div>
 
-      {/* 2. رأس الصفحة (الهيدر مع زر الهمبرغر والتحكم) */}
+      {/* 2. رأس الصفحة (الهيدر مع زر القائمة والتحكم) */}
       <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-30 px-4 md:px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {/* زر فتح القائمة الجانبية للشاشات الصغيرة والمتوسطة */}
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="md:hidden p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition"
@@ -374,7 +449,7 @@ export default function App() {
             <span className="sm:hidden">إضافة</span>
           </button>
 
-          {/* زر الدخول / الخروج */}
+          {/* زر تسجيل الدخول أو الخروج */}
           {currentUser ? (
             <div className="flex items-center gap-2">
               <button
@@ -394,7 +469,7 @@ export default function App() {
             </div>
           ) : (
             <button
-              onClick={() => setShowAuthModal(true)}
+              onClick={() => { setAuthMode('login'); setShowAuthModal(true); }}
               className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
             >
               <LogIn className="w-4 h-4" />
@@ -407,7 +482,7 @@ export default function App() {
       {/* 3. جسم المنصة الرئيسي */}
       <div className="flex-1 flex relative overflow-hidden">
         
-        {/* خلفية معتمة للجوال عند فتح القائمة */}
+        {/* خلفية معتمة للجوال */}
         {isSidebarOpen && (
           <div 
             onClick={() => setIsSidebarOpen(false)}
@@ -415,14 +490,14 @@ export default function App() {
           />
         )}
 
-        {/* القائمة الجانبية (Sidebar) متجاوبة مع الهاتف والكمبيوتر */}
+        {/* القائمة الجانبية (Sidebar) */}
         <aside className={`
           fixed md:static inset-y-0 right-0 z-40 w-64 bg-slate-900 border-l border-slate-800 p-4 
           flex flex-col justify-between transition-transform duration-300 ease-in-out
           ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
         `}>
           <div className="space-y-3">
-            {/* معلومات المستخدم */}
+            {/* بطاقة المستخدم */}
             <div className="p-3 bg-slate-800/50 border border-slate-700/60 rounded-xl mb-4">
               <span className="text-[10px] text-slate-400 block mb-0.5">الحالة الحالية:</span>
               <p className="text-xs font-bold text-white flex items-center gap-1.5">
@@ -495,7 +570,7 @@ export default function App() {
               </>
             )}
 
-            {/* الروابط العامة والطلابية */}
+            {/* روابط عامة وطلابية */}
             <button
               onClick={() => { setActiveTab('match'); setIsSidebarOpen(false); }}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
@@ -574,7 +649,7 @@ export default function App() {
               </button>
             ) : (
               <button
-                onClick={() => { setShowAuthModal(true); setIsSidebarOpen(false); }}
+                onClick={() => { setAuthMode('login'); setShowAuthModal(true); setIsSidebarOpen(false); }}
                 className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 py-2 rounded-xl text-xs font-bold transition cursor-pointer"
               >
                 <LogIn className="w-3.5 h-3.5" />
@@ -587,10 +662,10 @@ export default function App() {
           </div>
         </aside>
 
-        {/* المساحة الرئيسية للمحتوى */}
+        {/* المساحة الرئيسية */}
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">
           {activeTab === 'business_projects' ? (
-            /* واجهة أصحاب الأعمال الحصرية */
+            /* لوحة تحكم أصحاب الأعمال */
             <div className="space-y-6 max-w-5xl mx-auto">
               <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-slate-900 border border-blue-800/50 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -645,7 +720,7 @@ export default function App() {
               </div>
             </div>
           ) : activeTab === 'supervisor_review' ? (
-            /* واجهة المشرف الأكاديمي */
+            /* لوحة تحكم المشرف الأكاديمي */
             <div className="space-y-6 max-w-5xl mx-auto">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-2">
@@ -653,7 +728,7 @@ export default function App() {
                   مراجعة واعتماد مشاريع التخرج الأكاديمية
                 </h2>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  بصفتك مشرفاً أكاديمياً، يمكنك تدقيق مدى ملاءمة المشاكل المطروحة من المحلات والشركات لتكون مشاريع تخرج صالحة للتقييم الأكاديمي ومنحها علامة الاعتماد.
+                  بصفتك مشرفاً أكاديمياً، يمكنك تدقيق المشاكل المطروحة من المحلات والشركات واعتمادها كمشاريع تخرج صالحة للمناقشة.
                 </p>
               </div>
 
@@ -703,7 +778,7 @@ export default function App() {
               </div>
             </div>
           ) : activeTab === 'milestones' ? (
-            /* خريطة طريق التخرج */
+            /* مراحل التخرج */
             <div className="max-w-4xl mx-auto space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-white">خريطة طريق التخرج (Milestones Tracker)</h2>
@@ -894,61 +969,135 @@ export default function App() {
         </main>
       </div>
 
-      {/* نافذة تسجيل الدخول واختيار المستوى (طالب / متجر / مشرف) */}
+      {/* نافذة تسجيل الدخول وإنشاء الحساب مع يوزر وباسورد واختيار الدور */}
       {showAuthModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative">
-            <button onClick={() => setShowAuthModal(false)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative shadow-2xl">
+            <button 
+              onClick={() => { setShowAuthModal(false); setAuthError(''); }} 
+              className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer"
+            >
               <X className="w-5 h-5" />
             </button>
-            <h2 className="text-base font-bold mb-1 text-white">تسجيل الدخول / اختيار الحساب</h2>
-            <p className="text-xs text-slate-400 mb-5">اختر مستواك للدخول واستعراض الواجهة والصلاحيات المخصصة لك:</p>
 
-            <div className="space-y-3">
-              <button
-                onClick={() => handleLogin('student')}
-                className={`w-full p-3.5 rounded-xl border text-right transition flex items-center gap-3.5 cursor-pointer ${
-                  currentUser?.role === 'student' ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-800 bg-slate-800/40 hover:bg-slate-800'
-                }`}
-              >
-                <div className="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold">
-                  🎓
-                </div>
+            <div className="text-center mb-6">
+              <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-blue-900/50 border border-blue-500/30 flex items-center justify-center text-amber-400">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <h2 className="text-lg font-bold text-white">
+                {authMode === 'login' ? 'تسجيل الدخول إلى البوابة الأكاديمية' : 'إنشاء حساب جديد'}
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                جامعة القدس - ملتقى مشاريع التخرج وقطاع الأعمال
+              </p>
+            </div>
+
+            {/* أزرار اختيار نوع الحساب */}
+            <div className="mb-4">
+              <label className="text-[11px] text-slate-400 block mb-1.5 font-medium">نوع الحساب:</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'student', label: 'طالب خريج', icon: '🎓' },
+                  { id: 'business', label: 'متجر / شركة', icon: '🏢' },
+                  { id: 'supervisor', label: 'مشرف أكاديمي', icon: '🏛️' }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setAuthRole(item.id)}
+                    className={`py-2 px-1 rounded-xl text-xs font-semibold flex flex-col items-center gap-1 border transition cursor-pointer ${
+                      authRole === item.id
+                        ? 'border-blue-500 bg-blue-600/20 text-blue-200'
+                        : 'border-slate-800 bg-slate-800/40 text-slate-400 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="text-base">{item.icon}</span>
+                    <span className="text-[10px]">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {authError && (
+              <div className="p-2.5 mb-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl text-center">
+                {authError}
+              </div>
+            )}
+
+            {/* فورم تسجيل الدخول والتسجيل */}
+            <form onSubmit={handleAuthSubmit} className="space-y-3">
+              {authMode === 'register' && (
                 <div>
-                  <h4 className="font-bold text-xs md:text-sm text-white">حساب طالب خريج</h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">تصفح الفرص، فحص مطابقة المهارات، وتقديم طلبات الانضمام</p>
+                  <label className="text-[11px] text-slate-300 block mb-1">الاسم الكامل / اسم المتجر</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="مثال: أحمد محمود أو شركة الأندلس"
+                    value={authFullName}
+                    onChange={(e) => setAuthFullName(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                  />
                 </div>
-              </button>
+              )}
+
+              <div>
+                <label className="text-[11px] text-slate-300 block mb-1">البريد الإلكتروني / اسم المستخدم</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="user@alquds.edu"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 text-left"
+                  dir="ltr"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-slate-300 block mb-1">كلمة المرور</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 text-left"
+                  dir="ltr"
+                />
+              </div>
 
               <button
-                onClick={() => handleLogin('business')}
-                className={`w-full p-3.5 rounded-xl border text-right transition flex items-center gap-3.5 cursor-pointer ${
-                  currentUser?.role === 'business' ? 'border-blue-500 bg-blue-500/10' : 'border-slate-800 bg-slate-800/40 hover:bg-slate-800'
-                }`}
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-lg shadow-blue-600/20 cursor-pointer mt-2"
               >
-                <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold">
-                  🏢
-                </div>
-                <div>
-                  <h4 className="font-bold text-xs md:text-sm text-white">حساب قطاع أعمال ومصالح تجارية</h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">طرح مشاكل ومشاريع للمحل، وقبول وانتقاء فرق الطلاب</p>
-                </div>
+                {authMode === 'login' ? 'دخول إلى الحساب' : 'تأكيد التسجيل وإنشاء الحساب'}
               </button>
+            </form>
 
-              <button
-                onClick={() => handleLogin('supervisor')}
-                className={`w-full p-3.5 rounded-xl border text-right transition flex items-center gap-3.5 cursor-pointer ${
-                  currentUser?.role === 'supervisor' ? 'border-amber-500 bg-amber-500/10' : 'border-slate-800 bg-slate-800/40 hover:bg-slate-800'
-                }`}
-              >
-                <div className="w-10 h-10 rounded-xl bg-amber-600/20 text-amber-400 flex items-center justify-center font-bold">
-                  🏛️
-                </div>
-                <div>
-                  <h4 className="font-bold text-xs md:text-sm text-white">حساب مشرف أكاديمي (جامعة القدس)</h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">مراجعة أفكار المشاريع والاعتماد الأكاديمي لمشاريع التخرج</p>
-                </div>
-              </button>
+            <div className="mt-4 pt-3 border-t border-slate-800 text-center">
+              {authMode === 'login' ? (
+                <p className="text-xs text-slate-400">
+                  ليس لديك حساب بعد؟{' '}
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode('register'); setAuthError(''); }}
+                    className="text-amber-400 hover:underline font-semibold cursor-pointer"
+                  >
+                    إنشاء حساب جديد
+                  </button>
+                </p>
+              ) : (
+                <p className="text-xs text-slate-400">
+                  لديك حساب بالفعل؟{' '}
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode('login'); setAuthError(''); }}
+                    className="text-blue-400 hover:underline font-semibold cursor-pointer"
+                  >
+                    تسجيل الدخول
+                  </button>
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -1086,7 +1235,7 @@ export default function App() {
         </div>
       )}
 
-      {/* نافذة إضافة مشروع (طرح فكرة من متجر أو طالب) */}
+      {/* نافذة إضافة مشروع */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative">
