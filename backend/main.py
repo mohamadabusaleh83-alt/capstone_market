@@ -14,17 +14,10 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Capstone Platform API")
 
 # تفعيل CORS بالكامل
-origins = [
-    "https://capstone-market.vercel.app",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -70,22 +63,18 @@ def get_users(db: Session = Depends(get_db)):
     return db.query(models.User).all()
 
 # 3. إنشاء مشروع جديد
-@app.post("/projects/", response_model=schemas.ProjectResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/projects/", status_code=status.HTTP_201_CREATED)
 def create_project(
-    project: schemas.ProjectCreate,
-    db: Session = Depends(get_db),
-    current_user: Optional[models.User] = Depends(get_current_user)
+    project_data: dict,
+    db: Session = Depends(get_db)
 ):
-    if current_user:
-        owner_id = current_user.id
-    else:
-        first_user = db.query(models.User).first()
-        owner_id = first_user.id if first_user else 1
+    first_user = db.query(models.User).first()
+    owner_id = first_user.id if first_user else 1
 
     db_project = models.Project(
-        title=project.title,
-        description=project.description,
-        required_skills=project.required_skills,
+        title=project_data.get("title", "مشروع جديد"),
+        description=project_data.get("description", ""),
+        required_skills=project_data.get("required_skills", ""),
         created_by=owner_id
     )
     db.add(db_project)
