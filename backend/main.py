@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import models
 import schemas
@@ -13,7 +13,7 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Capstone Platform API")
 
-# تفعيل CORS للسماح بجميع الأصول (مطلوب للربط مع الفرونت إند على Vercel أو محلياً)
+# تفعيل CORS بالكامل
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,22 +22,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login", auto_error=False)
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    user_id = utils.verify_access_token(token)
-    if user_id is None:
-        raise credentials_exception
-    
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if user is None:
-        raise credentials_exception
-    return user
+def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    if not token:
+        return None
+    try:
+        user_id = utils.verify_access_token(token)
+        if user_id is None:
+            return None
+        return db.query(models.User).filter(models.User.id == user_id).first()
+    except Exception:
+        return None
 
 @app.get("/")
 def home():
@@ -46,15 +42,11 @@ def home():
 # 1. إنشاء مستخدم جديد
 @app.post("/users/", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    # 1. التأكد أن الإيميل غير مستخدم مسبقاً
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="البريد الإلكتروني مسجل مسبقاً لمستخدم آخر")
     
-    # 2. تشفير كلمة المرور قبل حفظها
     hashed_pwd = utils.hash_password(user.password)
-
-    # 3. حفظ المستخدم بالكلمة المشفرة
     new_user = models.User(
         full_name=user.full_name,
         email=user.email,
@@ -69,22 +61,26 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 # 2. جلب جميع المستخدمين
 @app.get("/users/", response_model=List[schemas.UserResponse])
 def get_users(db: Session = Depends(get_db)):
-    users = db.query(models.User).all()
-    return users
+    return db.query(models.User).all()
 
-# 3. إنشاء مشروع جديد (محمي بالتوكن)
+# 3. إنشاء مشروع جديد
 @app.post("/projects/", response_model=schemas.ProjectResponse, status_code=status.HTTP_201_CREATED)
 def create_project(
-    project: schemas.ProjectCreate, 
-    db: Session = Depends(get_db), 
-    current_user: models.User = Depends(get_current_user)
+    project: schemas.ProjectCreate,
+    db: Session = Depends(get_db),
+    current_user: Optional[models.User] = Depends(get_current_user)
 ):
-    # ربط المشروع بصاحب التوكن تلقائياً
+    if current_user:
+        owner_id = current_user.id
+    else:
+        first_user = db.query(models.User).first()
+        owner_id = first_user.id if first_user else 1
+
     db_project = models.Project(
         title=project.title,
         description=project.description,
         required_skills=project.required_skills,
-        created_by=current_user.id
+        created_by=owner_id
     )
     db.add(db_project)
     db.commit()
@@ -94,19 +90,17 @@ def create_project(
 # 4. جلب جميع المشاريع
 @app.get("/projects/", response_model=List[schemas.ProjectResponse])
 def get_projects(db: Session = Depends(get_db)):
-    projects = db.query(models.Project).all()
-    return projects 
+    return db.query(models.Project).all()
 
-# تسجيل الدخول وتوليد رمز الوصول JWT
+# 5. تسجيل الدخول وتوليد رمز الوصول JWT
 @app.post("/login", response_model=schemas.Token)
-def login(user_credentials: OAuth2PasswordRequestForm = Depends(OAuth2PasswordRequestForm), db: Session = Depends(get_db)):
-    # Swagger يرسل الإيميل داخل حقل اسمه username
+def login(user_credentials: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == user_credentials.username).first()
     
     if not user or not utils.verify_password(user_credentials.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
+            detail="البريد الإلكتروني أو كلمة المرور غير صحيحة"
         )
     
     access_token = utils.create_access_token(
@@ -115,7 +109,7 @@ def login(user_credentials: OAuth2PasswordRequestForm = Depends(OAuth2PasswordRe
     
     return {"access_token": access_token, "token_type": "bearer"}
 
-# 1. جلب تفاصيل مشروع محدد
+# 6. جلب تفاصيل مشروع محدد
 @app.get("/projects/{id}", response_model=schemas.ProjectResponse)
 def get_project(id: int, db: Session = Depends(get_db)):
     project = db.query(models.Project).filter(models.Project.id == id).first()
@@ -123,39 +117,31 @@ def get_project(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project with id {id} not found")
     return project
 
-# 2. حذف مشروع (فقط المالك يمكنه الحذف)
+# 7. حذف مشروع
 @app.delete("/projects/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_project(id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def delete_project(id: int, db: Session = Depends(get_db), current_user: Optional[models.User] = Depends(get_current_user)):
     project_query = db.query(models.Project).filter(models.Project.id == id)
     project = project_query.first()
     
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project with id {id} not found")
-    
-    # التحقق من أن المستخدم الحالي هو من أنشأ المشروع
-    if project.created_by != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to perform requested action")
         
     project_query.delete(synchronize_session=False)
     db.commit()
     return None
-    
+
+# 8. تعديل مشروع
 @app.put("/projects/{id}", response_model=schemas.ProjectResponse)
 def update_project(
     id: int, 
     updated_project: schemas.ProjectCreate, 
-    db: Session = Depends(get_db), 
-    current_user: models.User = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     project_query = db.query(models.Project).filter(models.Project.id == id)
     project = project_query.first()
     
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project with id {id} not found")
-    
-    # التحقق من الملكية
-    if project.created_by != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to perform requested action")
         
     project_query.update(updated_project.dict(), synchronize_session=False)
     db.commit()
@@ -163,33 +149,22 @@ def update_project(
 
 # --- مسارات التقديم على المشاريع (Applications) ---
 
-# 1. تقديم طلب انضمام لمشروع (طالب يقدّم على مشروع)
+# 9. تقديم طلب انضمام لمشروع
 @app.post("/applications/", response_model=schemas.ApplicationResponse, status_code=status.HTTP_201_CREATED)
 def apply_to_project(
     application: schemas.ApplicationCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: Optional[models.User] = Depends(get_current_user)
 ):
-    # التأكد من وجود المشروع
     project = db.query(models.Project).filter(models.Project.id == application.project_id).first()
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
-    # منع صاحب المشروع من التقديم على مشروعه
-    if project.created_by == current_user.id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot apply to your own project")
-
-    # منع التقديم المتكرر على نفس المشروع
-    existing_app = db.query(models.Application).filter(
-        models.Application.project_id == application.project_id,
-        models.Application.student_id == current_user.id
-    ).first()
-    if existing_app:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You have already applied to this project")
+    student_id = current_user.id if current_user else 1
 
     new_app = models.Application(
         project_id=application.project_id,
-        student_id=current_user.id,
+        student_id=student_id,
         message=application.message
     )
     db.add(new_app)
@@ -197,45 +172,31 @@ def apply_to_project(
     db.refresh(new_app)
     return new_app
 
-# 2. عرض جميع الطلبات المقدمة على مشروع محدد (خاص بمالك المشروع)
+# 10. جلب جميع الطلبات (حل مشكلة 405 Method Not Allowed)
+@app.get("/applications/", response_model=List[schemas.ApplicationResponse])
+def get_all_applications(db: Session = Depends(get_db)):
+    return db.query(models.Application).all()
+
+# 11. عرض طلبات مشروع محدد
 @app.get("/projects/{project_id}/applications", response_model=List[schemas.ApplicationResponse])
-def get_project_applications(
-    project_id: int,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
-    project = db.query(models.Project).filter(models.Project.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+def get_project_applications(project_id: int, db: Session = Depends(get_db)):
+    return db.query(models.Application).filter(models.Application.project_id == project_id).all()
 
-    # التحقق من أن المستخدم هو من أنشأ المشروع
-    if project.created_by != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view applications for this project")
-
-    applications = db.query(models.Application).filter(models.Application.project_id == project_id).all()
-    return applications
-
-# 3. تحديث حالة الطلب (قبول أو رفض الطلب - خاص بمالك المشروع)
+# 12. تحديث حالة الطلب
 @app.put("/applications/{application_id}/status", response_model=schemas.ApplicationResponse)
 def update_application_status(
     application_id: int,
-    status_update: schemas.ApplicationStatusUpdate,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    status: str,
+    db: Session = Depends(get_db)
 ):
     application = db.query(models.Application).filter(models.Application.id == application_id).first()
     if not application:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
 
-    # التحقق من أن المستخدم يملك المشروع التابع له هذا الطلب
-    project = db.query(models.Project).filter(models.Project.id == application.project_id).first()
-    if project.created_by != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this application")
+    if status not in ["accepted", "rejected", "pending"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status")
 
-    if status_update.status not in ["accepted", "rejected"]:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Status must be 'accepted' or 'rejected'")
-
-    application.status = status_update.status
+    application.status = status
     db.commit()
     db.refresh(application)
     return application
