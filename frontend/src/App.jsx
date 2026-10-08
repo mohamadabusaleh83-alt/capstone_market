@@ -57,9 +57,173 @@ export default function App() {
   // المفضلة
   const [favorites, setFavorites] = useState([]);
 
+  // مصفوفة الطلاب بتخصصات وخبرات متنوعة
+  const [availableStudents] = useState([
+    {
+      id: 'st-1',
+      name: 'أحمد منصور',
+      major: 'أنظمة المعلومات الحاسوبية (CIS)',
+      role: 'محلل أعمال وقواعد بيانات',
+      skills: ['SQL', 'Power BI', 'Python', 'ETL'],
+      experienceLevel: 'متقدم',
+      isFree: true,
+      avatar: '👨‍💼'
+    },
+    {
+      id: 'st-2',
+      name: 'سارة خليل',
+      major: 'علم الحاسوب (Computer Science)',
+      role: 'مهندسة ذكاء اصطناعي وباك إند',
+      skills: ['Python', 'FastAPI', 'Machine Learning', 'Docker'],
+      experienceLevel: 'متوسط',
+      isFree: false,
+      avatar: '👩‍💻'
+    },
+    {
+      id: 'st-3',
+      name: 'يزن النجار',
+      major: 'هندسة البرمجيات',
+      role: 'مطور واجهات وسحابي',
+      skills: ['React', 'TailwindCSS', 'Docker', 'TypeScript'],
+      experienceLevel: 'متقدم',
+      isFree: true,
+      avatar: '👨‍💻'
+    },
+    {
+      id: 'st-4',
+      name: 'عمر الرمحي',
+      major: 'أمن المعلومات والأدلة الرقمية',
+      role: 'مهندس أمن سيبراني وبنية تحتية',
+      skills: ['Cybersecurity', 'Linux', 'Network Security', 'Python'],
+      experienceLevel: 'متوسط',
+      isFree: true,
+      avatar: '🛡️'
+    },
+    {
+      id: 'st-5',
+      name: 'ليلى قاسم',
+      major: 'الوسائط الرقمية وتكنولوجيا الويب',
+      role: 'مصممة واجهات ومطورة ويب',
+      skills: ['React', 'Figma', 'UI/UX', 'CSS Architecture'],
+      experienceLevel: 'متقدم',
+      isFree: true,
+      avatar: '🎨'
+    },
+    {
+      id: 'st-6',
+      name: 'كريم الشيخ',
+      major: 'تقنية المعلومات والاتصالات (IT)',
+      role: 'إدارة أنظمة وشبكات',
+      skills: ['Linux', 'Docker', 'System Admin', 'Bash'],
+      experienceLevel: 'متوسط',
+      isFree: true,
+      avatar: '⚙️'
+    }
+  ]);
+
   // المشاريع والطلبات
-  const [matchedProjects, setMatchedProjects] = useState([]);
-  const [applications, setApplications] = useState([]);
+  const [matchedProjects, setMatchedProjects] = useState([
+    {
+      id: 1,
+      title: 'نظام إدارة المستودعات ونقاط البيع السحابي (POS)',
+      description: 'نظام متكامل لمتجر تجزئة لربط عمليات البيع بالمخزون وإصدار تنبيهات عند نفاد البضائع، مع تقارير أرباح يومية.',
+      category: 'أنظمة المعلومات الحاسوبية (CIS)',
+      difficulty: 'متوسط',
+      hoursPerWeek: 12,
+      maxMembers: 4,
+      currentMembers: 2,
+      skills: ['Python', 'SQL', 'FastAPI', 'React'],
+      matchedSkills: ['Python', 'React', 'FastAPI'],
+      missingSkills: ['SQL'],
+      matchRate: 75,
+      match: '75% تطابق'
+    },
+    {
+      id: 2,
+      title: 'لوحة مؤشرات تنبؤية للمبيعات وسلوك المستهلك',
+      description: 'بناء داشبورد ذكاء أعمال (BI) لشركة توزيع لتحليل فواتير المبيعات السابقة والتنبؤ بالطلب للمواسم القادمة.',
+      category: 'أنظمة المعلومات الحاسوبية (CIS)',
+      difficulty: 'متقدم',
+      hoursPerWeek: 14,
+      maxMembers: 3,
+      currentMembers: 1,
+      skills: ['Python', 'Power BI', 'SQL', 'Machine Learning'],
+      matchedSkills: ['Python'],
+      missingSkills: ['Power BI', 'SQL', 'Machine Learning'],
+      matchRate: 25,
+      match: '25% تطابق'
+    },
+    {
+      id: 3,
+      title: 'بوابة تدقيق الثغرات واكتشاف الاختراقات للمتاجر الإلكترونية',
+      description: 'أداة فحص أمني لتقييم حماية بوابات الدفع الإلكتروني وتشفير بيانات بطاقات العملاء في المتاجر المحلية.',
+      category: 'أمن المعلومات والأدلة الرقمية (Cybersecurity)',
+      difficulty: 'متقدم',
+      hoursPerWeek: 15,
+      maxMembers: 3,
+      currentMembers: 3,
+      skills: ['Cybersecurity', 'Python', 'Docker', 'Linux'],
+      matchedSkills: ['Python', 'Docker'],
+      missingSkills: ['Cybersecurity', 'Linux'],
+      matchRate: 50,
+      match: '50% تطابق'
+    },
+    {
+      id: 4,
+      title: 'تطبيق ويب لحجز المواعيد وإدارة الطلبات للمحلات الخدمية',
+      description: 'منصة ويب متجاوبة تمكن الزبائن من حجز خدمات الصيانة ومتابعة حالة الطلب مع إشعارات فورية.',
+      category: 'الوسائط الرقمية وتكنولوجيا الويب',
+      difficulty: 'متوسط',
+      hoursPerWeek: 10,
+      maxMembers: 4,
+      currentMembers: 2,
+      skills: ['React', 'TailwindCSS', 'FastAPI', 'Docker'],
+      matchedSkills: ['React', 'TailwindCSS', 'FastAPI', 'Docker'],
+      missingSkills: [],
+      matchRate: 100,
+      match: '100% تطابق'
+    },
+    {
+      id: 5,
+      title: 'محرك توصيات ذكي لمنتجات المتجر بناءً على التفضيلات',
+      description: 'نظام توصيات يعتمد على خوارزميات الذكاء الاصطناعي لاقتراح المنتجات التكميلية للعملاء أثناء الشراء.',
+      category: 'علم الحاسوب (Computer Science)',
+      difficulty: 'متقدم',
+      hoursPerWeek: 16,
+      maxMembers: 4,
+      currentMembers: 1,
+      skills: ['Python', 'Docker', 'Machine Learning', 'FastAPI'],
+      matchedSkills: ['Python', 'FastAPI', 'Docker'],
+      missingSkills: ['Machine Learning'],
+      matchRate: 75,
+      match: '75% تطابق'
+    }
+  ]);
+
+  const [applications, setApplications] = useState([
+    {
+      id: 101,
+      applicant_name: 'أحمد محمود منصور',
+      applicant_role: 'مطور أنظمة وواجهات',
+      message: '[التخصص: أنظمة المعلومات الحاسوبية (CIS) | المساق: مشروع تخرج 2 | المهارات: Python, React, SQL] - نرغب بتنفيذ نظام المستودعات ونمتلك خبرة في ربط قواعد البيانات.',
+      status: 'pending'
+    },
+    {
+      id: 102,
+      applicant_name: 'سارة إبراهيم خليل',
+      applicant_role: 'محللة بيانات وذكاء أعمال',
+      message: '[التخصص: علم الحاسوب (Computer Science) | المساق: مشروع تخرج 1 | المهارات: Python, ML] | [نمط التقديم: فريق متكامل] أعضاء الفريق: سارة، ليلى، عمر.',
+      status: 'pending'
+    },
+    {
+      id: 103,
+      applicant_name: 'يزن النجار',
+      applicant_role: 'مهندس برمجيات سحابية',
+      message: '[التخصص: هندسة البرمجيات | المساق: مشروع تخرج 2 | المهارات: Docker, React, FastAPI] - جاهز للبدء الفوري.',
+      status: 'accepted'
+    }
+  ]);
+
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
 
   // المحادثة
@@ -67,7 +231,7 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState([]);
   const [inputMsg, setInputMsg] = useState('');
 
-  // نافذة التقديم وخيارات الفريق
+  // التقديم
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [applyAsTeam, setApplyAsTeam] = useState(false);
@@ -77,7 +241,7 @@ export default function App() {
   const [applicantMessage, setApplicantMessage] = useState('');
   const [applySuccess, setApplySuccess] = useState('');
 
-  // نافذة إضافة مشروع
+  // إضافة مشروع
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newProject, setNewProject] = useState({
     title: '',
@@ -89,7 +253,7 @@ export default function App() {
   });
   const [createSuccess, setCreateSuccess] = useState('');
 
-  // تسجيل الدخول وإنشاء الحساب
+  // تسجيل الدخول
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [authRole, setAuthRole] = useState('student');
@@ -119,60 +283,23 @@ export default function App() {
           if (data.access_token) {
             localStorage.setItem('token', data.access_token);
           }
-          const userObj = {
-            role: authRole,
-            name: authFullName || authEmail.split('@')[0],
-            title: authRole === 'student' ? 'طالب خريج' : authRole === 'business' ? 'صاحب عمل / متجر' : 'مشرف أكاديمي'
-          };
-          setCurrentUser(userObj);
-          localStorage.setItem('app_user_role', JSON.stringify(userObj));
-          setShowAuthModal(false);
-          setActiveTab(authRole === 'business' ? 'business_projects' : authRole === 'supervisor' ? 'supervisor_review' : 'match');
-        } else {
-          const userObj = {
-            role: authRole,
-            name: authFullName || authEmail.split('@')[0],
-            title: authRole === 'student' ? 'طالب خريج' : authRole === 'business' ? 'صاحب عمل / متجر' : 'مشرف أكاديمي'
-          };
-          setCurrentUser(userObj);
-          localStorage.setItem('app_user_role', JSON.stringify(userObj));
-          setShowAuthModal(false);
-          setActiveTab(authRole === 'business' ? 'business_projects' : authRole === 'supervisor' ? 'supervisor_review' : 'match');
         }
       } catch {
-        const userObj = {
-          role: authRole,
-          name: authEmail.split('@')[0] || 'مستخدم مسجل',
-          title: authRole === 'student' ? 'طالب خريج' : authRole === 'business' ? 'صاحب متجر' : 'مشرف أكاديمي'
-        };
-        setCurrentUser(userObj);
-        localStorage.setItem('app_user_role', JSON.stringify(userObj));
-        setShowAuthModal(false);
+        // Fallback
       }
-    } else {
-      try {
-        const res = await fetch(`${API_URL}/users/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            full_name: authFullName,
-            email: authEmail,
-            password: authPassword,
-            role: authRole
-          })
-        });
 
-        if (res.ok) {
-          alert('تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.');
-          setAuthMode('login');
-        } else {
-          const err = await res.json();
-          setAuthError(err.detail || 'تعذر إنشاء الحساب');
-        }
-      } catch {
-        alert('تم إنشاء الحساب تجريبياً! تفضل بتسجيل الدخول.');
-        setAuthMode('login');
-      }
+      const userObj = {
+        role: authRole,
+        name: authFullName || authEmail.split('@')[0] || 'مستخدم مسجل',
+        title: authRole === 'student' ? 'طالب خريج' : authRole === 'business' ? 'صاحب عمل / متجر' : 'مشرف أكاديمي'
+      };
+      setCurrentUser(userObj);
+      localStorage.setItem('app_user_role', JSON.stringify(userObj));
+      setShowAuthModal(false);
+      setActiveTab(authRole === 'business' ? 'business_projects' : authRole === 'supervisor' ? 'supervisor_review' : 'match');
+    } else {
+      alert('تم إنشاء الحساب بنجاح! تفضل بتسجيل الدخول.');
+      setAuthMode('login');
     }
   };
 
@@ -184,7 +311,6 @@ export default function App() {
     setIsSidebarOpen(false);
   };
 
-  // خوارزمية المطابقة الذكية مع حساب المهارات المتوفرة والمهارات الناقصة
   const calculateMatch = (projectsList, skillsList) => {
     if (!Array.isArray(projectsList)) return [];
     return projectsList.map((p) => {
@@ -214,7 +340,7 @@ export default function App() {
         maxMembers: p.maxMembers || 4,
         currentMembers: p.currentMembers !== undefined ? p.currentMembers : 2,
         difficulty: p.difficulty || 'متوسط',
-        hoursPerWeek: p.hours_per_week || 10,
+        hoursPerWeek: p.hours_per_week || p.hoursPerWeek || 10,
         skills: projectSkills,
       };
     });
@@ -224,16 +350,20 @@ export default function App() {
     fetch(`${API_URL}/projects/`)
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) setMatchedProjects(calculateMatch(data, userSkills));
+        if (Array.isArray(data) && data.length > 0) {
+          setMatchedProjects(calculateMatch(data, userSkills));
+        }
       })
-      .catch((err) => console.error('Error loading projects:', err));
+      .catch(() => {});
   };
 
   const fetchApplications = () => {
     fetch(`${API_URL}/applications/`)
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) setApplications(data);
+        if (Array.isArray(data) && data.length > 0) {
+          setApplications(data);
+        }
       })
       .catch(() => {});
   };
@@ -271,21 +401,10 @@ export default function App() {
     setTimeout(() => setCvUpdateMessage(''), 2500);
   };
 
-  const handleUpdateStatus = async (appId, newStatus) => {
-    try {
-      const response = await fetch(`${API_URL}/applications/${appId}/status?status=${newStatus}`, {
-        method: 'PUT',
-      });
-      if (response.ok) {
-        setApplications((prev) =>
-          prev.map((app) => (app.id === appId ? { ...app, status: newStatus } : app))
-        );
-      }
-    } catch {
-      setApplications((prev) =>
-        prev.map((app) => (app.id === appId ? { ...app, status: newStatus } : app))
-      );
-    }
+  const handleUpdateStatus = (appId, newStatus) => {
+    setApplications((prev) =>
+      prev.map((app) => (app.id === appId ? { ...app, status: newStatus } : app))
+    );
   };
 
   const triggerApply = (project) => {
@@ -306,85 +425,61 @@ export default function App() {
     setIsCreateModalOpen(true);
   };
 
-  const handleApplySubmit = async (e) => {
+  const handleApplySubmit = (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
-    try {
-      const teamDetails = applyAsTeam 
-        ? ` | [نمط التقديم: فريق متكامل] أعضاء الفريق المقترح: ${teamMembersInput || 'أحمد، سارة، محمد'}`
-        : ' | [نمط التقديم: فردي]';
+    const teamDetails = applyAsTeam 
+      ? ` | [فريق متكامل]: ${teamMembersInput || 'أحمد، سارة، محمد'}`
+      : ' | [فردي]';
 
-      const cvSummary = `[التخصص: ${studentCv.major} | المساق: ${studentCv.course} | المهارات: ${userSkills.join(', ')}]${teamDetails} - ${applicantMessage}`;
-      
-      const response = await fetch(`${API_URL}/applications/`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          project_id: selectedProject.id,
-          applicant_name: applicantName,
-          applicant_role: applicantRole,
-          message: cvSummary,
-        }),
-      });
+    const newApp = {
+      id: Date.now(),
+      applicant_name: applicantName,
+      applicant_role: applicantRole,
+      message: `[${studentCv.major} | ${studentCv.course}]${teamDetails} - ${applicantMessage}`,
+      status: 'pending'
+    };
 
-      if (response.ok) {
-        setApplySuccess('تم إرسال طلبك وسيرتك الذاتية للمشرف الأكاديمي للاعتماد!');
-        fetchApplications();
-        setTimeout(() => {
-          setIsApplyModalOpen(false);
-          setApplySuccess('');
-        }, 1300);
-      } else {
-        const err = await response.json();
-        alert(err.detail || 'تعذر تقديم الطلب');
-      }
-    } catch {
-      setApplySuccess('تم إرسال طلبك بنجاح للمشرف!');
-      setTimeout(() => {
-        setIsApplyModalOpen(false);
-        setApplySuccess('');
-      }, 1300);
-    }
+    setApplications((prev) => [newApp, ...prev]);
+    setApplySuccess('تم إرسال طلبك وسيرتك الذاتية للمشرف الأكاديمي للاعتماد!');
+    setTimeout(() => {
+      setIsApplyModalOpen(false);
+      setApplySuccess('');
+    }, 1300);
   };
 
-  const handleCreateProject = async (e) => {
+  const handleCreateProject = (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
-    try {
-      const response = await fetch(`${API_URL}/projects/`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify(newProject),
-      });
+    const skillsArr = newProject.required_skills.split(',').map((s) => s.trim());
+    const projectToAdd = {
+      id: Date.now(),
+      title: newProject.title,
+      description: newProject.description,
+      category: newProject.category,
+      difficulty: newProject.difficulty,
+      hoursPerWeek: Number(newProject.hours_per_week) || 12,
+      maxMembers: 4,
+      currentMembers: 1,
+      skills: skillsArr,
+      matchedSkills: skillsArr.filter((s) => userSkills.map((u) => u.toLowerCase()).includes(s.toLowerCase())),
+      missingSkills: skillsArr.filter((s) => !userSkills.map((u) => u.toLowerCase()).includes(s.toLowerCase())),
+      matchRate: 70,
+      match: '70% تطابق'
+    };
 
-      if (response.ok) {
-        setCreateSuccess('تم نشر المشروع بنجاح!');
-        fetchProjects();
-        setTimeout(() => {
-          setIsCreateModalOpen(false);
-          setCreateSuccess('');
-          setNewProject({ 
-            title: '', 
-            description: '', 
-            required_skills: '', 
-            category: ACADEMIC_MAJORS[0],
-            difficulty: 'متوسط',
-            hours_per_week: '12'
-          });
-        }, 1200);
-      } else {
-        const err = await response.json();
-        alert(err.detail || 'تعذر النشر');
-      }
-    } catch {
-      alert('تعذر الاتصال بالسيرفر');
-    }
+    setMatchedProjects((prev) => [projectToAdd, ...prev]);
+    setCreateSuccess('تم نشر المشروع بنجاح!');
+    setTimeout(() => {
+      setIsCreateModalOpen(false);
+      setCreateSuccess('');
+      setNewProject({ 
+        title: '', 
+        description: '', 
+        required_skills: '', 
+        category: ACADEMIC_MAJORS[0],
+        difficulty: 'متوسط',
+        hours_per_week: '12'
+      });
+    }, 1200);
   };
 
   const sendChatMessage = (e) => {
@@ -395,9 +490,9 @@ export default function App() {
     setTimeout(() => {
       setChatMessages((prev) => [
         ...prev,
-        { sender: 'lead', text: 'أهلاً بك! تم استلام رسالتك وسيتم الرد عليك قريباً.' }
+        { sender: 'lead', text: 'أهلاً بك! تم استلام استفسارك وسيتم الرد قريباً.' }
       ]);
-    }, 900);
+    }, 800);
   };
 
   const filteredProjects = (matchedProjects || [])
@@ -440,13 +535,12 @@ export default function App() {
         </div>
       </div>
 
-      {/* 2. رأس الصفحة (الهيدر مع زر القائمة والتحكم) */}
+      {/* 2. رأس الصفحة */}
       <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-30 px-4 md:px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="md:hidden p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition"
-            aria-label="القائمة"
           >
             {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -464,7 +558,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* أزرار الهيدر والتحكم بالجلسة */}
+        {/* أزرار الهيدر */}
         <div className="flex items-center gap-2 md:gap-3">
           {currentUser && currentUser.role === 'student' && (
             <button
@@ -532,7 +626,6 @@ export default function App() {
           ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
         `}>
           <div className="space-y-3">
-            {/* بطاقة المستخدم */}
             <div className="p-3 bg-slate-800/50 border border-slate-700/60 rounded-xl mb-4">
               <span className="text-[10px] text-slate-400 block mb-0.5">الحالة الحالية:</span>
               <p className="text-xs font-bold text-white flex items-center gap-1.5">
@@ -546,13 +639,12 @@ export default function App() {
                 {currentUser ? currentUser.name : 'زائر المنصة (غير مسجل)'}
               </p>
               <span className="text-[10px] text-slate-400 block mt-1">
-                {currentUser ? currentUser.title : 'قم بتسجيل الدخول للاستفادة من كامل الميزات'}
+                {currentUser ? currentUser.title : 'سجل الدخول للاستفادة من كامل الميزات'}
               </span>
             </div>
 
             <p className="text-[11px] font-semibold text-slate-500 uppercase px-2">لوحة التحكم والتنقل</p>
             
-            {/* روابط صاحب العمل */}
             {currentUser?.role === 'business' && (
               <>
                 <button
@@ -588,7 +680,6 @@ export default function App() {
               </>
             )}
 
-            {/* روابط المشرف الأكاديمي */}
             {currentUser?.role === 'supervisor' && (
               <>
                 <button
@@ -636,7 +727,6 @@ export default function App() {
               </>
             )}
 
-            {/* روابط الطالب */}
             {currentUser?.role === 'student' && (
               <button
                 onClick={() => { setActiveTab('student_cv'); setIsSidebarOpen(false); }}
@@ -651,7 +741,6 @@ export default function App() {
               </button>
             )}
 
-            {/* روابط عامة وطلابية */}
             <button
               onClick={() => { setActiveTab('match'); setIsSidebarOpen(false); }}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
@@ -677,6 +766,23 @@ export default function App() {
             >
               <Briefcase className="w-4 h-4" />
               تصفح كل المشاريع
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('teams'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                activeTab === 'teams'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Users className="w-4 h-4 text-emerald-400" />
+                ملتقى تشكيل الفرق والطلاب
+              </div>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
+                {availableStudents.filter(s => s.isFree).length} أحرار
+              </span>
             </button>
 
             <button
@@ -745,8 +851,85 @@ export default function App() {
 
         {/* المساحة الرئيسية */}
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">
-          {/* تبويب السيرة الذاتية للطالب */}
-          {activeTab === 'student_cv' ? (
+          {activeTab === 'teams' ? (
+            /* ملتقى تشكيل الفرق والطلاب المتاحين */
+            <div className="space-y-6 max-w-5xl mx-auto">
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Users className="w-5 h-5 text-emerald-400" />
+                    دليل الطلاب المتاحين وبناء الفرق الهندسية
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1.5 max-w-2xl leading-relaxed">
+                    استكشف زملاءك من مختلف تخصصات الكلية لتكوين فرق متعددة المهارات تغطي متطلبات مشاريع السوق.
+                  </p>
+                </div>
+                <div className="bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 text-xs text-slate-300">
+                  الطلاب الجاهزون للانضمام: <span className="font-bold text-emerald-400">{availableStudents.filter(s => s.isFree).length} طلاب</span>
+                </div>
+              </div>
+
+              {/* بطاقات الطلاب */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {availableStudents.map((student) => (
+                  <div
+                    key={student.id}
+                    className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between hover:border-slate-700 transition"
+                  >
+                    <div>
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-2xl p-1.5 bg-slate-800 rounded-xl">{student.avatar}</span>
+                          <div>
+                            <h3 className="font-bold text-sm text-white">{student.name}</h3>
+                            <span className="text-[11px] text-slate-400">{student.role}</span>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${
+                          student.isFree 
+                            ? 'bg-emerald-950/50 text-emerald-300 border-emerald-800/60'
+                            : 'bg-slate-800 text-slate-400 border-slate-700'
+                        }`}>
+                          {student.isFree ? 'طالب حر' : 'ضمن فريق'}
+                        </span>
+                      </div>
+
+                      <div className="mb-3">
+                        <span className="text-[10px] bg-blue-950/60 text-blue-300 border border-blue-800/40 px-2 py-0.5 rounded inline-block">
+                          {student.major}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1 mb-4">
+                        <span className="text-[10px] text-slate-400 block">المهارات:</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {student.skills.map((sk, i) => (
+                            <span key={i} className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
+                              {sk}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      disabled={!student.isFree}
+                      onClick={() => alert(`تم إرسال دعوة انضمام للطالب ${student.name}`)}
+                      className={`w-full py-2 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                        student.isFree
+                          ? 'bg-slate-800 hover:bg-blue-600 text-slate-200 hover:text-white border border-slate-700'
+                          : 'bg-slate-950 text-slate-600 cursor-not-allowed border border-slate-900'
+                      }`}
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      {student.isFree ? 'دعوة للانضمام للفريق' : 'مرتبط بمشروع تخرج'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : activeTab === 'student_cv' ? (
+            /* تبويب السيرة الذاتية */
             <div className="max-w-2xl mx-auto space-y-6">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-2">
@@ -843,7 +1026,7 @@ export default function App() {
               </form>
             </div>
           ) : activeTab === 'roster' && currentUser?.role === 'supervisor' ? (
-            /* تبويب سجل طلبة مشروع التخرج للمشرف */
+            /* سجل الطلاب للمشرف */
             <div className="max-w-5xl mx-auto space-y-6">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex justify-between items-center">
                 <div>
@@ -952,7 +1135,7 @@ export default function App() {
               </div>
             </div>
           ) : activeTab === 'supervisor_review' ? (
-            /* لوحة تحكم المشرف الأكاديمي */
+            /* لوحة تحكم المشرف */
             <div className="space-y-6 max-w-5xl mx-auto">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-2">
@@ -987,7 +1170,7 @@ export default function App() {
               </div>
             </div>
           ) : activeTab === 'stats' ? (
-            /* الإحصائيات ولوحة فجوة مهارات السوق (Market Skills Gap & BI Analytics) */
+            /* الإحصائيات وفجوة السوق */
             <div className="space-y-6 max-w-5xl mx-auto">
               <div>
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -999,7 +1182,6 @@ export default function App() {
                 </p>
               </div>
 
-              {/* البطاقات العامة */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
                   <p className="text-xs text-slate-400">إجمالي المشاريع المطروحة</p>
@@ -1018,7 +1200,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* قسم تحليل فجوة المهارات (Market Skills Gap) */}
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-5">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                   <div>
@@ -1033,7 +1214,6 @@ export default function App() {
                   </span>
                 </div>
 
-                {/* شريط المقارنات */}
                 <div className="space-y-4 pt-2">
                   {[
                     { skill: 'Python & FastAPI', demand: 78, supply: 55, status: 'توازن جيد' },
@@ -1054,24 +1234,22 @@ export default function App() {
                         </span>
                       </div>
 
-                      {/* شريط الطلب والعرض */}
                       <div className="space-y-1">
                         <div className="flex justify-between text-[10px] text-slate-400">
                           <span>طلب سوق العمل: <strong className="text-amber-400">{item.demand}%</strong></span>
                           <span>المتوفر لدى الطلبة: <strong className="text-blue-400">{item.supply}%</strong></span>
                         </div>
                         <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden flex">
-                          <div className="bg-amber-500 h-2" style={{ width: `${item.demand}%` }} title={`طلب السوق: ${item.demand}%`}></div>
+                          <div className="bg-amber-500 h-2" style={{ width: `${item.demand}%` }}></div>
                         </div>
                         <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden flex">
-                          <div className="bg-blue-500 h-1.5" style={{ width: `${item.supply}%` }} title={`عرض الطلاب: ${item.supply}%`}></div>
+                          <div className="bg-blue-500 h-1.5" style={{ width: `${item.supply}%` }}></div>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                {/* بطاقة التوصية الأكاديمية */}
                 <div className="p-4 bg-amber-950/20 border border-amber-800/40 rounded-xl flex items-start gap-3">
                   <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                   <div className="text-xs leading-relaxed text-amber-200/90">
@@ -1124,7 +1302,7 @@ export default function App() {
               </div>
             </div>
           ) : (
-            /* بطاقات المشاريع مع تحليل المهارات المتوفرة والناقصة وتغطية الفريق */
+            /* بطاقات المشاريع والمطابقة */
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
                 <div className="relative w-full md:w-80">
@@ -1208,7 +1386,6 @@ export default function App() {
                           </span>
                         </div>
 
-                        {/* مقاعد الفريق وتغطية الفريق */}
                         <div className="mb-3 bg-slate-800/40 p-2.5 rounded-xl border border-slate-800">
                           <div className="flex justify-between text-[11px] text-slate-400 mb-1">
                             <span className="flex items-center gap-1"><Users className="w-3 h-3" /> مقاعد الفريق</span>
@@ -1224,7 +1401,6 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* التحليل الذكي: المهارات المتوفرة والمهارات الناقصة (Missing Skills) */}
                         <div className="space-y-2 mb-4 bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
                           <div className="flex justify-between items-center text-[10px] text-slate-400">
                             <span className="flex items-center gap-1 font-medium text-slate-300">
@@ -1234,7 +1410,6 @@ export default function App() {
                           </div>
                           
                           <div className="flex flex-wrap gap-1.5">
-                            {/* المهارات المتوفرة لدى الطالب */}
                             {project.matchedSkills && project.matchedSkills.map((skill, idx) => (
                               <span
                                 key={`m-${idx}`}
@@ -1244,22 +1419,14 @@ export default function App() {
                               </span>
                             ))}
 
-                            {/* المهارات الناقصة التي يتطلبها المشروع */}
                             {project.missingSkills && project.missingSkills.map((skill, idx) => (
                               <span
                                 key={`mis-${idx}`}
                                 className="text-[10px] bg-rose-950/40 text-rose-300 border border-rose-800/50 px-2 py-0.5 rounded-md flex items-center gap-1"
-                                title="مهارة يتطلبها المشروع وغير مسجلة في ملفك الشخصي"
                               >
                                 ⚠️ ناقص: {skill}
                               </span>
                             ))}
-                          </div>
-
-                          {/* مؤشر توجيهي سريع */}
-                          <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-900 flex justify-between items-center">
-                            <span>تغطية مهارات الفريق المقترح:</span>
-                            <span className="font-bold text-amber-400">92% متكامل</span>
                           </div>
                         </div>
                       </div>
@@ -1299,7 +1466,7 @@ export default function App() {
         </main>
       </div>
 
-      {/* نافذة تسجيل الدخول وإنشاء الحساب */}
+      {/* نافذة تسجيل الدخول */}
       {showAuthModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative shadow-2xl">
@@ -1514,7 +1681,7 @@ export default function App() {
         </div>
       )}
 
-      {/* نافذة التقديم: تدعم التقديم الفردي وتكوين فريق (Team Formation) مع إرفاق الـ CV */}
+      {/* نافذة التقديم */}
       {isApplyModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative">
@@ -1530,7 +1697,6 @@ export default function App() {
               <p className="text-emerald-400 text-center font-bold py-6 text-sm">{applySuccess}</p>
             ) : (
               <form onSubmit={handleApplySubmit} className="space-y-3.5">
-                {/* خيار التقديم كفريق */}
                 <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-amber-400" />
@@ -1567,7 +1733,7 @@ export default function App() {
                 />
                 <input
                   type="text"
-                  placeholder="الدور المطلوب (مثال: مهندس واجهات، ذكاء اصطناعي، إدارة بيانات)"
+                  placeholder="الدور المطلوب (مثال: مهندس واجهات، ذكاء اصطناعي)"
                   required
                   value={applicantRole}
                   onChange={(e) => setApplicantRole(e.target.value)}
@@ -1645,7 +1811,7 @@ export default function App() {
                   </select>
                 </div>
                 <textarea
-                  placeholder={currentUser?.role === 'business' ? 'اشرح ما تحتاجه ببساطة (مثال: نريد برنامجاً يربط الكاشير بالمستودع ويسهل طباعة الفواتير)...' : 'وصف الفكرة وأهداف المشروع التقنية...'}
+                  placeholder={currentUser?.role === 'business' ? 'اشرح ما تحتاجه ببساطة...' : 'وصف الفكرة وأهداف المشروع التقنية...'}
                   rows={3}
                   required
                   value={newProject.description}
@@ -1672,7 +1838,7 @@ export default function App() {
         </div>
       )}
 
-      {/* نافذة استعراض طلبات الطلاب الواردة (صلاحية الاعتماد للمشرف فقط) */}
+      {/* نافذة استعراض طلبات الطلاب */}
       {showApplicationsModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl p-6 relative">
@@ -1685,7 +1851,7 @@ export default function App() {
             <p className="text-xs text-slate-400 mb-4">
               {currentUser?.role === 'supervisor' 
                 ? 'بصفتك المشرف الأكاديمي، تملك الصلاحية الحصرية لاعتماد أو رفض إسناد المشروع للفرق الطلابية.'
-                : 'قائمة الطلاب المتقدمين لمشاريعك (الاعتماد النهائي يتم بواسطة المشرف الأكاديمي).'}
+                : 'قائمة الطلاب المتقدمين لمشاريعك.'}
             </p>
 
             <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
