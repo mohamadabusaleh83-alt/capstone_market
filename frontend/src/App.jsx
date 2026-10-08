@@ -5,7 +5,7 @@ import {
   Calendar, Award, TrendingUp, Download, Megaphone, ArrowUpRight,
   Star, MessageSquare, Layers, LogIn, LogOut, Store, UserCheck,
   Menu, ShieldCheck, GraduationCap, FileText, AlertTriangle, PieChart,
-  Edit2, Trash2, MessageSquarePlus, Save
+  Edit2, Trash2, MessageSquarePlus, Save, UploadCloud, Send, ExternalLink
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://capstone-market.onrender.com';
@@ -46,7 +46,62 @@ export default function App() {
   });
   const [cvUpdateMessage, setCvUpdateMessage] = useState('');
 
-  // قائمة الطلاب مع دعم الملاحظات والتعديل والحذف عند المشرف
+  // ------------------------------------------------------------------
+  // نظام متابعة التقارير والمهام الأكاديمية (Capstone Deliverables)
+  // ------------------------------------------------------------------
+  const [reportsTimeline, setReportsTimeline] = useState([
+    {
+      id: 1,
+      title: 'وثيقة مقترح المشروع وتحليل المشكلة (Project Proposal & Problem Statement)',
+      deadlineDay: 'الثلاثاء القادم',
+      deadlineDate: '2026-10-13',
+      status: 'submitted', // submitted, pending, reviewed
+      submissionLink: 'https://docs.google.com/document/d/demo_proposal',
+      submittedAt: 'الأحد، 11 أكتوبر 2026',
+      supervisorFeedback: 'تم استلام المقترح المبدئي. يرجى التركيز أكثر على جزئية قاعدة بيانات المحل وتوضيح الـ Schema.',
+      grade: '88/100'
+    },
+    {
+      id: 2,
+      title: 'وثيقة هندسة المتطلبات والنظام (SRS & Architecture Specification)',
+      deadlineDay: 'الثلاثاء 27 أكتوبر',
+      deadlineDate: '2026-10-27',
+      status: 'pending',
+      submissionLink: '',
+      submittedAt: '',
+      supervisorFeedback: 'بانتظار تسليم المخططات الـ UML ومسارات الـ REST API.',
+      grade: 'قيد الانتظار'
+    },
+    {
+      id: 3,
+      title: 'النموذج الأولي واختبار التوافق مع المتجر (Prototype & User Testing)',
+      deadlineDay: 'الثلاثاء 17 نوفمبر',
+      deadlineDate: '2026-11-17',
+      status: 'pending',
+      submissionLink: '',
+      submittedAt: '',
+      supervisorFeedback: 'سيتم فحص الكود المشترك على GitHub.',
+      grade: 'قيد الانتظار'
+    }
+  ]);
+
+  // تعديل موعد وملاحظة التقرير للمشرف
+  const [editingReportId, setEditingReportId] = useState(null);
+  const [editDeadlineInput, setEditDeadlineInput] = useState('');
+  const [editFeedbackInput, setEditFeedbackInput] = useState('');
+
+  // رفع تقرير من قبل الطالب
+  const [submitReportModal, setSubmitReportModal] = useState(null);
+  const [reportUrlInput, setReportUrlInput] = useState('');
+
+  // رسائل المحادثة المباشرة بين المشرف والطلاب حول التقارير
+  const [supervisionChat, setSupervisionChat] = useState([
+    { sender: 'supervisor', name: 'د. إياد الأحمد (المشرف)', text: 'مرحباً بالجميع، تذكير بأن موعد تسليم تقرير المقترح SRS محدد يوم الثلاثاء القادم دون تأخير.', time: '10:30 ص' },
+    { sender: 'student', name: 'أحمد منصور (قائد الفريق)', text: 'أهلاً دكتور، قمنا بإنهاء المخططات المبدئية ورفعنا رابط المسودة في خانة التسليم.', time: '11:15 ص' }
+  ]);
+  const [chatInputText, setChatInputText] = useState('');
+
+  // قائمة الطلاب لشاشة المشرف والطلاب
   const [studentsList, setStudentsList] = useState([
     {
       id: 'st-1',
@@ -56,7 +111,6 @@ export default function App() {
       course: 'مشروع تخرج 2',
       role: 'محلل أعمال وقواعد بيانات',
       skills: ['SQL', 'Power BI', 'Python', 'ETL'],
-      experienceLevel: 'متقدم',
       isFree: false,
       projectTitle: 'نظام إدارة المستودعات ونقاط البيع السحابي (POS)',
       supervisorNote: 'فريق ملتزم، تم تسليم مقترح المتطلبات بنجاح.',
@@ -70,7 +124,6 @@ export default function App() {
       course: 'مشروع تخرج 1',
       role: 'مهندسة ذكاء اصطناعي وباك إند',
       skills: ['Python', 'FastAPI', 'Machine Learning', 'Docker'],
-      experienceLevel: 'متوسط',
       isFree: true,
       projectTitle: 'غير مرتبط بمشروع',
       supervisorNote: 'طالبة متميزة تبحث عن فريق يركز على الـ AI.',
@@ -84,7 +137,6 @@ export default function App() {
       course: 'مشروع تخرج 2',
       role: 'مطور واجهات وسحابي',
       skills: ['React', 'TailwindCSS', 'Docker', 'TypeScript'],
-      experienceLevel: 'متقدم',
       isFree: false,
       projectTitle: 'تطبيق ويب لحجز المواعيد وإدارة الطلبات',
       supervisorNote: 'بحاجة لمتابعة تقرير فحص الأمان.',
@@ -98,7 +150,6 @@ export default function App() {
       course: 'مشروع تخرج 2',
       role: 'مهندس أمن سيبراني وبنية تحتية',
       skills: ['Cybersecurity', 'Linux', 'Network Security', 'Python'],
-      experienceLevel: 'متوسط',
       isFree: false,
       projectTitle: 'بوابة تدقيق الثغرات واكتشاف الاختراقات',
       supervisorNote: 'تم اعتماد المرحلة الأولى من التقرير SRS.',
@@ -112,7 +163,6 @@ export default function App() {
       course: 'مشروع تخرج 1',
       role: 'مصممة واجهات ومطورة ويب',
       skills: ['React', 'Figma', 'UI/UX', 'CSS Architecture'],
-      experienceLevel: 'متقدم',
       isFree: true,
       projectTitle: 'غير مرتبط بمشروع',
       supervisorNote: 'تنتظر التسكين مع فريق يحتاج مصمم واجهات.',
@@ -126,7 +176,6 @@ export default function App() {
       course: 'مشروع تخرج 1',
       role: 'إدارة أنظمة وشبكات',
       skills: ['Linux', 'Docker', 'System Admin', 'Bash'],
-      experienceLevel: 'متوسط',
       isFree: true,
       projectTitle: 'غير مرتبط بمشروع',
       supervisorNote: '',
@@ -134,7 +183,7 @@ export default function App() {
     }
   ]);
 
-  // حالة تعديل الملاحظة والمشروع عند المشرف
+  // إدارة تعديل الطلاب عند المشرف
   const [editingStudentId, setEditingStudentId] = useState(null);
   const [editNoteText, setEditNoteText] = useState('');
   const [editStatusValue, setEditStatusValue] = useState(false);
@@ -247,8 +296,6 @@ export default function App() {
   ]);
 
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
-
-  // المحادثة
   const [chatProject, setChatProject] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [inputMsg, setInputMsg] = useState('');
@@ -290,13 +337,13 @@ export default function App() {
 
     const userObj = {
       role: authRole,
-      name: authFullName || authEmail.split('@')[0] || (authRole === 'supervisor' ? 'د. إياد الأحمد' : 'مستخدم مسجل'),
+      name: authFullName || authEmail.split('@')[0] || (authRole === 'supervisor' ? 'د. إياد الأحمد' : 'أحمد منصور'),
       title: authRole === 'student' ? 'طالب خريج' : authRole === 'business' ? 'صاحب عمل / متجر' : 'مشرف أكاديمي'
     };
     setCurrentUser(userObj);
     localStorage.setItem('app_user_role', JSON.stringify(userObj));
     setShowAuthModal(false);
-    setActiveTab(authRole === 'business' ? 'business_projects' : authRole === 'supervisor' ? 'supervisor_teams' : 'match');
+    setActiveTab(authRole === 'business' ? 'business_projects' : authRole === 'supervisor' ? 'reports_hub' : 'reports_hub');
   };
 
   const handleLogout = () => {
@@ -376,122 +423,50 @@ export default function App() {
     );
   };
 
-  // دوال خاصة بالمشرف: تعديل، حذف، ووضع ملاحظة
-  const startEditingStudent = (student) => {
-    setEditingStudentId(student.id);
-    setEditNoteText(student.supervisorNote || '');
-    setEditStatusValue(student.isFree);
-    setEditProjectTitle(student.projectTitle || '');
-  };
-
-  const saveStudentEdits = (id) => {
-    setStudentsList((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? {
-              ...s,
-              supervisorNote: editNoteText,
-              isFree: editStatusValue,
-              projectTitle: editStatusValue ? 'غير مرتبط بمشروع' : (editProjectTitle || 'مشروع معتمد')
-            }
-          : s
+  // دوال التقارير
+  const handleUpdateReportDeadline = (reportId) => {
+    setReportsTimeline((prev) =>
+      prev.map((r) =>
+        r.id === reportId
+          ? { ...r, deadlineDay: editDeadlineInput || r.deadlineDay, supervisorFeedback: editFeedbackInput || r.supervisorFeedback }
+          : r
       )
     );
-    setEditingStudentId(null);
+    setEditingReportId(null);
   };
 
-  const deleteStudentFromCohort = (id, name) => {
-    if (window.confirm(`هل أنت متأكد من حذف/استبعاد الطالب "${name}" من سجل مساق مشروع التخرج؟`)) {
-      setStudentsList((prev) => prev.filter((s) => s.id !== id));
-    }
-  };
-
-  const triggerApply = (project) => {
-    if (!currentUser) {
-      setShowAuthModal(true);
-      return;
-    }
-    setSelectedProject(project);
-    setApplicantName(currentUser.name);
-    setIsApplyModalOpen(true);
-  };
-
-  const triggerCreateProject = () => {
-    if (!currentUser) {
-      setShowAuthModal(true);
-      return;
-    }
-    setIsCreateModalOpen(true);
-  };
-
-  const handleApplySubmit = (e) => {
+  const handleStudentSubmitReport = (e) => {
     e.preventDefault();
-    const teamDetails = applyAsTeam 
-      ? ` | [فريق متكامل]: ${teamMembersInput || 'أحمد، سارة، محمد'}`
-      : ' | [فردي]';
+    if (!reportUrlInput.trim()) return;
 
-    const newApp = {
-      id: Date.now(),
-      applicant_name: applicantName,
-      applicant_role: applicantRole,
-      message: `[${studentCv.major} | ${studentCv.course}]${teamDetails} - ${applicantMessage}`,
-      status: 'pending'
+    setReportsTimeline((prev) =>
+      prev.map((r) =>
+        r.id === submitReportModal.id
+          ? {
+              ...r,
+              status: 'submitted',
+              submissionLink: reportUrlInput,
+              submittedAt: 'اليوم، تم التسليم بنجاح'
+            }
+          : r
+      )
+    );
+    setSubmitReportModal(null);
+    setReportUrlInput('');
+    alert('تم رفع التقرير بنجاح للمشرف الأكاديمي!');
+  };
+
+  const sendSupervisionMsg = (e) => {
+    e.preventDefault();
+    if (!chatInputText.trim()) return;
+    const newMsg = {
+      sender: currentUser?.role === 'supervisor' ? 'supervisor' : 'student',
+      name: currentUser?.name || 'طالب مسجل',
+      text: chatInputText,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-
-    setApplications((prev) => [newApp, ...prev]);
-    setApplySuccess('تم إرسال طلبك وسيرتك الذاتية للمشرف الأكاديمي للاعتماد!');
-    setTimeout(() => {
-      setIsApplyModalOpen(false);
-      setApplySuccess('');
-    }, 1300);
-  };
-
-  const handleCreateProject = (e) => {
-    e.preventDefault();
-    const skillsArr = newProject.required_skills.split(',').map((s) => s.trim());
-    const projectToAdd = {
-      id: Date.now(),
-      title: newProject.title,
-      description: newProject.description,
-      category: newProject.category,
-      difficulty: newProject.difficulty,
-      hoursPerWeek: Number(newProject.hours_per_week) || 12,
-      maxMembers: 4,
-      currentMembers: 1,
-      skills: skillsArr,
-      matchedSkills: skillsArr.filter((s) => userSkills.map((u) => u.toLowerCase()).includes(s.toLowerCase())),
-      missingSkills: skillsArr.filter((s) => !userSkills.map((u) => u.toLowerCase()).includes(s.toLowerCase())),
-      matchRate: 70,
-      match: '70% تطابق'
-    };
-
-    setMatchedProjects((prev) => [projectToAdd, ...prev]);
-    setCreateSuccess('تم نشر المشروع بنجاح!');
-    setTimeout(() => {
-      setIsCreateModalOpen(false);
-      setCreateSuccess('');
-      setNewProject({ 
-        title: '', 
-        description: '', 
-        required_skills: '', 
-        category: ACADEMIC_MAJORS[0],
-        difficulty: 'متوسط',
-        hours_per_week: '12'
-      });
-    }, 1200);
-  };
-
-  const sendChatMessage = (e) => {
-    e.preventDefault();
-    if (!inputMsg.trim()) return;
-    setChatMessages((prev) => [...prev, { sender: 'user', text: inputMsg }]);
-    setInputMsg('');
-    setTimeout(() => {
-      setChatMessages((prev) => [
-        ...prev,
-        { sender: 'lead', text: 'أهلاً بك! تم استلام استفسارك وسيتم الرد قريباً.' }
-      ]);
-    }, 800);
+    setSupervisionChat((prev) => [...prev, newMsg]);
+    setChatInputText('');
   };
 
   const filteredProjects = (matchedProjects || [])
@@ -513,18 +488,14 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans" dir="rtl">
       
-      {/* 1. الشريط العلوي العام */}
+      {/* 1. الشريط العلوي العام مع موعد التسليم القريب */}
       <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-xs py-2 px-4 md:px-6 shadow-md flex items-center justify-between border-b border-amber-500/20">
         <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap">
           <span className="flex items-center gap-1.5 bg-amber-500 text-slate-950 font-bold px-2.5 py-0.5 rounded-full text-[10px]">
-            <Megaphone className="w-3 h-3" /> بوابة الشراكة والتدريب
+            <Megaphone className="w-3 h-3" /> تسليمات المساق
           </span>
           <span className="text-slate-200 text-xs truncate">
-            {currentUser?.role === 'business'
-              ? '🏢 بوابة القطاع الخاص: اطرح التحديات البرمجية ليحلها طلاب مشاريع التخرج تحت إشراف أكاديمي.'
-              : currentUser?.role === 'supervisor'
-              ? '📋 بوابة الإشراف الأكاديمي: إدارة الشُّعب، مراجعة المشاريع، ووضع التوجيهات والملاحظات.'
-              : '🎓 بوابة الطلاب: استعرض مشاكل الشركات والمحلات الحقيقية وابنِ فريقك مع زملائك.'}
+            📅 موعد تسليم التقرير القادم لجميع الفرق: <strong>الثلاثاء القادم (وثيقة SRS والنموذج المبدئي)</strong>
           </span>
         </div>
         <div className="hidden md:flex items-center gap-4 text-amber-300/80 text-xs">
@@ -552,33 +523,20 @@ export default function App() {
               منصة مشاريع التخرج وربط سوق العمل
             </h1>
             <p className="text-[11px] text-slate-400">
-              ربط مشاريع الطلاب بسوق العمل والمصالح التجارية
+              ربط مشاريع الطلاب بسوق العمل والإشراف الأكاديمي المباشر
             </p>
           </div>
         </div>
 
         {/* أزرار الهيدر */}
         <div className="flex items-center gap-2 md:gap-3">
-          {currentUser && currentUser.role === 'student' && (
-            <button
-              onClick={() => setActiveTab('student_cv')}
-              className="flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer"
-            >
-              <FileText className="w-3.5 h-3.5 text-blue-400" />
-              سيرتي الذاتية (CV)
-            </button>
-          )}
-
-          {currentUser?.role === 'business' && (
-            <button
-              onClick={triggerCreateProject}
-              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-3 md:px-4 py-2 rounded-xl text-xs font-semibold shadow-md transition cursor-pointer"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">طرح مشكلة لمتجرك</span>
-              <span className="sm:hidden">إضافة</span>
-            </button>
-          )}
+          <button
+            onClick={() => setActiveTab('reports_hub')}
+            className="flex items-center gap-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 text-indigo-200 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+          >
+            <Clock className="w-3.5 h-3.5 text-amber-400" />
+            تسليم ومتابعة التقارير
+          </button>
 
           {currentUser ? (
             <div className="flex items-center gap-2">
@@ -644,40 +602,23 @@ export default function App() {
 
             <p className="text-[11px] font-semibold text-slate-500 uppercase px-2">لوحة التحكم والتنقل</p>
             
-            {/* روابط صاحب العمل */}
-            {currentUser?.role === 'business' && (
-              <>
-                <button
-                  onClick={() => { setActiveTab('business_projects'); setIsSidebarOpen(false); }}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
-                    activeTab === 'business_projects'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-                  }`}
-                >
-                  <Briefcase className="w-4 h-4" />
-                  مشاريع محلي المنشورة
-                </button>
-
-                <button
-                  onClick={() => {
-                    setShowApplicationsModal(true);
-                    setIsSidebarOpen(false);
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium bg-slate-800/60 hover:bg-slate-800 text-slate-300 transition cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Users className="w-4 h-4 text-emerald-400" />
-                    طلبات الطلاب المتقدمين
-                  </div>
-                  {pendingCount > 0 && (
-                    <span className="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                      {pendingCount}
-                    </span>
-                  )}
-                </button>
-              </>
-            )}
+            {/* التبويب الجديد الأكاديمي: تسليم ومتابعة التقارير والتواصل */}
+            <button
+              onClick={() => { setActiveTab('reports_hub'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                activeTab === 'reports_hub'
+                  ? 'bg-blue-600 border-blue-400 text-white shadow-md'
+                  : 'bg-slate-800/70 border-slate-700 text-amber-300 hover:bg-slate-800'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Clock className="w-4 h-4 text-amber-400" />
+                تسليم ومتابعة التقارير
+              </div>
+              <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold">
+                الثلاثاء
+              </span>
+            </button>
 
             {/* روابط المشرف الأكاديمي */}
             {currentUser?.role === 'supervisor' && (
@@ -710,28 +651,10 @@ export default function App() {
                   <CheckCircle className="w-4 h-4 text-emerald-400" />
                   اعتماد المشاريع الأكاديمية
                 </button>
-
-                <button
-                  onClick={() => {
-                    setShowApplicationsModal(true);
-                    setIsSidebarOpen(false);
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium bg-slate-800/60 hover:bg-slate-800 text-slate-300 transition cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Users className="w-4 h-4 text-blue-400" />
-                    طلبات الإسناد الواردة
-                  </div>
-                  {pendingCount > 0 && (
-                    <span className="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                      {pendingCount}
-                    </span>
-                  )}
-                </button>
               </>
             )}
 
-            {/* روابط الطالب فقط: ملتقى تشكيل الفرق والسيرة الذاتية */}
+            {/* روابط الطلاب فقط */}
             {(!currentUser || currentUser.role === 'student') && (
               <>
                 {currentUser?.role === 'student' && (
@@ -767,7 +690,7 @@ export default function App() {
               </>
             )}
 
-            {/* روابط مشتركة */}
+            {/* روابط عامة */}
             <button
               onClick={() => { setActiveTab('match'); setIsSidebarOpen(false); }}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
@@ -793,21 +716,6 @@ export default function App() {
             >
               <Briefcase className="w-4 h-4" />
               تصفح كل المشاريع
-            </button>
-
-            <button
-              onClick={() => { setActiveTab('favorites'); setIsSidebarOpen(false); }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
-                activeTab === 'favorites'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Star className="w-4 h-4 text-amber-400" />
-                المشاريع المحفوظة
-              </div>
-              <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">{favorites.length}</span>
             </button>
 
             <button
@@ -854,15 +762,242 @@ export default function App() {
               </button>
             )}
             <div className="p-2.5 bg-blue-950/30 border border-blue-900/50 rounded-xl text-[10px] text-slate-400 text-center">
-              منظومة مشاريع التخرج وسوق العمل
+              منظومة تسليم التقارير والإشراف
             </div>
           </div>
         </aside>
 
         {/* المساحة الرئيسية */}
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">
-          {/* 1. شاشة المشرف: إدارة ومتابعة شُعب التخرج والفرق (مع تعديل وحذف وملاحظات) */}
-          {activeTab === 'supervisor_teams' && currentUser?.role === 'supervisor' ? (
+
+          {/* 🌟 التبويب الجديد: خانة متابعة التقارير والتواصل المباشر مع الدكتور 🌟 */}
+          {activeTab === 'reports_hub' ? (
+            <div className="space-y-6 max-w-6xl mx-auto">
+              
+              {/* الرأس التوضيحي */}
+              <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 border border-blue-800/50 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-6 h-6 text-amber-400" />
+                    <h2 className="text-xl font-bold text-white">بوابة تسليم التقارير والتواصل الأكاديمي المباشر</h2>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1.5 max-w-2xl leading-relaxed">
+                    من هنا تتم متابعة مراحل إعداد مساق مشروع التخرج، مواعيد التسليم المحددة من المشرف، استلام تقييم المسودات، والتواصل الفوري بين الدكتور والطلبة.
+                  </p>
+                </div>
+
+                <div className="bg-slate-900/90 border border-slate-700/80 p-3 rounded-xl text-xs flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">الموعد النهائي القادم:</span>
+                    <strong className="text-amber-400">الثلاثاء القادم (23:59 مساءً)</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* شبكة التقارير والشات المباشر */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* العمود 1 و 2: جدول ومسار تسليم التقارير */}
+                <div className="lg:col-span-2 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-blue-400" />
+                      جدول تسليم التقارير الدورية للمشروع
+                    </h3>
+                    <span className="text-[11px] text-slate-400">
+                      {currentUser?.role === 'supervisor' ? 'صلاحية التعديل وتحديد المواعيد متاحة لك كـ مشرف' : 'اضغط على التقرير لرفع المسودة'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3.5">
+                    {reportsTimeline.map((rep) => {
+                      const isEditing = editingReportId === rep.id;
+
+                      return (
+                        <div key={rep.id} className="bg-slate-900 border border-slate-800 hover:border-slate-700 p-5 rounded-2xl transition space-y-3">
+                          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                            <div>
+                              <span className="text-[10px] bg-slate-800 text-blue-400 px-2 py-0.5 rounded border border-slate-700 font-bold">
+                                تقرير رقم #{rep.id}
+                              </span>
+                              <h4 className="font-bold text-sm text-white mt-1">{rep.title}</h4>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                                rep.status === 'submitted'
+                                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
+                                  : 'bg-amber-950/60 text-amber-300 border-amber-800/60'
+                              }`}>
+                                {rep.status === 'submitted' ? 'تم تسليم المسودة' : 'بانتظار التسليم'}
+                              </span>
+                              {currentUser?.role === 'supervisor' && (
+                                <button
+                                  onClick={() => {
+                                    setEditingReportId(rep.id);
+                                    setEditDeadlineInput(rep.deadlineDay);
+                                    setEditFeedbackInput(rep.supervisorFeedback);
+                                  }}
+                                  className="p-1.5 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white rounded-lg transition"
+                                  title="تعديل الموعد النهائي وملاحظات الدكتور"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* الموعد النهائي */}
+                          <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-xs">
+                            <div className="flex items-center gap-2 text-slate-300">
+                              <Calendar className="w-4 h-4 text-amber-400" />
+                              <span>الموعد النهائي للتسليم:</span>
+                              <strong className="text-amber-400">{rep.deadlineDay}</strong>
+                            </div>
+
+                            {rep.submissionLink ? (
+                              <a
+                                href={rep.submissionLink}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-blue-400 hover:underline flex items-center gap-1 text-[11px]"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" /> عرض ملف التقرير المسلم
+                              </a>
+                            ) : (
+                              <span className="text-slate-500 text-[11px]">لم يتم رفع ملف بعد</span>
+                            )}
+                          </div>
+
+                          {/* إذا كان المشرف يعدل الموعد والملاحظة */}
+                          {isEditing ? (
+                            <div className="p-3 bg-slate-800/60 rounded-xl space-y-2 border border-slate-700">
+                              <label className="text-[10px] text-slate-300 block">تعديل موعد التسليم (يظهر للطلاب فوراً):</label>
+                              <input
+                                type="text"
+                                value={editDeadlineInput}
+                                onChange={(e) => setEditDeadlineInput(e.target.value)}
+                                placeholder="مثال: الثلاثاء القادم 20 أكتوبر"
+                                className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                              />
+
+                              <label className="text-[10px] text-slate-300 block">ملاحظات وتوجيهات المشرف:</label>
+                              <textarea
+                                rows={2}
+                                value={editFeedbackInput}
+                                onChange={(e) => setEditFeedbackInput(e.target.value)}
+                                placeholder="اكتب الملاحظات والتعديلات المطلوبة على التقرير..."
+                                className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                              />
+
+                              <div className="flex justify-end gap-2 pt-1">
+                                <button
+                                  onClick={() => handleUpdateReportDeadline(rep.id)}
+                                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 font-bold"
+                                >
+                                  <Save className="w-3.5 h-3.5" /> حفظ الموعد والملاحظة
+                                </button>
+                                <button
+                                  onClick={() => setEditingReportId(null)}
+                                  className="bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg"
+                                >
+                                  إلغاء
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            /* عرض ملاحظات الدكتور وتقييمه */
+                            <div className="text-xs bg-blue-950/20 border border-blue-900/40 p-3 rounded-xl space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-blue-300 flex items-center gap-1.5">
+                                  <MessageSquarePlus className="w-3.5 h-3.5 text-blue-400" />
+                                  ملاحظات المشرف الأكاديمي (د. إياد):
+                                </span>
+                                <span className="text-[10px] bg-slate-800 text-amber-300 px-2 py-0.5 rounded font-mono">
+                                  التقييم: {rep.grade}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-300 leading-relaxed pr-5">
+                                {rep.supervisorFeedback}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* زر التسليم للطلاب */}
+                          {currentUser?.role !== 'supervisor' && (
+                            <div className="pt-2 flex justify-end">
+                              <button
+                                onClick={() => setSubmitReportModal(rep)}
+                                className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-4 py-2 rounded-xl font-bold flex items-center gap-1.5 transition shadow-sm cursor-pointer"
+                              >
+                                <UploadCloud className="w-4 h-4" />
+                                {rep.status === 'submitted' ? 'تحديث / إعادة تسليم المسودة' : 'رفع وتسليم التقرير الآن'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* العمود 3: شات مباشر ومخصص للتقارير بين الدكتور والطلاب */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col h-[580px] shadow-xl">
+                  <div className="pb-3 border-b border-slate-800 flex items-center justify-between">
+                    <div>
+                      <h3 className="font-bold text-sm text-white flex items-center gap-1.5">
+                        <MessageSquare className="w-4 h-4 text-emerald-400" />
+                        المحادثة الأكاديمية المباشرة
+                      </h3>
+                      <span className="text-[10px] text-slate-400">تواصل فوري بين المشرف وأعضاء الفريق</span>
+                    </div>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" title="متصل الآن"></span>
+                  </div>
+
+                  {/* رسائل الشات */}
+                  <div className="flex-1 overflow-y-auto space-y-3 py-3 pr-1 text-xs">
+                    {supervisionChat.map((msg, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-3 rounded-2xl max-w-[88%] space-y-1 ${
+                          msg.sender === 'supervisor'
+                            ? 'bg-amber-950/40 border border-amber-800/50 text-slate-200 ml-auto'
+                            : 'bg-blue-600/90 text-white mr-auto'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center gap-2 text-[10px] font-bold text-slate-300">
+                          <span>{msg.name}</span>
+                          <span className="text-[9px] opacity-70">{msg.time}</span>
+                        </div>
+                        <p className="text-xs leading-relaxed">{msg.text}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* حقل كتابة الرسالة */}
+                  <form onSubmit={sendSupervisionMsg} className="pt-2 border-t border-slate-800 flex gap-2">
+                    <input
+                      type="text"
+                      value={chatInputText}
+                      onChange={(e) => setChatInputText(e.target.value)}
+                      placeholder={currentUser?.role === 'supervisor' ? 'اكتب توجيهاً للفريق...' : 'اطرح استفسارك للدكتور حول التقرير...'}
+                      className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                    />
+                    <button
+                      type="submit"
+                      className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-xl transition cursor-pointer"
+                      title="إرسال"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </form>
+                </div>
+
+              </div>
+            </div>
+          ) : activeTab === 'supervisor_teams' && currentUser?.role === 'supervisor' ? (
+            /* إدارة الشُّعب والفرق للمشرف */
             <div className="space-y-6 max-w-6xl mx-auto">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -874,17 +1009,8 @@ export default function App() {
                     من هنا يمتلك المشرف الأكاديمي الصلاحية الكاملة لتسجيل الملاحظات، تعديل حالة تسكين الطلاب، وفك ارتباط أو استبعاد أي طالب.
                   </p>
                 </div>
-                <div className="flex gap-2 text-xs">
-                  <div className="bg-emerald-950/60 border border-emerald-800/60 px-3 py-1.5 rounded-xl text-emerald-300">
-                    مرتبطون بمشاريع: <strong>{studentsList.filter(s => !s.isFree).length}</strong>
-                  </div>
-                  <div className="bg-amber-950/60 border border-amber-800/60 px-3 py-1.5 rounded-xl text-amber-300">
-                    أحرار (بحاجة لتسكين): <strong>{studentsList.filter(s => s.isFree).length}</strong>
-                  </div>
-                </div>
               </div>
 
-              {/* جدول المتابعة الأكاديمي للمشرف */}
               <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
                 <table className="w-full text-right text-xs">
                   <thead className="bg-slate-950 border-b border-slate-800 text-slate-400">
@@ -971,7 +1097,21 @@ export default function App() {
                             {isEditing ? (
                               <div className="flex items-center justify-center gap-1.5">
                                 <button
-                                  onClick={() => saveStudentEdits(st.id)}
+                                  onClick={() => {
+                                    setStudentsList((prev) =>
+                                      prev.map((s) =>
+                                        s.id === st.id
+                                          ? {
+                                              ...s,
+                                              supervisorNote: editNoteText,
+                                              isFree: editStatusValue,
+                                              projectTitle: editStatusValue ? 'غير مرتبط بمشروع' : (editProjectTitle || 'مشروع معتمد')
+                                            }
+                                          : s
+                                      )
+                                    );
+                                    setEditingStudentId(null);
+                                  }}
                                   className="p-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition"
                                   title="حفظ التعديلات والملاحظة"
                                 >
@@ -980,7 +1120,6 @@ export default function App() {
                                 <button
                                   onClick={() => setEditingStudentId(null)}
                                   className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition"
-                                  title="إلغاء"
                                 >
                                   <X className="w-4 h-4" />
                                 </button>
@@ -988,14 +1127,23 @@ export default function App() {
                             ) : (
                               <div className="flex items-center justify-center gap-1.5">
                                 <button
-                                  onClick={() => startEditingStudent(st)}
+                                  onClick={() => {
+                                    setEditingStudentId(st.id);
+                                    setEditNoteText(st.supervisorNote || '');
+                                    setEditStatusValue(st.isFree);
+                                    setEditProjectTitle(st.projectTitle || '');
+                                  }}
                                   className="p-1.5 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white rounded-lg transition"
                                   title="تعديل الحالة أو وضع ملاحظة"
                                 >
                                   <Edit2 className="w-3.5 h-3.5" />
                                 </button>
                                 <button
-                                  onClick={() => deleteStudentFromCohort(st.id, st.name)}
+                                  onClick={() => {
+                                    if (window.confirm(`استبعاد الطالب "${st.name}" من الكشف؟`)) {
+                                      setStudentsList((prev) => prev.filter((s) => s.id !== st.id));
+                                    }
+                                  }}
                                   className="p-1.5 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-lg transition"
                                   title="استبعاد الطالب من الكشف"
                                 >
@@ -1012,7 +1160,7 @@ export default function App() {
               </div>
             </div>
           ) : activeTab === 'teams' ? (
-            /* 2. شاشة الطلاب: ملتقى تشكيل الفرق والطلاب المتاحين */
+            /* ملتقى تشكيل الفرق والطلاب للطلبة */
             <div className="space-y-6 max-w-5xl mx-auto">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -1089,7 +1237,7 @@ export default function App() {
               </div>
             </div>
           ) : activeTab === 'student_cv' ? (
-            /* تبويب السيرة الذاتية للطالب */
+            /* تبويب السيرة الذاتية */
             <div className="max-w-2xl mx-auto space-y-6">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-2">
@@ -1135,7 +1283,7 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">رابط المشاريع السابقة أو GitHub / Portfolio</label>
+                  <label className="text-[11px] text-slate-300 block mb-1">رابط GitHub / Portfolio</label>
                   <input
                     type="url"
                     value={studentCv.portfolioUrl}
@@ -1153,7 +1301,6 @@ export default function App() {
                     value={studentCv.bio}
                     onChange={(e) => setStudentCv({ ...studentCv, bio: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
-                    placeholder="اكتب نبذة عن المجالات التي تتقنها..."
                   />
                 </div>
 
@@ -1184,95 +1331,6 @@ export default function App() {
                   حفظ وتحديث بيانات السيرة الذاتية
                 </button>
               </form>
-            </div>
-          ) : activeTab === 'business_projects' ? (
-            /* لوحة تحكم أصحاب الأعمال */
-            <div className="space-y-6 max-w-5xl mx-auto">
-              <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-slate-900 border border-blue-800/50 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Store className="w-5 h-5 text-amber-400" />
-                    مرحباً بك، {currentUser?.name}
-                  </h2>
-                  <p className="text-xs text-slate-300 mt-1.5 max-w-xl leading-relaxed">
-                    من هنا يمكنك متابعة مشاريعك التي طرحتها للطلاب، واستعراض طلبات الانضمام لاختيار الفريق الأنسب.
-                  </p>
-                </div>
-                <button
-                  onClick={triggerCreateProject}
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition shadow-lg flex items-center gap-2 cursor-pointer"
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  طرح فكرة مشروع جديدة
-                </button>
-              </div>
-
-              <div>
-                <h3 className="font-bold text-base text-white mb-4">المشاريع التي طرحتها على الطلاب</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {matchedProjects.slice(0, 2).map((p) => (
-                    <div key={p.id} className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between">
-                      <div>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-[11px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-0.5 rounded-md">
-                            {p.category}
-                          </span>
-                          <span className="text-xs text-slate-400">{p.currentMembers} من {p.maxMembers} مقاعد محجوزة</span>
-                        </div>
-                        <h4 className="font-bold text-base text-white mb-2">{p.title}</h4>
-                        <p className="text-xs text-slate-400 line-clamp-3 mb-4">{p.description}</p>
-                      </div>
-
-                      <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
-                        <button
-                          onClick={() => {
-                            setShowApplicationsModal(true);
-                          }}
-                          className="bg-slate-800 hover:bg-slate-700 text-white text-xs px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <Users className="w-3.5 h-3.5 text-blue-400" />
-                          عرض المتقدمين لهذا المشروع
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : activeTab === 'supervisor_review' ? (
-            /* لوحة تدقيق واعتماد المشاريع للمشرف */
-            <div className="space-y-6 max-w-5xl mx-auto">
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-2">
-                  <ShieldCheck className="w-5 h-5 text-amber-400" />
-                  مراجعة واعتماد مشاريع التخرج الأكاديمية
-                </h2>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  بصفتك مشرفاً أكاديمياً، يمكنك تدقيق المشاكل المطروحة من المحلات والشركات واعتمادها كمشاريع تخرج صالحة للمناقشة.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                {matchedProjects.map((p) => (
-                  <div key={p.id} className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-white">{p.title}</span>
-                        <span className="text-[10px] bg-slate-800 text-amber-400 px-2 py-0.5 rounded border border-slate-700">{p.category}</span>
-                      </div>
-                      <p className="text-xs text-slate-400 line-clamp-2">{p.description}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => alert(`تم اعتماد المشروع "${p.title}" رسمياً كمشروع تخرج معتمد.`)}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer"
-                      >
-                        <Check className="w-3.5 h-3.5" /> اعتماد كـ Capstone
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           ) : activeTab === 'stats' ? (
             /* الإحصائيات وفجوة السوق */
@@ -1314,9 +1372,6 @@ export default function App() {
                     </h3>
                     <p className="text-[11px] text-slate-400">مقارنة نسبة طلب سوق العمل بنسبة مهارات الطلاب المتوفرة</p>
                   </div>
-                  <span className="text-[10px] bg-blue-500/10 text-blue-300 border border-blue-500/20 px-2.5 py-1 rounded-lg">
-                    مؤشر موجه للجامعة وأصحاب القرار
-                  </span>
                 </div>
 
                 <div className="space-y-4 pt-2">
@@ -1353,13 +1408,6 @@ export default function App() {
                       </div>
                     </div>
                   ))}
-                </div>
-
-                <div className="p-4 bg-amber-950/20 border border-amber-800/40 rounded-xl flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                  <div className="text-xs leading-relaxed text-amber-200/90">
-                    <strong>توصية النظام لعمادة الكلية والمشرفين:</strong> توجد فجوة بنسبة <strong>37%</strong> في مهارات ذكاء الأعمال (Power BI) وتحليل البيانات، حيث تطلبها مشاريع المحلات والمتاجر بشكل متزايد بينما يركز معظم الطلاب على الواجهات الأمامية. يُوصى بتوجيه طلاب مشاريع تخرج 1 نحو أنظمة الـ BI والتحليل.
-                  </div>
                 </div>
               </div>
             </div>
@@ -1491,25 +1539,10 @@ export default function App() {
                           </span>
                         </div>
 
-                        <div className="mb-3 bg-slate-800/40 p-2.5 rounded-xl border border-slate-800">
-                          <div className="flex justify-between text-[11px] text-slate-400 mb-1">
-                            <span className="flex items-center gap-1"><Users className="w-3 h-3" /> مقاعد الفريق</span>
-                            <span className={`font-semibold ${isFull ? 'text-rose-400' : 'text-slate-300'}`}>
-                              {isFull ? 'الفريق مكتمل' : `${project.currentMembers} من ${project.maxMembers} طلاب`}
-                            </span>
-                          </div>
-                          <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                            <div
-                              className={`h-1.5 rounded-full ${isFull ? 'bg-rose-500' : 'bg-blue-500'}`}
-                              style={{ width: `${(project.currentMembers / project.maxMembers) * 100}%` }}
-                            ></div>
-                          </div>
-                        </div>
-
                         <div className="space-y-2 mb-4 bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
                           <div className="flex justify-between items-center text-[10px] text-slate-400">
                             <span className="flex items-center gap-1 font-medium text-slate-300">
-                              <Sparkles className="w-3 h-3 text-blue-400" /> تحليل مطابقة المهارات:
+                              <Sparkles className="w-3.5 h-3.5 text-blue-400" /> تحليل مطابقة المهارات:
                             </span>
                             <span className="text-emerald-400 font-bold">{project.matchedSkills?.length || 0} متوفرة</span>
                           </div>
@@ -1539,7 +1572,12 @@ export default function App() {
                       <div className="flex items-center gap-2">
                         <button
                           disabled={isFull}
-                          onClick={() => triggerApply(project)}
+                          onClick={() => {
+                            if (!currentUser) { setShowAuthModal(true); return; }
+                            setSelectedProject(project);
+                            setApplicantName(currentUser.name);
+                            setIsApplyModalOpen(true);
+                          }}
                           className={`flex-1 py-2 rounded-xl text-xs font-semibold shadow-md transition flex items-center justify-center gap-1.5 ${
                             isFull
                               ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
@@ -1548,18 +1586,6 @@ export default function App() {
                         >
                           {isFull ? 'مكتمل' : 'تقديم طلب انضمام / فريق'}
                           {!isFull && <ArrowUpRight className="w-3.5 h-3.5" />}
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setChatProject(project);
-                            setChatMessages([
-                              { sender: 'lead', text: `أهلاً بك! أنا المسؤول عن مشروع "${project.title}". تفضل بطرح أي سؤال!` }
-                            ]);
-                          }}
-                          className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-slate-300 hover:text-white transition cursor-pointer"
-                        >
-                          <MessageSquare className="w-4 h-4 text-blue-400" />
                         </button>
                       </div>
                     </div>
@@ -1570,6 +1596,46 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {/* نافذة رفع التقرير للطلاب */}
+      {submitReportModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative">
+            <button onClick={() => setSubmitReportModal(null)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="text-base font-bold mb-1 text-white">تسليم تقرير المساق الأكاديمي</h2>
+            <p className="text-xs text-blue-400 mb-4">{submitReportModal.title}</p>
+
+            <form onSubmit={handleStudentSubmitReport} className="space-y-4">
+              <div>
+                <label className="text-[11px] text-slate-300 block mb-1">رابط المستند (Google Docs / Drive / GitHub PDF)</label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://docs.google.com/document/d/..."
+                  value={reportUrlInput}
+                  onChange={(e) => setReportUrlInput(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 text-left"
+                  dir="ltr"
+                />
+              </div>
+
+              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                <div>• الموعد النهائي المحدد من الدكتور: <strong className="text-amber-400">{submitReportModal.deadlineDay}</strong></div>
+                <div>• سيتم إشعار المشرف الأكاديمي لمراجعة المسودة وتزويدك بالتغذية الراجعة.</div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-500 py-2.5 rounded-xl font-bold text-xs text-white transition shadow-lg cursor-pointer"
+              >
+                تأكيد تسليم التقرير
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* نافذة تسجيل الدخول */}
       {showAuthModal && (
@@ -1589,9 +1655,7 @@ export default function App() {
               <h2 className="text-lg font-bold text-white">
                 {authMode === 'login' ? 'تسجيل الدخول إلى البوابة الأكاديمية' : 'إنشاء حساب جديد'}
               </h2>
-              <p className="text-xs text-slate-400 mt-1">
-                منصة مشاريع التخرج وربط سوق العمل
-              </p>
+              <p className="text-xs text-slate-400 mt-1">منصة متابعة مشاريع التخرج</p>
             </div>
 
             <div className="mb-4">
@@ -1619,27 +1683,7 @@ export default function App() {
               </div>
             </div>
 
-            {authError && (
-              <div className="p-2.5 mb-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl text-center">
-                {authError}
-              </div>
-            )}
-
             <form onSubmit={handleAuthSubmit} className="space-y-3">
-              {authMode === 'register' && (
-                <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">الاسم الكامل / اسم المتجر</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="مثال: د. إياد أو أحمد محمود"
-                    value={authFullName}
-                    onChange={(e) => setAuthFullName(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              )}
-
               <div>
                 <label className="text-[11px] text-slate-300 block mb-1">البريد الإلكتروني / اسم المستخدم</label>
                 <input
@@ -1670,35 +1714,9 @@ export default function App() {
                 type="submit"
                 className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-lg shadow-blue-600/20 cursor-pointer mt-2"
               >
-                {authMode === 'login' ? 'دخول إلى الحساب' : 'تأكيد التسجيل وإنشاء الحساب'}
+                دخول إلى الحساب
               </button>
             </form>
-
-            <div className="mt-4 pt-3 border-t border-slate-800 text-center">
-              {authMode === 'login' ? (
-                <p className="text-xs text-slate-400">
-                  ليس لديك حساب بعد؟{' '}
-                  <button
-                    type="button"
-                    onClick={() => { setAuthMode('register'); setAuthError(''); }}
-                    className="text-amber-400 hover:underline font-semibold cursor-pointer"
-                  >
-                    إنشاء حساب جديد
-                  </button>
-                </p>
-              ) : (
-                <p className="text-xs text-slate-400">
-                  لديك حساب بالفعل؟{' '}
-                  <button
-                    type="button"
-                    onClick={() => { setAuthMode('login'); setAuthError(''); }}
-                    className="text-blue-400 hover:underline font-semibold cursor-pointer"
-                  >
-                    تسجيل الدخول
-                  </button>
-                </p>
-              )}
-            </div>
           </div>
         </div>
       )}
@@ -1741,281 +1759,6 @@ export default function App() {
         </div>
       )}
 
-      {/* نافذة المحادثة */}
-      {chatProject && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 flex flex-col h-[480px] relative">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div>
-                <h3 className="font-bold text-sm text-white">{chatProject.title}</h3>
-                <p className="text-[11px] text-emerald-400">محادثة مباشرة مع صاحب المشروع</p>
-              </div>
-              <button onClick={() => setChatProject(null)} className="text-slate-400 hover:text-white cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-3 py-4 pr-1 text-xs">
-              {chatMessages.map((msg, i) => (
-                <div
-                  key={i}
-                  className={`p-3 rounded-xl max-w-[85%] ${
-                    msg.sender === 'user'
-                      ? 'bg-blue-600 text-white mr-auto rounded-bl-none'
-                      : 'bg-slate-800 text-slate-200 ml-auto rounded-br-none border border-slate-700/50'
-                  }`}
-                >
-                  {msg.text}
-                </div>
-              ))}
-            </div>
-
-            <form onSubmit={sendChatMessage} className="flex gap-2 pt-2 border-t border-slate-800">
-              <input
-                type="text"
-                placeholder="اكتب استفسارك هنا..."
-                value={inputMsg}
-                onChange={(e) => setInputMsg(e.target.value)}
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
-              />
-              <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer">
-                إرسال
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* نافذة التقديم */}
-      {isApplyModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative">
-            <button onClick={() => setIsApplyModalOpen(false)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
-              <X className="w-5 h-5" />
-            </button>
-            <h2 className="text-base font-bold mb-1 text-white">
-              تقديم طلب لـ: <span className="text-blue-400">{selectedProject?.title}</span>
-            </h2>
-            <p className="text-[11px] text-slate-400 mb-4">يمكنك التقدم كطالب مستقل أو تشكيل فريق مع زملائك</p>
-
-            {applySuccess ? (
-              <p className="text-emerald-400 text-center font-bold py-6 text-sm">{applySuccess}</p>
-            ) : (
-              <form onSubmit={handleApplySubmit} className="space-y-3.5">
-                <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-amber-400" />
-                    <span className="text-xs text-slate-200">التقدم كفريق متكامل (Team Formation)</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={applyAsTeam}
-                    onChange={(e) => setApplyAsTeam(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-0 cursor-pointer"
-                  />
-                </div>
-
-                {applyAsTeam && (
-                  <div>
-                    <label className="text-[11px] text-slate-300 block mb-1">أسماء وتخصصات أعضاء الفريق المقترح</label>
-                    <input
-                      type="text"
-                      placeholder="مثال: أحمد (CIS - Data)، سارة (CS - ML)، محمد (SE - Frontend)"
-                      value={teamMembersInput}
-                      onChange={(e) => setTeamMembersInput(e.target.value)}
-                      className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none"
-                    />
-                  </div>
-                )}
-
-                <input
-                  type="text"
-                  placeholder="اسمك الكامل (قائد الفريق)"
-                  required
-                  value={applicantName}
-                  onChange={(e) => setApplicantName(e.target.value)}
-                  className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none"
-                />
-                <input
-                  type="text"
-                  placeholder="الدور المطلوب (مثال: مهندس واجهات، ذكاء اصطناعي)"
-                  required
-                  value={applicantRole}
-                  onChange={(e) => setApplicantRole(e.target.value)}
-                  className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none"
-                />
-
-                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
-                  <div className="text-blue-400 font-semibold flex items-center gap-1">
-                    <FileText className="w-3.5 h-3.5" /> سيتم إرفاق سيرتك الذاتية تلقائياً:
-                  </div>
-                  <div>• التخصص: {studentCv.major}</div>
-                  <div>• المساق: {studentCv.course}</div>
-                  <div>• المهارات: {userSkills.slice(0, 4).join(', ')}...</div>
-                </div>
-
-                <textarea
-                  placeholder="رسالة تعريفية موجزة أو نبذة عن جاهزية الفريق..."
-                  rows={2}
-                  value={applicantMessage}
-                  onChange={(e) => setApplicantMessage(e.target.value)}
-                  className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-500 py-2.5 rounded-xl font-semibold text-xs text-white transition shadow-lg cursor-pointer"
-                >
-                  إرسال الطلب والسيرة الذاتية للمشرف الأكاديمي
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* نافذة إضافة مشروع */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative">
-            <button onClick={() => setIsCreateModalOpen(false)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
-              <X className="w-5 h-5" />
-            </button>
-            <h2 className="text-base font-bold mb-4 text-white">
-              {currentUser?.role === 'business' ? 'طرح مشكلة أو فكرة مشروع لمتجرك' : 'إضافة فكرة مشروع تخرج'}
-            </h2>
-            {createSuccess ? (
-              <p className="text-emerald-400 text-center font-bold py-6 text-sm">{createSuccess}</p>
-            ) : (
-              <form onSubmit={handleCreateProject} className="space-y-3.5">
-                <input
-                  type="text"
-                  placeholder={currentUser?.role === 'business' ? 'عنوان المشكلة (مثال: نظام جرد مستودع ومبيعات للمحل)' : 'عنوان المشروع'}
-                  required
-                  value={newProject.title}
-                  onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
-                  className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none"
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    value={newProject.category}
-                    onChange={(e) => setNewProject({ ...newProject, category: e.target.value })}
-                    className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
-                  >
-                    {ACADEMIC_MAJORS.map((m, idx) => (
-                      <option key={idx} value={m}>{m}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={newProject.difficulty}
-                    onChange={(e) => setNewProject({ ...newProject, difficulty: e.target.value })}
-                    className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
-                  >
-                    <option value="مبتدئ">مبتدئ</option>
-                    <option value="متوسط">متوسط</option>
-                    <option value="متقدم">متقدم</option>
-                  </select>
-                </div>
-                <textarea
-                  placeholder={currentUser?.role === 'business' ? 'اشرح ما تحتاجه ببساطة...' : 'وصف الفكرة وأهداف المشروع التقنية...'}
-                  rows={3}
-                  required
-                  value={newProject.description}
-                  onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                  className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none"
-                />
-                <input
-                  type="text"
-                  placeholder="المهارات المقترحة (مثال: React, Python, SQL, Power BI)"
-                  required
-                  value={newProject.required_skills}
-                  onChange={(e) => setNewProject({ ...newProject, required_skills: e.target.value })}
-                  className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-500 py-2.5 rounded-xl font-semibold text-xs text-white transition shadow-lg cursor-pointer"
-                >
-                  {currentUser?.role === 'business' ? 'نشر المشكلة للطلاب' : 'حفظ ونشر المشروع'}
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* نافذة استعراض طلبات الطلاب */}
-      {showApplicationsModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl p-6 relative">
-            <button onClick={() => setShowApplicationsModal(false)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
-              <X className="w-5 h-5" />
-            </button>
-            <h2 className="text-base font-bold mb-1 text-white">
-              {currentUser?.role === 'supervisor' ? 'اعتماد وإسناد طلبات مشاريع التخرج' : 'طلبات الطلاب المتقدمين لمشاريع محلك'}
-            </h2>
-            <p className="text-xs text-slate-400 mb-4">
-              {currentUser?.role === 'supervisor' 
-                ? 'بصفتك المشرف الأكاديمي، تملك الصلاحية الحصرية لاعتماد أو رفض إسناد المشروع للفرق الطلابية.'
-                : 'قائمة الطلاب المتقدمين لمشاريعك.'}
-            </p>
-
-            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-              {applications.length === 0 ? (
-                <p className="text-center text-slate-500 py-8 text-xs">لا توجد طلبات انضمام حالياً</p>
-              ) : (
-                applications.map((app) => (
-                  <div key={app.id} className="p-3.5 bg-slate-800/50 border border-slate-700/60 rounded-xl flex items-center justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-xs text-white">{app.applicant_name}</span>
-                        <span className="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-slate-300">
-                          {app.applicant_role}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-400 leading-relaxed">{app.message}</p>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      {currentUser?.role === 'supervisor' ? (
-                        app.status === 'pending' ? (
-                          <>
-                            <button
-                              onClick={() => handleUpdateStatus(app.id, 'accepted')}
-                              className="bg-emerald-600 hover:bg-emerald-500 text-white p-2 rounded-lg transition cursor-pointer"
-                              title="اعتماد وإسناد المشروع للطالب"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleUpdateStatus(app.id, 'rejected')}
-                              className="bg-rose-600 hover:bg-rose-500 text-white p-2 rounded-lg transition cursor-pointer"
-                              title="رفض"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        ) : (
-                          <span className={`text-[10px] px-2.5 py-1 rounded-full font-medium ${
-                            app.status === 'accepted'
-                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                              : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                          }`}>
-                            {app.status === 'accepted' ? 'معتمد رسمياً' : 'مرفوض'}
-                          </span>
-                        )
-                      ) : (
-                        <span className="text-[11px] text-amber-400 bg-amber-950/40 border border-amber-800/50 px-2.5 py-1 rounded-lg">
-                          {app.status === 'accepted' ? 'تم الاعتماد' : 'بانتظار المشرف'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
