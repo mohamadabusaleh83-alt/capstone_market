@@ -5,7 +5,8 @@ import {
   Calendar, Award, TrendingUp, Download, Megaphone, ArrowUpRight,
   Star, MessageSquare, Layers, LogIn, LogOut, Store, UserCheck,
   Menu, ShieldCheck, GraduationCap, FileText, AlertTriangle, PieChart,
-  Edit2, Trash2, MessageSquarePlus, Save, UploadCloud, Send, ExternalLink
+  Edit2, Trash2, MessageSquarePlus, Save, UploadCloud, Send, ExternalLink,
+  Lock, ArrowLeft
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://capstone-market.onrender.com';
@@ -26,9 +27,20 @@ export default function App() {
   });
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('match');
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = localStorage.getItem('app_user_role');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.role === 'supervisor') return 'supervisor_teams';
+      if (parsed.role === 'business') return 'business_projects';
+      return 'match';
+    }
+    return 'browse';
+  });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('الكل');
+  const [authBannerMsg, setAuthBannerMsg] = useState('');
 
   // مهارات وسيرة الطالب
   const [userSkills, setUserSkills] = useState(['Python', 'FastAPI', 'Docker', 'React', 'TailwindCSS']);
@@ -46,16 +58,14 @@ export default function App() {
   });
   const [cvUpdateMessage, setCvUpdateMessage] = useState('');
 
-  // ------------------------------------------------------------------
-  // نظام متابعة التقارير والمهام الأكاديمية (Capstone Deliverables)
-  // ------------------------------------------------------------------
+  // تسليمات ومتابعة التقارير
   const [reportsTimeline, setReportsTimeline] = useState([
     {
       id: 1,
       title: 'وثيقة مقترح المشروع وتحليل المشكلة (Project Proposal & Problem Statement)',
       deadlineDay: 'الثلاثاء القادم',
       deadlineDate: '2026-10-13',
-      status: 'submitted', // submitted, pending, reviewed
+      status: 'submitted',
       submissionLink: 'https://docs.google.com/document/d/demo_proposal',
       submittedAt: 'الأحد، 11 أكتوبر 2026',
       supervisorFeedback: 'تم استلام المقترح المبدئي. يرجى التركيز أكثر على جزئية قاعدة بيانات المحل وتوضيح الـ Schema.',
@@ -85,23 +95,20 @@ export default function App() {
     }
   ]);
 
-  // تعديل موعد وملاحظة التقرير للمشرف
   const [editingReportId, setEditingReportId] = useState(null);
   const [editDeadlineInput, setEditDeadlineInput] = useState('');
   const [editFeedbackInput, setEditFeedbackInput] = useState('');
-
-  // رفع تقرير من قبل الطالب
   const [submitReportModal, setSubmitReportModal] = useState(null);
   const [reportUrlInput, setReportUrlInput] = useState('');
 
-  // رسائل المحادثة المباشرة بين المشرف والطلاب حول التقارير
+  // محادثة الإشراف والتقارير المباشرة
   const [supervisionChat, setSupervisionChat] = useState([
     { sender: 'supervisor', name: 'د. إياد الأحمد (المشرف)', text: 'مرحباً بالجميع، تذكير بأن موعد تسليم تقرير المقترح SRS محدد يوم الثلاثاء القادم دون تأخير.', time: '10:30 ص' },
     { sender: 'student', name: 'أحمد منصور (قائد الفريق)', text: 'أهلاً دكتور، قمنا بإنهاء المخططات المبدئية ورفعنا رابط المسودة في خانة التسليم.', time: '11:15 ص' }
   ]);
   const [chatInputText, setChatInputText] = useState('');
 
-  // قائمة الطلاب لشاشة المشرف والطلاب
+  // قائمة الطلاب
   const [studentsList, setStudentsList] = useState([
     {
       id: 'st-1',
@@ -183,13 +190,11 @@ export default function App() {
     }
   ]);
 
-  // إدارة تعديل الطلاب عند المشرف
   const [editingStudentId, setEditingStudentId] = useState(null);
   const [editNoteText, setEditNoteText] = useState('');
   const [editStatusValue, setEditStatusValue] = useState(false);
   const [editProjectTitle, setEditProjectTitle] = useState('');
 
-  // المفضلة
   const [favorites, setFavorites] = useState([]);
 
   // المشاريع والطلبات
@@ -300,7 +305,6 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState([]);
   const [inputMsg, setInputMsg] = useState('');
 
-  // التقديم
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [applyAsTeam, setApplyAsTeam] = useState(false);
@@ -310,7 +314,6 @@ export default function App() {
   const [applicantMessage, setApplicantMessage] = useState('');
   const [applySuccess, setApplySuccess] = useState('');
 
-  // إضافة مشروع
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newProject, setNewProject] = useState({
     title: '',
@@ -331,27 +334,58 @@ export default function App() {
   const [authFullName, setAuthFullName] = useState('');
   const [authError, setAuthError] = useState('');
 
+  // -------------------------------------------------------------
+  // منطق الدخول والخروج والتوجيه الطبيعي
+  // -------------------------------------------------------------
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
 
+    const defaultNames = {
+      student: 'أحمد منصور',
+      supervisor: 'د. إياد الأحمد',
+      business: 'شركة الهدى للتجارة'
+    };
+
     const userObj = {
       role: authRole,
-      name: authFullName || authEmail.split('@')[0] || (authRole === 'supervisor' ? 'د. إياد الأحمد' : 'أحمد منصور'),
+      name: authFullName || (authEmail ? authEmail.split('@')[0] : defaultNames[authRole]),
       title: authRole === 'student' ? 'طالب خريج' : authRole === 'business' ? 'صاحب عمل / متجر' : 'مشرف أكاديمي'
     };
+
     setCurrentUser(userObj);
     localStorage.setItem('app_user_role', JSON.stringify(userObj));
     setShowAuthModal(false);
-    setActiveTab(authRole === 'business' ? 'business_projects' : authRole === 'supervisor' ? 'reports_hub' : 'reports_hub');
+
+    // توجيه ذكي حسب الدور
+    if (authRole === 'supervisor') {
+      setActiveTab('supervisor_teams');
+    } else if (authRole === 'business') {
+      setActiveTab('business_projects');
+    } else {
+      setActiveTab('match');
+    }
+
+    setAuthBannerMsg(`مرحباً بك مجدداً، ${userObj.name} (${userObj.title})`);
+    setTimeout(() => setAuthBannerMsg(''), 3500);
   };
 
   const handleLogout = () => {
+    // تصفير الجلسة تماماً
     setCurrentUser(null);
     localStorage.removeItem('app_user_role');
     localStorage.removeItem('token');
+
+    // إعادة التوجيه إلى صفحة التصفح العامة فوراً
     setActiveTab('browse');
     setIsSidebarOpen(false);
+    setShowApplicationsModal(false);
+    setChatProject(null);
+    setEditingStudentId(null);
+    setEditingReportId(null);
+
+    setAuthBannerMsg('تم تسجيل الخروج بنجاح. أنت تتصفح المنصة الآن كـ زائر.');
+    setTimeout(() => setAuthBannerMsg(''), 4000);
   };
 
   const calculateMatch = (projectsList, skillsList) => {
@@ -423,7 +457,6 @@ export default function App() {
     );
   };
 
-  // دوال التقارير
   const handleUpdateReportDeadline = (reportId) => {
     setReportsTimeline((prev) =>
       prev.map((r) =>
@@ -485,10 +518,39 @@ export default function App() {
   const pendingCount = applications.filter((app) => app.status === 'pending').length;
   const categories = ['الكل', ...ACADEMIC_MAJORS];
 
+  // دالة مساعدة لحماية الصفحات من دخول غير المصرح لهم
+  const renderAccessDenied = (requiredRoleName) => (
+    <div className="max-w-md mx-auto my-12 bg-slate-900 border border-slate-800 p-8 rounded-2xl text-center shadow-xl space-y-4">
+      <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+        <Lock className="w-7 h-7" />
+      </div>
+      <div>
+        <h3 className="text-lg font-bold text-white">صفحة مقيدة</h3>
+        <p className="text-xs text-slate-400 mt-1">
+          هذا القسم متاح فقط لـ <strong className="text-amber-300">{requiredRoleName}</strong>. يرجى تسجيل الدخول بالحساب المناسب للوصول.
+        </p>
+      </div>
+      <div className="flex gap-2 justify-center pt-2">
+        <button
+          onClick={() => { setAuthMode('login'); setShowAuthModal(true); }}
+          className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition cursor-pointer"
+        >
+          تسجيل الدخول الآن
+        </button>
+        <button
+          onClick={() => setActiveTab('browse')}
+          className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-4 py-2 rounded-xl transition cursor-pointer"
+        >
+          العودة للمشاريع العامة
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans" dir="rtl">
       
-      {/* 1. الشريط العلوي العام مع موعد التسليم القريب */}
+      {/* 1. الشريط العلوي التنبيهي */}
       <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-xs py-2 px-4 md:px-6 shadow-md flex items-center justify-between border-b border-amber-500/20">
         <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap">
           <span className="flex items-center gap-1.5 bg-amber-500 text-slate-950 font-bold px-2.5 py-0.5 rounded-full text-[10px]">
@@ -500,10 +562,18 @@ export default function App() {
         </div>
         <div className="hidden md:flex items-center gap-4 text-amber-300/80 text-xs">
           <span className="flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5" /> العام الأكاديمي 2026/2027
+            <Calendar className="w-3.5 h-3.5" /> الفصل الدراسي 2026/2027
           </span>
         </div>
       </div>
+
+      {/* تنبيه حالة تسجيل الدخول / الخروج الأنيق */}
+      {authBannerMsg && (
+        <div className="bg-emerald-950/90 border-b border-emerald-500/40 text-emerald-300 text-xs py-2 px-4 text-center font-medium flex items-center justify-center gap-2 animate-fade-in">
+          <CheckCircle className="w-4 h-4 text-emerald-400" />
+          {authBannerMsg}
+        </div>
+      )}
 
       {/* 2. رأس الصفحة */}
       <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-30 px-4 md:px-6 py-3 flex items-center justify-between">
@@ -549,10 +619,11 @@ export default function App() {
               </button>
               <button
                 onClick={handleLogout}
-                className="p-2 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-300 rounded-xl transition cursor-pointer"
-                title="تسجيل الخروج"
+                className="flex items-center gap-1.5 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-300 px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer"
+                title="تسجيل الخروج والعودة كزائر"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">خروج</span>
               </button>
             </div>
           ) : (
@@ -567,7 +638,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* 3. جسم المنصة الرئيسي */}
+      {/* 3. جسم المنصة */}
       <div className="flex-1 flex relative overflow-hidden">
         {isSidebarOpen && (
           <div 
@@ -590,19 +661,21 @@ export default function App() {
                   <Store className="w-3.5 h-3.5 text-blue-400" />
                 ) : currentUser?.role === 'supervisor' ? (
                   <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                ) : (
+                ) : currentUser?.role === 'student' ? (
                   <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <Users className="w-3.5 h-3.5 text-slate-400" />
                 )}
                 {currentUser ? currentUser.name : 'زائر المنصة (غير مسجل)'}
               </p>
               <span className="text-[10px] text-slate-400 block mt-1">
-                {currentUser ? currentUser.title : 'سجل الدخول للاستفادة من كامل الميزات'}
+                {currentUser ? currentUser.title : 'تصفح عام كـ زائر'}
               </span>
             </div>
 
             <p className="text-[11px] font-semibold text-slate-500 uppercase px-2">لوحة التحكم والتنقل</p>
             
-            {/* التبويب الجديد الأكاديمي: تسليم ومتابعة التقارير والتواصل */}
+            {/* التبويب الأكاديمي لمتابعة التقارير */}
             <button
               onClick={() => { setActiveTab('reports_hub'); setIsSidebarOpen(false); }}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
@@ -620,7 +693,7 @@ export default function App() {
               </span>
             </button>
 
-            {/* روابط المشرف الأكاديمي */}
+            {/* أدوار المشرف الأكاديمي */}
             {currentUser?.role === 'supervisor' && (
               <>
                 <button
@@ -654,22 +727,20 @@ export default function App() {
               </>
             )}
 
-            {/* روابط الطلاب فقط */}
-            {(!currentUser || currentUser.role === 'student') && (
+            {/* أدوار الطالب فقط */}
+            {currentUser?.role === 'student' && (
               <>
-                {currentUser?.role === 'student' && (
-                  <button
-                    onClick={() => { setActiveTab('student_cv'); setIsSidebarOpen(false); }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
-                      activeTab === 'student_cv'
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-                    }`}
-                  >
-                    <FileText className="w-4 h-4 text-blue-400" />
-                    سيرتي الذاتية (CV)
-                  </button>
-                )}
+                <button
+                  onClick={() => { setActiveTab('student_cv'); setIsSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                    activeTab === 'student_cv'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                  }`}
+                >
+                  <FileText className="w-4 h-4 text-blue-400" />
+                  سيرتي الذاتية (CV)
+                </button>
 
                 <button
                   onClick={() => { setActiveTab('teams'); setIsSidebarOpen(false); }}
@@ -690,7 +761,7 @@ export default function App() {
               </>
             )}
 
-            {/* روابط عامة */}
+            {/* روابط عامة واستكشافية */}
             <button
               onClick={() => { setActiveTab('match'); setIsSidebarOpen(false); }}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
@@ -716,6 +787,21 @@ export default function App() {
             >
               <Briefcase className="w-4 h-4" />
               تصفح كل المشاريع
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('favorites'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                activeTab === 'favorites'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Star className="w-4 h-4 text-amber-400" />
+                المشاريع المحفوظة
+              </div>
+              <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">{favorites.length}</span>
             </button>
 
             <button
@@ -750,7 +836,7 @@ export default function App() {
                 className="w-full flex items-center justify-center gap-2 bg-rose-950/40 hover:bg-rose-900/50 border border-rose-800/60 text-rose-300 py-2 rounded-xl text-xs font-semibold transition cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                تسجيل الخروج
+                تسجيل الخروج والعودة كزائر
               </button>
             ) : (
               <button
@@ -770,11 +856,9 @@ export default function App() {
         {/* المساحة الرئيسية */}
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">
 
-          {/* 🌟 التبويب الجديد: خانة متابعة التقارير والتواصل المباشر مع الدكتور 🌟 */}
+          {/* 1. تبويب التقارير والمواعيد والشات الأكاديمي */}
           {activeTab === 'reports_hub' ? (
             <div className="space-y-6 max-w-6xl mx-auto">
-              
-              {/* الرأس التوضيحي */}
               <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 border border-blue-800/50 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                   <div className="flex items-center gap-2">
@@ -782,7 +866,7 @@ export default function App() {
                     <h2 className="text-xl font-bold text-white">بوابة تسليم التقارير والتواصل الأكاديمي المباشر</h2>
                   </div>
                   <p className="text-xs text-slate-300 mt-1.5 max-w-2xl leading-relaxed">
-                    من هنا تتم متابعة مراحل إعداد مساق مشروع التخرج، مواعيد التسليم المحددة من المشرف، استلام تقييم المسودات، والتواصل الفوري بين الدكتور والطلبة.
+                    متابعة مراحل إعداد مساق مشروع التخرج، المواعيد المحددة من المشرف الأكاديمي، التغذية الراجعة، والتواصل الفوري.
                   </p>
                 </div>
 
@@ -795,18 +879,16 @@ export default function App() {
                 </div>
               </div>
 
-              {/* شبكة التقارير والشات المباشر */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* العمود 1 و 2: جدول ومسار تسليم التقارير */}
+                {/* قائمة التقارير */}
                 <div className="lg:col-span-2 space-y-4">
                   <div className="flex justify-between items-center">
                     <h3 className="font-bold text-sm text-white flex items-center gap-2">
                       <FileText className="w-4 h-4 text-blue-400" />
-                      جدول تسليم التقارير الدورية للمشروع
+                      جدول تسليم التقارير الدورية
                     </h3>
                     <span className="text-[11px] text-slate-400">
-                      {currentUser?.role === 'supervisor' ? 'صلاحية التعديل وتحديد المواعيد متاحة لك كـ مشرف' : 'اضغط على التقرير لرفع المسودة'}
+                      {currentUser?.role === 'supervisor' ? 'صلاحية التعديل متاحة للمشرف' : 'اضغط على التقرير لرفع المسودة'}
                     </span>
                   </div>
 
@@ -848,11 +930,10 @@ export default function App() {
                             </div>
                           </div>
 
-                          {/* الموعد النهائي */}
                           <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-xs">
                             <div className="flex items-center gap-2 text-slate-300">
                               <Calendar className="w-4 h-4 text-amber-400" />
-                              <span>الموعد النهائي للتسليم:</span>
+                              <span>الموعد المحدد:</span>
                               <strong className="text-amber-400">{rep.deadlineDay}</strong>
                             </div>
 
@@ -863,31 +944,28 @@ export default function App() {
                                 rel="noreferrer"
                                 className="text-blue-400 hover:underline flex items-center gap-1 text-[11px]"
                               >
-                                <ExternalLink className="w-3.5 h-3.5" /> عرض ملف التقرير المسلم
+                                <ExternalLink className="w-3.5 h-3.5" /> عرض ملف المسودة المسلمة
                               </a>
                             ) : (
                               <span className="text-slate-500 text-[11px]">لم يتم رفع ملف بعد</span>
                             )}
                           </div>
 
-                          {/* إذا كان المشرف يعدل الموعد والملاحظة */}
                           {isEditing ? (
                             <div className="p-3 bg-slate-800/60 rounded-xl space-y-2 border border-slate-700">
-                              <label className="text-[10px] text-slate-300 block">تعديل موعد التسليم (يظهر للطلاب فوراً):</label>
+                              <label className="text-[10px] text-slate-300 block">تعديل موعد التسليم:</label>
                               <input
                                 type="text"
                                 value={editDeadlineInput}
                                 onChange={(e) => setEditDeadlineInput(e.target.value)}
-                                placeholder="مثال: الثلاثاء القادم 20 أكتوبر"
                                 className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
                               />
 
-                              <label className="text-[10px] text-slate-300 block">ملاحظات وتوجيهات المشرف:</label>
+                              <label className="text-[10px] text-slate-300 block">ملاحظات المشرف:</label>
                               <textarea
                                 rows={2}
                                 value={editFeedbackInput}
                                 onChange={(e) => setEditFeedbackInput(e.target.value)}
-                                placeholder="اكتب الملاحظات والتعديلات المطلوبة على التقرير..."
                                 className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
                               />
 
@@ -896,7 +974,7 @@ export default function App() {
                                   onClick={() => handleUpdateReportDeadline(rep.id)}
                                   className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 font-bold"
                                 >
-                                  <Save className="w-3.5 h-3.5" /> حفظ الموعد والملاحظة
+                                  <Save className="w-3.5 h-3.5" /> حفظ الموعد
                                 </button>
                                 <button
                                   onClick={() => setEditingReportId(null)}
@@ -907,12 +985,11 @@ export default function App() {
                               </div>
                             </div>
                           ) : (
-                            /* عرض ملاحظات الدكتور وتقييمه */
                             <div className="text-xs bg-blue-950/20 border border-blue-900/40 p-3 rounded-xl space-y-1">
                               <div className="flex items-center justify-between">
                                 <span className="font-bold text-blue-300 flex items-center gap-1.5">
                                   <MessageSquarePlus className="w-3.5 h-3.5 text-blue-400" />
-                                  ملاحظات المشرف الأكاديمي (د. إياد):
+                                  ملاحظات المشرف الأكاديمي:
                                 </span>
                                 <span className="text-[10px] bg-slate-800 text-amber-300 px-2 py-0.5 rounded font-mono">
                                   التقييم: {rep.grade}
@@ -924,15 +1001,20 @@ export default function App() {
                             </div>
                           )}
 
-                          {/* زر التسليم للطلاب */}
                           {currentUser?.role !== 'supervisor' && (
                             <div className="pt-2 flex justify-end">
                               <button
-                                onClick={() => setSubmitReportModal(rep)}
+                                onClick={() => {
+                                  if (!currentUser) {
+                                    setShowAuthModal(true);
+                                    return;
+                                  }
+                                  setSubmitReportModal(rep);
+                                }}
                                 className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-4 py-2 rounded-xl font-bold flex items-center gap-1.5 transition shadow-sm cursor-pointer"
                               >
                                 <UploadCloud className="w-4 h-4" />
-                                {rep.status === 'submitted' ? 'تحديث / إعادة تسليم المسودة' : 'رفع وتسليم التقرير الآن'}
+                                {rep.status === 'submitted' ? 'تحديث / تسليم مسودة جديدة' : 'رفع وتسليم التقرير'}
                               </button>
                             </div>
                           )}
@@ -942,7 +1024,7 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* العمود 3: شات مباشر ومخصص للتقارير بين الدكتور والطلاب */}
+                {/* الشات الأكاديمي المباشر */}
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col h-[580px] shadow-xl">
                   <div className="pb-3 border-b border-slate-800 flex items-center justify-between">
                     <div>
@@ -950,12 +1032,11 @@ export default function App() {
                         <MessageSquare className="w-4 h-4 text-emerald-400" />
                         المحادثة الأكاديمية المباشرة
                       </h3>
-                      <span className="text-[10px] text-slate-400">تواصل فوري بين المشرف وأعضاء الفريق</span>
+                      <span className="text-[10px] text-slate-400">تواصل فوري بين المشرف والطلبة</span>
                     </div>
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" title="متصل الآن"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                   </div>
 
-                  {/* رسائل الشات */}
                   <div className="flex-1 overflow-y-auto space-y-3 py-3 pr-1 text-xs">
                     {supervisionChat.map((msg, idx) => (
                       <div
@@ -975,363 +1056,371 @@ export default function App() {
                     ))}
                   </div>
 
-                  {/* حقل كتابة الرسالة */}
                   <form onSubmit={sendSupervisionMsg} className="pt-2 border-t border-slate-800 flex gap-2">
                     <input
                       type="text"
                       value={chatInputText}
                       onChange={(e) => setChatInputText(e.target.value)}
-                      placeholder={currentUser?.role === 'supervisor' ? 'اكتب توجيهاً للفريق...' : 'اطرح استفسارك للدكتور حول التقرير...'}
-                      className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                      placeholder={currentUser ? 'اكتب رسالتك الأكاديمية هنا...' : 'يرجى تسجيل الدخول للكتابة...'}
+                      disabled={!currentUser}
+                      className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50"
                     />
                     <button
                       type="submit"
-                      className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-xl transition cursor-pointer"
-                      title="إرسال"
+                      disabled={!currentUser}
+                      className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white p-2.5 rounded-xl transition cursor-pointer"
                     >
                       <Send className="w-4 h-4" />
                     </button>
                   </form>
                 </div>
-
               </div>
             </div>
-          ) : activeTab === 'supervisor_teams' && currentUser?.role === 'supervisor' ? (
-            /* إدارة الشُّعب والفرق للمشرف */
-            <div className="space-y-6 max-w-6xl mx-auto">
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <ShieldCheck className="w-6 h-6 text-amber-400" />
-                    لوحة متابعة وإدارة شُعبة مشاريع التخرج
-                  </h2>
-                  <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
-                    من هنا يمتلك المشرف الأكاديمي الصلاحية الكاملة لتسجيل الملاحظات، تعديل حالة تسكين الطلاب، وفك ارتباط أو استبعاد أي طالب.
-                  </p>
+          ) : activeTab === 'supervisor_teams' ? (
+            /* 2. شاشة المشرف: إدارة الشُعب والفرق (محمية) */
+            currentUser?.role === 'supervisor' ? (
+              <div className="space-y-6 max-w-6xl mx-auto">
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <ShieldCheck className="w-6 h-6 text-amber-400" />
+                      لوحة متابعة وإدارة شُعبة مشاريع التخرج
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                      تسجيل الملاحظات، تعديل حالة تسكين الطلاب، وفك ارتباط أو استبعاد أي طالب.
+                    </p>
+                  </div>
+                  <div className="flex gap-2 text-xs">
+                    <div className="bg-emerald-950/60 border border-emerald-800/60 px-3 py-1.5 rounded-xl text-emerald-300">
+                      مرتبطون بمشاريع: <strong>{studentsList.filter(s => !s.isFree).length}</strong>
+                    </div>
+                    <div className="bg-amber-950/60 border border-amber-800/60 px-3 py-1.5 rounded-xl text-amber-300">
+                      أحرار: <strong>{studentsList.filter(s => s.isFree).length}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                  <table className="w-full text-right text-xs">
+                    <thead className="bg-slate-950 border-b border-slate-800 text-slate-400">
+                      <tr>
+                        <th className="p-3.5">الرقم الجامعي</th>
+                        <th className="p-3.5">اسم الطالب والتخصص</th>
+                        <th className="p-3.5">المساق</th>
+                        <th className="p-3.5">حالة المشروع المسند</th>
+                        <th className="p-3.5">ملاحظات المشرف الأكاديمي</th>
+                        <th className="p-3.5 text-center">الإجراءات والتحكم</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {studentsList.map((st) => {
+                        const isEditing = editingStudentId === st.id;
+                        return (
+                          <tr key={st.id} className="hover:bg-slate-800/20 transition">
+                            <td className="p-3.5 font-mono text-slate-400">{st.academicId}</td>
+                            <td className="p-3.5">
+                              <div className="font-semibold text-white flex items-center gap-2">
+                                <span>{st.avatar}</span>
+                                <span>{st.name}</span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">{st.major}</span>
+                            </td>
+                            <td className="p-3.5">
+                              <span className="bg-blue-950 text-blue-300 border border-blue-800/60 px-2 py-0.5 rounded text-[10px]">
+                                {st.course}
+                              </span>
+                            </td>
+                            <td className="p-3.5">
+                              {isEditing ? (
+                                <div className="space-y-1.5">
+                                  <select
+                                    value={editStatusValue ? 'free' : 'assigned'}
+                                    onChange={(e) => setEditStatusValue(e.target.value === 'free')}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-[11px] text-white"
+                                  >
+                                    <option value="assigned">مرتبط بمشروع</option>
+                                    <option value="free">طالب حر (غير مرتبط)</option>
+                                  </select>
+                                  {!editStatusValue && (
+                                    <input
+                                      type="text"
+                                      value={editProjectTitle}
+                                      onChange={(e) => setEditProjectTitle(e.target.value)}
+                                      placeholder="اسم المشروع..."
+                                      className="w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-[10px] text-white"
+                                    />
+                                  )}
+                                </div>
+                              ) : (
+                                <div>
+                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium border inline-block ${
+                                    st.isFree
+                                      ? 'bg-amber-950/40 text-amber-300 border-amber-800/50'
+                                      : 'bg-emerald-950/40 text-emerald-300 border-emerald-800/50'
+                                  }`}>
+                                    {st.isFree ? 'طالب حر' : 'مرتبط بمشروع'}
+                                  </span>
+                                  <span className="text-[11px] text-slate-400 block mt-1">{st.projectTitle}</span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-3.5 max-w-xs">
+                              {isEditing ? (
+                                <textarea
+                                  rows={2}
+                                  value={editNoteText}
+                                  onChange={(e) => setEditNoteText(e.target.value)}
+                                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-1.5 text-xs text-white"
+                                />
+                              ) : (
+                                <div className="flex items-start gap-1.5 text-slate-300 bg-slate-950/50 p-2 rounded-lg border border-slate-800">
+                                  <MessageSquarePlus className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                                  <span className="text-[11px] leading-relaxed">
+                                    {st.supervisorNote || <em className="text-slate-500">لا توجد ملاحظات مسجلة بعد</em>}
+                                  </span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-3.5 text-center">
+                              {isEditing ? (
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button
+                                    onClick={() => {
+                                      setStudentsList((prev) =>
+                                        prev.map((s) =>
+                                          s.id === st.id
+                                            ? {
+                                                ...s,
+                                                supervisorNote: editNoteText,
+                                                isFree: editStatusValue,
+                                                projectTitle: editStatusValue ? 'غير مرتبط بمشروع' : (editProjectTitle || 'مشروع معتمد')
+                                              }
+                                            : s
+                                        )
+                                      );
+                                      setEditingStudentId(null);
+                                    }}
+                                    className="p-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition"
+                                  >
+                                    <Save className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingStudentId(null)}
+                                    className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button
+                                    onClick={() => {
+                                      setEditingStudentId(st.id);
+                                      setEditNoteText(st.supervisorNote || '');
+                                      setEditStatusValue(st.isFree);
+                                      setEditProjectTitle(st.projectTitle || '');
+                                    }}
+                                    className="p-1.5 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white rounded-lg transition"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (window.confirm(`استبعاد الطالب "${st.name}" من الكشف؟`)) {
+                                        setStudentsList((prev) => prev.filter((s) => s.id !== st.id));
+                                      }
+                                    }}
+                                    className="p-1.5 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-lg transition"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-                <table className="w-full text-right text-xs">
-                  <thead className="bg-slate-950 border-b border-slate-800 text-slate-400">
-                    <tr>
-                      <th className="p-3.5">الرقم الجامعي</th>
-                      <th className="p-3.5">اسم الطالب والتخصص</th>
-                      <th className="p-3.5">المساق</th>
-                      <th className="p-3.5">حالة المشروع المسند</th>
-                      <th className="p-3.5">ملاحظات المشرف الأكاديمي</th>
-                      <th className="p-3.5 text-center">الإجراءات والتحكم</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    {studentsList.map((st) => {
-                      const isEditing = editingStudentId === st.id;
-                      return (
-                        <tr key={st.id} className="hover:bg-slate-800/20 transition">
-                          <td className="p-3.5 font-mono text-slate-400">{st.academicId}</td>
-                          <td className="p-3.5">
-                            <div className="font-semibold text-white flex items-center gap-2">
-                              <span>{st.avatar}</span>
-                              <span>{st.name}</span>
-                            </div>
-                            <span className="text-[10px] text-slate-400 block mt-0.5">{st.major}</span>
-                          </td>
-                          <td className="p-3.5">
-                            <span className="bg-blue-950 text-blue-300 border border-blue-800/60 px-2 py-0.5 rounded text-[10px]">
-                              {st.course}
-                            </span>
-                          </td>
-                          <td className="p-3.5">
-                            {isEditing ? (
-                              <div className="space-y-1.5">
-                                <select
-                                  value={editStatusValue ? 'free' : 'assigned'}
-                                  onChange={(e) => setEditStatusValue(e.target.value === 'free')}
-                                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-[11px] text-white"
-                                >
-                                  <option value="assigned">مرتبط بمشروع</option>
-                                  <option value="free">طالب حر (غير مرتبط)</option>
-                                </select>
-                                {!editStatusValue && (
-                                  <input
-                                    type="text"
-                                    value={editProjectTitle}
-                                    onChange={(e) => setEditProjectTitle(e.target.value)}
-                                    placeholder="اسم المشروع..."
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-[10px] text-white"
-                                  />
-                                )}
-                              </div>
-                            ) : (
-                              <div>
-                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium border inline-block ${
-                                  st.isFree
-                                    ? 'bg-amber-950/40 text-amber-300 border-amber-800/50'
-                                    : 'bg-emerald-950/40 text-emerald-300 border-emerald-800/50'
-                                }`}>
-                                  {st.isFree ? 'طالب حر' : 'مرتبط بمشروع'}
-                                </span>
-                                <span className="text-[11px] text-slate-400 block mt-1">{st.projectTitle}</span>
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-3.5 max-w-xs">
-                            {isEditing ? (
-                              <textarea
-                                rows={2}
-                                value={editNoteText}
-                                onChange={(e) => setEditNoteText(e.target.value)}
-                                placeholder="اكتب ملاحظة أو توجيهات أكاديمية..."
-                                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
-                              />
-                            ) : (
-                              <div className="flex items-start gap-1.5 text-slate-300 bg-slate-950/50 p-2 rounded-lg border border-slate-800">
-                                <MessageSquarePlus className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                                <span className="text-[11px] leading-relaxed">
-                                  {st.supervisorNote || <em className="text-slate-500">لا توجد ملاحظات مسجلة بعد</em>}
-                                </span>
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-3.5 text-center">
-                            {isEditing ? (
-                              <div className="flex items-center justify-center gap-1.5">
-                                <button
-                                  onClick={() => {
-                                    setStudentsList((prev) =>
-                                      prev.map((s) =>
-                                        s.id === st.id
-                                          ? {
-                                              ...s,
-                                              supervisorNote: editNoteText,
-                                              isFree: editStatusValue,
-                                              projectTitle: editStatusValue ? 'غير مرتبط بمشروع' : (editProjectTitle || 'مشروع معتمد')
-                                            }
-                                          : s
-                                      )
-                                    );
-                                    setEditingStudentId(null);
-                                  }}
-                                  className="p-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition"
-                                  title="حفظ التعديلات والملاحظة"
-                                >
-                                  <Save className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => setEditingStudentId(null)}
-                                  className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-center gap-1.5">
-                                <button
-                                  onClick={() => {
-                                    setEditingStudentId(st.id);
-                                    setEditNoteText(st.supervisorNote || '');
-                                    setEditStatusValue(st.isFree);
-                                    setEditProjectTitle(st.projectTitle || '');
-                                  }}
-                                  className="p-1.5 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white rounded-lg transition"
-                                  title="تعديل الحالة أو وضع ملاحظة"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    if (window.confirm(`استبعاد الطالب "${st.name}" من الكشف؟`)) {
-                                      setStudentsList((prev) => prev.filter((s) => s.id !== st.id));
-                                    }
-                                  }}
-                                  className="p-1.5 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-lg transition"
-                                  title="استبعاد الطالب من الكشف"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            ) : renderAccessDenied('المشرف الأكاديمي')
           ) : activeTab === 'teams' ? (
-            /* ملتقى تشكيل الفرق والطلاب للطلبة */
-            <div className="space-y-6 max-w-5xl mx-auto">
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Users className="w-5 h-5 text-emerald-400" />
-                    دليل الطلاب المتاحين وبناء الفرق الهندسية
-                  </h2>
-                  <p className="text-xs text-slate-400 mt-1.5 max-w-2xl leading-relaxed">
-                    استكشف زملاءك من مختلف تخصصات الكلية لتكوين فرق متعددة المهارات تغطي متطلبات مشاريع السوق.
-                  </p>
+            /* 3. شاشة ملتقى تشكيل الفرق والطلاب */
+            currentUser?.role === 'student' || !currentUser ? (
+              <div className="space-y-6 max-w-5xl mx-auto">
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <Users className="w-5 h-5 text-emerald-400" />
+                      دليل الطلاب المتاحين وبناء الفرق الهندسية
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-1.5 max-w-2xl leading-relaxed">
+                      استكشف زملاءك من مختلف تخصصات الكلية لتكوين فرق متعددة المهارات.
+                    </p>
+                  </div>
+                  <div className="bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 text-xs text-slate-300">
+                    الطلاب الجاهزون للانضمام: <span className="font-bold text-emerald-400">{studentsList.filter(s => s.isFree).length} طلاب</span>
+                  </div>
                 </div>
-                <div className="bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 text-xs text-slate-300">
-                  الطلاب الجاهزون للانضمام: <span className="font-bold text-emerald-400">{studentsList.filter(s => s.isFree).length} طلاب</span>
-                </div>
-              </div>
 
-              {/* بطاقات الطلاب */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {studentsList.map((student) => (
-                  <div
-                    key={student.id}
-                    className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between hover:border-slate-700 transition"
-                  >
-                    <div>
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-2xl p-1.5 bg-slate-800 rounded-xl">{student.avatar}</span>
-                          <div>
-                            <h3 className="font-bold text-sm text-white">{student.name}</h3>
-                            <span className="text-[11px] text-slate-400">{student.role}</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {studentsList.map((student) => (
+                    <div
+                      key={student.id}
+                      className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between hover:border-slate-700 transition"
+                    >
+                      <div>
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-2xl p-1.5 bg-slate-800 rounded-xl">{student.avatar}</span>
+                            <div>
+                              <h3 className="font-bold text-sm text-white">{student.name}</h3>
+                              <span className="text-[11px] text-slate-400">{student.role}</span>
+                            </div>
+                          </div>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${
+                            student.isFree 
+                              ? 'bg-emerald-950/50 text-emerald-300 border-emerald-800/60'
+                              : 'bg-slate-800 text-slate-400 border-slate-700'
+                          }`}>
+                            {student.isFree ? 'طالب حر' : 'ضمن فريق'}
+                          </span>
+                        </div>
+
+                        <div className="mb-3">
+                          <span className="text-[10px] bg-blue-950/60 text-blue-300 border border-blue-800/40 px-2 py-0.5 rounded inline-block">
+                            {student.major}
+                          </span>
+                        </div>
+
+                        <div className="space-y-1 mb-4">
+                          <span className="text-[10px] text-slate-400 block">المهارات:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {student.skills.map((sk, i) => (
+                              <span key={i} className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
+                                {sk}
+                              </span>
+                            ))}
                           </div>
                         </div>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${
-                          student.isFree 
-                            ? 'bg-emerald-950/50 text-emerald-300 border-emerald-800/60'
-                            : 'bg-slate-800 text-slate-400 border-slate-700'
-                        }`}>
-                          {student.isFree ? 'طالب حر' : 'ضمن فريق'}
-                        </span>
                       </div>
 
-                      <div className="mb-3">
-                        <span className="text-[10px] bg-blue-950/60 text-blue-300 border border-blue-800/40 px-2 py-0.5 rounded inline-block">
-                          {student.major}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1 mb-4">
-                        <span className="text-[10px] text-slate-400 block">المهارات:</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {student.skills.map((sk, i) => (
-                            <span key={i} className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
-                              {sk}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+                      <button
+                        disabled={!student.isFree}
+                        onClick={() => alert(`تم إرسال دعوة انضمام للطالب ${student.name}`)}
+                        className={`w-full py-2 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                          student.isFree
+                            ? 'bg-slate-800 hover:bg-blue-600 text-slate-200 hover:text-white border border-slate-700'
+                            : 'bg-slate-950 text-slate-600 cursor-not-allowed border border-slate-900'
+                        }`}
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        {student.isFree ? 'دعوة للانضمام للفريق' : 'مرتبط بمشروع تخرج'}
+                      </button>
                     </div>
-
-                    <button
-                      disabled={!student.isFree}
-                      onClick={() => alert(`تم إرسال دعوة انضمام للطالب ${student.name}`)}
-                      className={`w-full py-2 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                        student.isFree
-                          ? 'bg-slate-800 hover:bg-blue-600 text-slate-200 hover:text-white border border-slate-700'
-                          : 'bg-slate-950 text-slate-600 cursor-not-allowed border border-slate-900'
-                      }`}
-                    >
-                      <Users className="w-3.5 h-3.5" />
-                      {student.isFree ? 'دعوة للانضمام للفريق' : 'مرتبط بمشروع تخرج'}
-                    </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : renderAccessDenied('الطلاب')
           ) : activeTab === 'student_cv' ? (
-            /* تبويب السيرة الذاتية */
-            <div className="max-w-2xl mx-auto space-y-6">
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-2">
-                  <FileText className="w-5 h-5 text-blue-400" />
-                  السيرة الذاتية والملف الأكاديمي للطالب
-                </h2>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  تُرفق هذه السيرة تلقائياً عند تقديمك على أي مشكلة مطروحة ليتسنى للمشرف الأكاديمي مراجعة مهاراتك واعتماد إسناد المشروع لك.
-                </p>
-              </div>
-
-              {cvUpdateMessage && (
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs rounded-xl text-center">
-                  {cvUpdateMessage}
+            /* 4. السيرة الذاتية (محمية للطلاب) */
+            currentUser?.role === 'student' ? (
+              <div className="max-w-2xl mx-auto space-y-6">
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-2">
+                    <FileText className="w-5 h-5 text-blue-400" />
+                    السيرة الذاتية والملف الأكاديمي للطالب
+                  </h2>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    تُرفق تلقائياً عند تقديمك على المشاريع للمشرف الأكاديمي.
+                  </p>
                 </div>
-              )}
 
-              <form onSubmit={handleSaveCv} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {cvUpdateMessage && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs rounded-xl text-center">
+                    {cvUpdateMessage}
+                  </div>
+                )}
+
+                <form onSubmit={handleSaveCv} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[11px] text-slate-300 block mb-1">التخصص الأكاديمي</label>
+                      <select
+                        value={studentCv.major}
+                        onChange={(e) => setStudentCv({ ...studentCv, major: e.target.value })}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                      >
+                        {ACADEMIC_MAJORS.map((m, idx) => (
+                          <option key={idx} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-300 block mb-1">المساق المسجل</label>
+                      <select
+                        value={studentCv.course}
+                        onChange={(e) => setStudentCv({ ...studentCv, course: e.target.value })}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                      >
+                        <option value="مشروع تخرج 1">مشروع تخرج 1</option>
+                        <option value="مشروع تخرج 2">مشروع تخرج 2</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="text-[11px] text-slate-300 block mb-1">التخصص الأكاديمي</label>
-                    <select
-                      value={studentCv.major}
-                      onChange={(e) => setStudentCv({ ...studentCv, major: e.target.value })}
+                    <label className="text-[11px] text-slate-300 block mb-1">رابط GitHub / Portfolio</label>
+                    <input
+                      type="url"
+                      value={studentCv.portfolioUrl}
+                      onChange={(e) => setStudentCv({ ...studentCv, portfolioUrl: e.target.value })}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none text-left"
+                      dir="ltr"
+                      placeholder="https://github.com/username"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] text-slate-300 block mb-1">نبذة عن مهاراتك وطموحك</label>
+                    <textarea
+                      rows={3}
+                      value={studentCv.bio}
+                      onChange={(e) => setStudentCv({ ...studentCv, bio: e.target.value })}
                       className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
-                    >
-                      {ACADEMIC_MAJORS.map((m, idx) => (
-                        <option key={idx} value={m}>{m}</option>
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="text-[11px] text-slate-300">المهارات المضافة للمطابقة ({userSkills.length})</label>
+                      <button
+                        type="button"
+                        onClick={() => setShowSkillsModal(true)}
+                        className="text-xs text-blue-400 hover:underline"
+                      >
+                        تعديل المهارات
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 p-2 bg-slate-950 rounded-xl border border-slate-800">
+                      {userSkills.map((sk, idx) => (
+                        <span key={idx} className="bg-slate-800 text-slate-300 text-[10px] px-2 py-0.5 rounded-md border border-slate-700">
+                          {sk}
+                        </span>
                       ))}
-                    </select>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[11px] text-slate-300 block mb-1">المساق المسجل</label>
-                    <select
-                      value={studentCv.course}
-                      onChange={(e) => setStudentCv({ ...studentCv, course: e.target.value })}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
-                    >
-                      <option value="مشروع تخرج 1">مشروع تخرج 1</option>
-                      <option value="مشروع تخرج 2">مشروع تخرج 2</option>
-                    </select>
-                  </div>
-                </div>
 
-                <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">رابط GitHub / Portfolio</label>
-                  <input
-                    type="url"
-                    value={studentCv.portfolioUrl}
-                    onChange={(e) => setStudentCv({ ...studentCv, portfolioUrl: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none text-left"
-                    dir="ltr"
-                    placeholder="https://github.com/username"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">نبذة عن مهاراتك وطموحك التقني</label>
-                  <textarea
-                    rows={3}
-                    value={studentCv.bio}
-                    onChange={(e) => setStudentCv({ ...studentCv, bio: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <label className="text-[11px] text-slate-300">المهارات المضافة للمطابقة ({userSkills.length})</label>
-                    <button
-                      type="button"
-                      onClick={() => setShowSkillsModal(true)}
-                      className="text-xs text-blue-400 hover:underline"
-                    >
-                      تعديل المهارات
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 p-2 bg-slate-950 rounded-xl border border-slate-800">
-                    {userSkills.map((sk, idx) => (
-                      <span key={idx} className="bg-slate-800 text-slate-300 text-[10px] px-2 py-0.5 rounded-md border border-slate-700">
-                        {sk}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition cursor-pointer"
-                >
-                  حفظ وتحديث بيانات السيرة الذاتية
-                </button>
-              </form>
-            </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition cursor-pointer"
+                  >
+                    حفظ وتحديث بيانات السيرة الذاتية
+                  </button>
+                </form>
+              </div>
+            ) : renderAccessDenied('الطلاب المسجلين')
           ) : activeTab === 'stats' ? (
             /* الإحصائيات وفجوة السوق */
             <div className="space-y-6 max-w-5xl mx-auto">
@@ -1416,7 +1505,7 @@ export default function App() {
             <div className="max-w-4xl mx-auto space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-white">خريطة طريق التخرج (Milestones Tracker)</h2>
-                <p className="text-xs text-slate-400 mt-1">متابعة دقيقة للخطوات المعتمدة لدى كلية الهندسة والتكنولوجيا ومشاريع التخرج</p>
+                <p className="text-xs text-slate-400 mt-1">متابعة دقيقة للخطوات المعتمدة لدى مشاريع التخرج</p>
               </div>
 
               <div className="space-y-4">
@@ -1455,7 +1544,7 @@ export default function App() {
               </div>
             </div>
           ) : (
-            /* بطاقات المشاريع والمطابقة الذكية */
+            /* المشاريع والمطابقة */
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
                 <div className="relative w-full md:w-80">
@@ -1597,7 +1686,7 @@ export default function App() {
         </main>
       </div>
 
-      {/* نافذة رفع التقرير للطلاب */}
+      {/* نافذة تسليم التقرير */}
       {submitReportModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative">
@@ -1609,7 +1698,7 @@ export default function App() {
 
             <form onSubmit={handleStudentSubmitReport} className="space-y-4">
               <div>
-                <label className="text-[11px] text-slate-300 block mb-1">رابط المستند (Google Docs / Drive / GitHub PDF)</label>
+                <label className="text-[11px] text-slate-300 block mb-1">رابط المستند (Google Docs / GitHub PDF)</label>
                 <input
                   type="url"
                   required
@@ -1622,8 +1711,8 @@ export default function App() {
               </div>
 
               <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
-                <div>• الموعد النهائي المحدد من الدكتور: <strong className="text-amber-400">{submitReportModal.deadlineDay}</strong></div>
-                <div>• سيتم إشعار المشرف الأكاديمي لمراجعة المسودة وتزويدك بالتغذية الراجعة.</div>
+                <div>• الموعد النهائي المحدد: <strong className="text-amber-400">{submitReportModal.deadlineDay}</strong></div>
+                <div>• سيتم إشعار المشرف الأكاديمي مباشرة لمراجعة المسودة وتزويدك بالتقييم.</div>
               </div>
 
               <button
@@ -1637,7 +1726,7 @@ export default function App() {
         </div>
       )}
 
-      {/* نافذة تسجيل الدخول */}
+      {/* نافذة تسجيل الدخول المحدثة */}
       {showAuthModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative shadow-2xl">
@@ -1655,7 +1744,7 @@ export default function App() {
               <h2 className="text-lg font-bold text-white">
                 {authMode === 'login' ? 'تسجيل الدخول إلى البوابة الأكاديمية' : 'إنشاء حساب جديد'}
               </h2>
-              <p className="text-xs text-slate-400 mt-1">منصة متابعة مشاريع التخرج</p>
+              <p className="text-xs text-slate-400 mt-1">منصة متابعة مشاريع التخرج وربط سوق العمل</p>
             </div>
 
             <div className="mb-4">
