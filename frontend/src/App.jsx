@@ -21,9 +21,6 @@ const ACADEMIC_MAJORS = [
 ];
 
 export default function App() {
-  // ------------------------------------------------------------------
-  // 1. إدارة حالة الجلسة والمستخدم (Session & Auth State)
-  // ------------------------------------------------------------------
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('app_user_role');
     const token = localStorage.getItem('token');
@@ -46,14 +43,12 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('الكل');
 
-  // بيانات شاشة تسجيل الدخول
-  const [authRole, setAuthRole] = useState('student'); // student | company | supervisor
+  const [authRole, setAuthRole] = useState('student');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [isLoadingAuth, setIsLoadingAuth] = useState(false);
 
-  // مهارات وسيرة الطالب
   const [userSkills, setUserSkills] = useState(['Python', 'FastAPI', 'Docker', 'React', 'TailwindCSS']);
   const [newSkillInput, setNewSkillInput] = useState('');
   const [showSkillsModal, setShowSkillsModal] = useState(false);
@@ -69,9 +64,6 @@ export default function App() {
   });
   const [cvUpdateMessage, setCvUpdateMessage] = useState('');
 
-  // ------------------------------------------------------------------
-  // 2. نظام متابعة التقارير ومواعيد التسليم (Deliverables & Deadlines)
-  // ------------------------------------------------------------------
   const [reportsTimeline, setReportsTimeline] = useState([
     {
       id: 1,
@@ -114,14 +106,12 @@ export default function App() {
   const [submitReportModal, setSubmitReportModal] = useState(null);
   const [reportUrlInput, setReportUrlInput] = useState('');
 
-  // محادثة الإشراف الأكاديمي
   const [supervisionChat, setSupervisionChat] = useState([
     { sender: 'supervisor', name: 'د. إياد الأحمد (المشرف الأكاديمي)', text: 'مرحباً بالجميع، تذكير بأن موعد تسليم تقرير المقترح SRS محدد يوم الثلاثاء القادم دون تأخير.', time: '10:30 ص' },
     { sender: 'student', name: 'أحمد منصور (قائد الفريق)', text: 'أهلاً دكتور، قمنا بإنهاء المخططات المبدئية ورفعنا رابط المسودة في خانة التسليم.', time: '11:15 ص' }
   ]);
   const [chatInputText, setChatInputText] = useState('');
 
-  // قائمة الطلاب لشاشة المشرف وملتقى الفرق
   const [studentsList, setStudentsList] = useState([
     {
       id: 'st-1',
@@ -210,7 +200,6 @@ export default function App() {
 
   const [favorites, setFavorites] = useState([]);
 
-  // المشاريع والطلبات
   const [matchedProjects, setMatchedProjects] = useState([
     {
       id: 1,
@@ -320,54 +309,16 @@ export default function App() {
 
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
-  const [applyAsTeam, setApplyAsTeam] = useState(false);
-  const [teamMembersInput, setTeamMembersInput] = useState('');
-  const [applicantName, setApplicantName] = useState('');
   const [applicantRole, setApplicantRole] = useState('مطور أنظمة وواجهات');
-  const [applicantMessage, setApplicantMessage] = useState('');
-  const [applySuccess, setApplySuccess] = useState('');
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newProject, setNewProject] = useState({
-    title: '',
-    description: '',
-    required_skills: '',
-    category: ACADEMIC_MAJORS[0],
-    difficulty: 'متوسط',
-    hours_per_week: '12'
-  });
-  const [createSuccess, setCreateSuccess] = useState('');
 
-  // -------------------------------------------------------------
-  // 3. المنطق الصارم لتسجيل الدخول والخروج (Strict Auth Pipeline)
-  // -------------------------------------------------------------
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
     setIsLoadingAuth(true);
 
     try {
-      // محاولة التحقق مع الـ API إن كان متاحاً
-      const formData = new URLSearchParams();
-      formData.append('username', authEmail || `${authRole}@domain.ps`);
-      formData.append('password', authPassword || '123456');
-
-      let token = 'mock_jwt_token_' + Date.now();
-      try {
-        const res = await fetch(`${API_URL}/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: formData
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.access_token) token = data.access_token;
-        }
-      } catch (err) {
-        // Fallback آمن للمناقشة في حال غياب الاتصال بالإنترنت
-      }
-
-      // تحديد اسم وهوية المستخدم حسب الدور المختار
       const defaultProfiles = {
         student: { name: 'أحمد منصور', title: 'طالب خريج (CIS)' },
         supervisor: { name: 'د. إياد الأحمد', title: 'مشرف أكاديمي' },
@@ -381,12 +332,10 @@ export default function App() {
         email: authEmail || `${authRole}@domain.ps`
       };
 
-      // تخزين الجلسة والـ Token
-      localStorage.setItem('token', token);
+      localStorage.setItem('token', 'mock_token_' + Date.now());
       localStorage.setItem('app_user_role', JSON.stringify(userObj));
       setCurrentUser(userObj);
 
-      // التوجيه التلقائي المباشر للـ Dashboard المناسب للدور
       if (authRole === 'supervisor') {
         setActiveTab('supervisor_teams');
       } else if (authRole === 'company') {
@@ -394,30 +343,22 @@ export default function App() {
       } else {
         setActiveTab('match');
       }
-    } catch (err) {
-      setAuthError('حدث خطأ أثناء تسجيل الدخول. يرجى التحقق من البيانات.');
+    } catch {
+      setAuthError('تعذر تسجيل الدخول.');
     } finally {
       setIsLoadingAuth(false);
     }
   };
 
   const handleLogout = () => {
-    // 1. تصفير الـ Storage بالكامل
     localStorage.removeItem('token');
     localStorage.removeItem('app_user_role');
-
-    // 2. تصفير الـ States الداخلية
     setCurrentUser(null);
     setIsSidebarOpen(false);
     setShowApplicationsModal(false);
     setChatProject(null);
     setEditingStudentId(null);
     setEditingReportId(null);
-    setAuthEmail('');
-    setAuthPassword('');
-    setAuthError('');
-
-    // 3. التحويل الفوري لشاشة الدخول (Strict Lock)
     setActiveTab('login');
   };
 
@@ -484,12 +425,6 @@ export default function App() {
     setTimeout(() => setCvUpdateMessage(''), 2500);
   };
 
-  const handleUpdateStatus = (appId, newStatus) => {
-    setApplications((prev) =>
-      prev.map((app) => (app.id === appId ? { ...app, status: newStatus } : app))
-    );
-  };
-
   const handleUpdateReportDeadline = (reportId) => {
     setReportsTimeline((prev) =>
       prev.map((r) =>
@@ -551,13 +486,10 @@ export default function App() {
   const pendingCount = applications.filter((app) => app.status === 'pending').length;
   const categories = ['الكل', ...ACADEMIC_MAJORS];
 
-  // ==================================================================
-  // 🔒 الحائط الأمني الصارم: إذا لم يسجل الدخول، تظهر شاشة Login فقط!
-  // ==================================================================
+  // 1. شاشة الدخول إذا لم يسجل الدخول
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between font-sans selection:bg-blue-600 selection:text-white" dir="rtl">
-        {/* شريط التعريف الأكاديمي */}
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between font-sans" dir="rtl">
         <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-xs py-2.5 px-6 border-b border-amber-500/20 flex justify-between items-center shadow-md">
           <div className="flex items-center gap-2 text-amber-300 font-semibold">
             <ShieldCheck className="w-4 h-4 text-amber-400" />
@@ -568,14 +500,8 @@ export default function App() {
           </span>
         </div>
 
-        {/* بطاقة تسجيل الدخول المركزية */}
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-7 md:p-8 shadow-2xl relative overflow-hidden backdrop-blur-md">
-            
-            {/* زخرفة خلفية خفيفة */}
-            <div className="absolute -top-12 -right-12 w-36 h-36 bg-blue-600/10 rounded-full blur-2xl pointer-events-none"></div>
-            <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-indigo-600/10 rounded-full blur-2xl pointer-events-none"></div>
-
             <div className="text-center mb-6">
               <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-blue-900 to-indigo-950 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-lg">
                 <Lock className="w-7 h-7" />
@@ -586,7 +512,6 @@ export default function App() {
               </p>
             </div>
 
-            {/* اختيار الدور */}
             <div className="mb-5">
               <label className="text-[11px] text-slate-400 font-medium block mb-2">الدور الأكاديمي / الوظيفي:</label>
               <div className="grid grid-cols-3 gap-2">
@@ -619,7 +544,6 @@ export default function App() {
               </div>
             )}
 
-            {/* نموذج الدخول */}
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div>
                 <label className="text-[11px] text-slate-300 block mb-1 font-medium">البريد الإلكتروني / الرقم الجامعي</label>
@@ -662,17 +586,9 @@ export default function App() {
                 {isLoadingAuth ? 'جاري التحقق من الصلاحيات...' : 'دخول إلى النظام (Authorize)'}
               </button>
             </form>
-
-            <div className="mt-5 pt-4 border-t border-slate-800 text-center">
-              <span className="text-[10px] text-slate-500">
-                🔒 الاتصال مشفر وآمن عبر JWT Token & Role Guard
-              </span>
-            </div>
-
           </div>
         </div>
 
-        {/* التذييل */}
         <footer className="text-center py-3 text-[11px] text-slate-500 border-t border-slate-900 bg-slate-950">
           منظومة إدارة مشاريع التخرج الأكاديمية والربط بسوق العمل © 2026
         </footer>
@@ -680,13 +596,11 @@ export default function App() {
     );
   }
 
-  // ==================================================================
-  // 🔓 المستخدم مسجل دخول (Authorized View): تفتح الـ Dashboard المخصصة
-  // ==================================================================
+  // 2. الشاشة الرئيسية بعد تسجيل الدخول
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans" dir="rtl">
       
-      {/* 1. الشريط العلوي التنبيهي لمساق التخرج */}
+      {/* الشريط العلوي */}
       <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-xs py-2 px-4 md:px-6 shadow-md flex items-center justify-between border-b border-amber-500/20">
         <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap">
           <span className="flex items-center gap-1.5 bg-amber-500 text-slate-950 font-bold px-2.5 py-0.5 rounded-full text-[10px]">
@@ -703,7 +617,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* 2. رأس الصفحة (Header) */}
+      {/* رأس الصفحة */}
       <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-30 px-4 md:px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button 
@@ -714,7 +628,7 @@ export default function App() {
           </button>
 
           <div className="w-10 h-10 rounded-xl bg-blue-900 border border-amber-500/30 flex items-center justify-center font-black text-amber-400 shadow-md">
-            {currentUser?.role === 'company' ? <Store className="w-5 h-5" /> : currentUser?.role === 'supervisor' ? <ShieldCheck className="w-5 h-5" /> : <GraduationCap className="w-5 h-5" />}
+            {currentUser.role === 'company' ? <Store className="w-5 h-5" /> : currentUser.role === 'supervisor' ? <ShieldCheck className="w-5 h-5" /> : <GraduationCap className="w-5 h-5" />}
           </div>
           <div>
             <h1 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
@@ -726,15 +640,17 @@ export default function App() {
           </div>
         </div>
 
-        {/* أزرار رأس الصفحة وتسجيل الخروج الحقيقي */}
         <div className="flex items-center gap-2 md:gap-3">
-          <button
-            onClick={() => setActiveTab('reports_hub')}
-            className="flex items-center gap-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 text-indigo-200 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
-          >
-            <Clock className="w-3.5 h-3.5 text-amber-400" />
-            تسليم ومتابعة التقارير
-          </button>
+          {/* إخفاء زر التقارير عن حساب الشركة */}
+          {currentUser.role !== 'company' && (
+            <button
+              onClick={() => setActiveTab('reports_hub')}
+              className="flex items-center gap-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 text-indigo-200 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+            >
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              تسليم ومتابعة التقارير
+            </button>
+          )}
 
           <div className="flex items-center gap-2">
             <div className="hidden sm:flex items-center gap-1.5 bg-slate-800/80 border border-slate-700 px-3 py-1.5 rounded-xl text-xs text-slate-200">
@@ -742,7 +658,6 @@ export default function App() {
               <span>{currentUser.name}</span>
             </div>
             
-            {/* زر تسجيل الخروج الإجباري */}
             <button
               onClick={handleLogout}
               className="flex items-center gap-1.5 bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-200 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-sm"
@@ -755,7 +670,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* 3. جسم المنصة الرئيسي */}
+      {/* جسم المنصة */}
       <div className="flex-1 flex relative overflow-hidden">
         {isSidebarOpen && (
           <div 
@@ -764,7 +679,7 @@ export default function App() {
           />
         )}
 
-        {/* القائمة الجانبية (Sidebar) الخاصة بالدور المسجل */}
+        {/* القائمة الجانبية */}
         <aside className={`
           fixed md:static inset-y-0 right-0 z-40 w-64 bg-slate-900 border-l border-slate-800 p-4 
           flex flex-col justify-between transition-transform duration-300 ease-in-out
@@ -790,26 +705,27 @@ export default function App() {
 
             <p className="text-[11px] font-semibold text-slate-500 uppercase px-2">لوحة التحكم والتنقل</p>
             
-            {/* التبويب الأكاديمي لمتابعة التقارير */}
-            <button
-              onClick={() => { setActiveTab('reports_hub'); setIsSidebarOpen(false); }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
-                activeTab === 'reports_hub'
-                  ? 'bg-blue-600 border-blue-400 text-white shadow-md'
-                  : 'bg-slate-800/70 border-slate-700 text-amber-300 hover:bg-slate-800'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Clock className="w-4 h-4 text-amber-400" />
-                تسليم ومتابعة التقارير
-              </div>
-              <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold">
-                الثلاثاء
-              </span>
-            </button>
+            {/* إخفاء زر التقارير بالقائمة الجانبية عن حساب الشركة */}
+            {currentUser.role !== 'company' && (
+              <button
+                onClick={() => { setActiveTab('reports_hub'); setIsSidebarOpen(false); }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                  activeTab === 'reports_hub'
+                    ? 'bg-blue-600 border-blue-400 text-white shadow-md'
+                    : 'bg-slate-800/70 border-slate-700 text-amber-300 hover:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Clock className="w-4 h-4 text-amber-400" />
+                  تسليم ومتابعة التقارير
+                </div>
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold">
+                  الثلاثاء
+                </span>
+              </button>
+            )}
 
-            {/* أدوار المشرف الأكاديمي */}
-            {currentUser?.role === 'supervisor' && (
+            {currentUser.role === 'supervisor' && (
               <>
                 <button
                   onClick={() => { setActiveTab('supervisor_teams'); setIsSidebarOpen(false); }}
@@ -842,8 +758,7 @@ export default function App() {
               </>
             )}
 
-            {/* أدوار الشركة / صاحب العمل */}
-            {currentUser?.role === 'company' && (
+            {currentUser.role === 'company' && (
               <>
                 <button
                   onClick={() => { setActiveTab('company_projects'); setIsSidebarOpen(false); }}
@@ -877,8 +792,7 @@ export default function App() {
               </>
             )}
 
-            {/* أدوار الطالب فقط */}
-            {currentUser?.role === 'student' && (
+            {currentUser.role === 'student' && (
               <>
                 <button
                   onClick={() => { setActiveTab('student_cv'); setIsSidebarOpen(false); }}
@@ -911,7 +825,6 @@ export default function App() {
               </>
             )}
 
-            {/* روابط الاستكشاف والمطابقة المتاحة للمستخدم المسجل */}
             <button
               onClick={() => { setActiveTab('match'); setIsSidebarOpen(false); }}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
@@ -978,8 +891,8 @@ export default function App() {
         {/* المساحة الرئيسية */}
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">
 
-          {/* 1. تبويب تسليم التقارير والتواصل الأكاديمي */}
-          {activeTab === 'reports_hub' ? (
+          {/* تبويب التقارير (محمي للطالب والمشرف فقط) */}
+          {activeTab === 'reports_hub' && currentUser.role !== 'company' ? (
             <div className="space-y-6 max-w-6xl mx-auto">
               <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 border border-blue-800/50 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -988,7 +901,7 @@ export default function App() {
                     <h2 className="text-xl font-bold text-white">بوابة تسليم التقارير والتواصل الأكاديمي المباشر</h2>
                   </div>
                   <p className="text-xs text-slate-300 mt-1.5 max-w-2xl leading-relaxed">
-                    متابعة مراحل إعداد مساق مشروع التخرج، المواعيد المحددة من المشرف، التغذية الراجعة، والتواصل الفوري بين الدكتور والطلبة.
+                    متابعة مراحل إعداد مساق مشروع التخرج، المواعيد المحددة من المشرف، التغذية الراجعة، والتواصل الفوري.
                   </p>
                 </div>
 
@@ -1008,9 +921,6 @@ export default function App() {
                       <FileText className="w-4 h-4 text-blue-400" />
                       جدول تسليم التقارير الدورية
                     </h3>
-                    <span className="text-[11px] text-slate-400">
-                      {currentUser?.role === 'supervisor' ? 'صلاحية التعديل متاحة لك كـ مشرف' : 'اضغط على التقرير لرفع المسودة'}
-                    </span>
                   </div>
 
                   <div className="space-y-3.5">
@@ -1035,7 +945,7 @@ export default function App() {
                               }`}>
                                 {rep.status === 'submitted' ? 'تم تسليم المسودة' : 'بانتظار التسليم'}
                               </span>
-                              {currentUser?.role === 'supervisor' && (
+                              {currentUser.role === 'supervisor' && (
                                 <button
                                   onClick={() => {
                                     setEditingReportId(rep.id);
@@ -1122,7 +1032,7 @@ export default function App() {
                             </div>
                           )}
 
-                          {currentUser?.role !== 'supervisor' && (
+                          {currentUser.role !== 'supervisor' && (
                             <div className="pt-2 flex justify-end">
                               <button
                                 onClick={() => setSubmitReportModal(rep)}
@@ -1139,7 +1049,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* الشات الأكاديمي المباشر */}
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col h-[580px] shadow-xl">
                   <div className="pb-3 border-b border-slate-800 flex items-center justify-between">
                     <div>
@@ -1189,8 +1098,8 @@ export default function App() {
                 </div>
               </div>
             </div>
-          ) : activeTab === 'supervisor_teams' && currentUser?.role === 'supervisor' ? (
-            /* 2. شاشة المشرف: إدارة الشُعب والفرق */
+          ) : activeTab === 'supervisor_teams' && currentUser.role === 'supervisor' ? (
+            /* شاشة المشرف: إدارة الشُعب والفرق */
             <div className="space-y-6 max-w-6xl mx-auto">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -1201,14 +1110,6 @@ export default function App() {
                   <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
                     تسجيل الملاحظات، تعديل حالة تسكين الطلاب، وفك ارتباط أو استبعاد أي طالب.
                   </p>
-                </div>
-                <div className="flex gap-2 text-xs">
-                  <div className="bg-emerald-950/60 border border-emerald-800/60 px-3 py-1.5 rounded-xl text-emerald-300">
-                    مرتبطون بمشاريع: <strong>{studentsList.filter(s => !s.isFree).length}</strong>
-                  </div>
-                  <div className="bg-amber-950/60 border border-amber-800/60 px-3 py-1.5 rounded-xl text-amber-300">
-                    أحرار: <strong>{studentsList.filter(s => s.isFree).length}</strong>
-                  </div>
                 </div>
               </div>
 
@@ -1356,8 +1257,8 @@ export default function App() {
                 </table>
               </div>
             </div>
-          ) : activeTab === 'company_projects' && currentUser?.role === 'company' ? (
-            /* 3. شاشة الشركة / صاحب العمل */
+          ) : activeTab === 'company_projects' && currentUser.role === 'company' ? (
+            /* شاشة الشركة */
             <div className="space-y-6 max-w-5xl mx-auto">
               <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-slate-900 border border-blue-800/50 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -1366,7 +1267,7 @@ export default function App() {
                     لوحة تحكم: {currentUser.name}
                   </h2>
                   <p className="text-xs text-slate-300 mt-1.5 max-w-xl leading-relaxed">
-                    من هنا تطرح التحديات التقنية التي تواجه أعمالكم ليقوم طلاب مشاريع التخرج بحلها تحت إشراف أكاديمي معتمد.
+                    من هنا تطرح التحديات التقنية التي تواجه أعمالكم ليقوم طلاب مشاريع التخرج بحلها تحت إشراف أكاديمي.
                   </p>
                 </div>
                 <button
@@ -1408,8 +1309,8 @@ export default function App() {
                 </div>
               </div>
             </div>
-          ) : activeTab === 'teams' && currentUser?.role === 'student' ? (
-            /* 4. شاشة ملتقى تشكيل الفرق والطلاب */
+          ) : activeTab === 'teams' && currentUser.role === 'student' ? (
+            /* ملتقى تشكيل الفرق للطلاب */
             <div className="space-y-6 max-w-5xl mx-auto">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -1484,8 +1385,8 @@ export default function App() {
                 ))}
               </div>
             </div>
-          ) : activeTab === 'student_cv' && currentUser?.role === 'student' ? (
-            /* 5. السيرة الذاتية للطالب */
+          ) : activeTab === 'student_cv' && currentUser.role === 'student' ? (
+            /* السيرة الذاتية */
             <div className="max-w-2xl mx-auto space-y-6">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-2">
@@ -1493,7 +1394,7 @@ export default function App() {
                   السيرة الذاتية والملف الأكاديمي للطالب
                 </h2>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  تُرفق تلقائياً عند تقديمك على المشاريع المطروحة ليتمكن المشرف الأكاديمي من مراجعتها.
+                  تُرفق تلقائياً عند تقديمك على المشاريع المطروحة.
                 </p>
               </div>
 
@@ -1581,7 +1482,7 @@ export default function App() {
               </form>
             </div>
           ) : activeTab === 'stats' ? (
-            /* 6. الإحصائيات وفجوة السوق (BI) */
+            /* الإحصائيات وفجوة السوق */
             <div className="space-y-6 max-w-5xl mx-auto">
               <div>
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -1660,7 +1561,7 @@ export default function App() {
               </div>
             </div>
           ) : activeTab === 'milestones' ? (
-            /* 7. مراحل التخرج */
+            /* مراحل التخرج */
             <div className="max-w-4xl mx-auto space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-white">خريطة طريق التخرج (Milestones Tracker)</h2>
@@ -1703,7 +1604,7 @@ export default function App() {
               </div>
             </div>
           ) : (
-            /* 8. بطاقات المشاريع والمطابقة */
+            /* المشاريع والمطابقة */
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
                 <div className="relative w-full md:w-80">
@@ -1822,7 +1723,6 @@ export default function App() {
                           disabled={isFull}
                           onClick={() => {
                             setSelectedProject(project);
-                            setApplicantName(currentUser.name);
                             setIsApplyModalOpen(true);
                           }}
                           className={`flex-1 py-2 rounded-xl text-xs font-semibold shadow-md transition flex items-center justify-center gap-1.5 ${
