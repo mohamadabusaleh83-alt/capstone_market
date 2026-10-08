@@ -369,10 +369,9 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchProjects();
+    // fetchProjects();
     fetchApplications();
   }, []);
-
   useEffect(() => {
     setMatchedProjects((prev) => calculateMatch(prev, userSkills));
   }, [userSkills]);
