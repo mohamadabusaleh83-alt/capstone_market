@@ -4,7 +4,8 @@ import {
   Users, BarChart2, Bell, X, Check, Sparkles,
   Calendar, Award, TrendingUp, Download, Megaphone, ArrowUpRight,
   Star, MessageSquare, Layers, LogIn, LogOut, Store, UserCheck,
-  Menu, ShieldCheck, GraduationCap, FileText, AlertTriangle, PieChart
+  Menu, ShieldCheck, GraduationCap, FileText, AlertTriangle, PieChart,
+  Edit2, Trash2, MessageSquarePlus, Save
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://capstone-market.onrender.com';
@@ -45,81 +46,102 @@ export default function App() {
   });
   const [cvUpdateMessage, setCvUpdateMessage] = useState('');
 
-  // سجل طلاب مساق مشروع التخرج للمشرف (Roster)
-  const [studentRoster] = useState([
-    { id: '12020412', name: 'أحمد منصور', major: 'أنظمة المعلومات الحاسوبية (CIS)', course: 'مشروع تخرج 2', status: 'مرتبط بمشروع', projectTitle: 'نظام إدارة مستودعات ذكي' },
-    { id: '12020589', name: 'سارة خليل', major: 'علم الحاسوب (Computer Science)', course: 'مشروع تخرج 1', status: 'طالب حر (يبحث عن فريق)', projectTitle: '-' },
-    { id: '12019844', name: 'عمر الرمحي', major: 'أمن المعلومات والأدلة الرقمية', course: 'مشروع تخرج 2', status: 'مرتبط بمشروع', projectTitle: 'بوابة رصد الثغرات' },
-    { id: '12120031', name: 'ليلى قاسم', major: 'تقنية المعلومات والاتصالات (IT)', course: 'مشروع تخرج 1', status: 'طالب حر (يبحث عن فريق)', projectTitle: '-' },
-    { id: '12022410', name: 'يزن النجار', major: 'هندسة البرمجيات', course: 'مشروع تخرج 1', status: 'طالب حر (يبحث عن فريق)', projectTitle: '-' }
-  ]);
-
-  // المفضلة
-  const [favorites, setFavorites] = useState([]);
-
-  // مصفوفة الطلاب بتخصصات وخبرات متنوعة
-  const [availableStudents] = useState([
+  // قائمة الطلاب مع دعم الملاحظات والتعديل والحذف عند المشرف
+  const [studentsList, setStudentsList] = useState([
     {
       id: 'st-1',
+      academicId: '12020412',
       name: 'أحمد منصور',
       major: 'أنظمة المعلومات الحاسوبية (CIS)',
+      course: 'مشروع تخرج 2',
       role: 'محلل أعمال وقواعد بيانات',
       skills: ['SQL', 'Power BI', 'Python', 'ETL'],
       experienceLevel: 'متقدم',
-      isFree: true,
+      isFree: false,
+      projectTitle: 'نظام إدارة المستودعات ونقاط البيع السحابي (POS)',
+      supervisorNote: 'فريق ملتزم، تم تسليم مقترح المتطلبات بنجاح.',
       avatar: '👨‍💼'
     },
     {
       id: 'st-2',
+      academicId: '12020589',
       name: 'سارة خليل',
       major: 'علم الحاسوب (Computer Science)',
+      course: 'مشروع تخرج 1',
       role: 'مهندسة ذكاء اصطناعي وباك إند',
       skills: ['Python', 'FastAPI', 'Machine Learning', 'Docker'],
       experienceLevel: 'متوسط',
-      isFree: false,
+      isFree: true,
+      projectTitle: 'غير مرتبط بمشروع',
+      supervisorNote: 'طالبة متميزة تبحث عن فريق يركز على الـ AI.',
       avatar: '👩‍💻'
     },
     {
       id: 'st-3',
+      academicId: '12022410',
       name: 'يزن النجار',
       major: 'هندسة البرمجيات',
+      course: 'مشروع تخرج 2',
       role: 'مطور واجهات وسحابي',
       skills: ['React', 'TailwindCSS', 'Docker', 'TypeScript'],
       experienceLevel: 'متقدم',
-      isFree: true,
+      isFree: false,
+      projectTitle: 'تطبيق ويب لحجز المواعيد وإدارة الطلبات',
+      supervisorNote: 'بحاجة لمتابعة تقرير فحص الأمان.',
       avatar: '👨‍💻'
     },
     {
       id: 'st-4',
+      academicId: '12019844',
       name: 'عمر الرمحي',
       major: 'أمن المعلومات والأدلة الرقمية',
+      course: 'مشروع تخرج 2',
       role: 'مهندس أمن سيبراني وبنية تحتية',
       skills: ['Cybersecurity', 'Linux', 'Network Security', 'Python'],
       experienceLevel: 'متوسط',
-      isFree: true,
+      isFree: false,
+      projectTitle: 'بوابة تدقيق الثغرات واكتشاف الاختراقات',
+      supervisorNote: 'تم اعتماد المرحلة الأولى من التقرير SRS.',
       avatar: '🛡️'
     },
     {
       id: 'st-5',
+      academicId: '12120031',
       name: 'ليلى قاسم',
       major: 'الوسائط الرقمية وتكنولوجيا الويب',
+      course: 'مشروع تخرج 1',
       role: 'مصممة واجهات ومطورة ويب',
       skills: ['React', 'Figma', 'UI/UX', 'CSS Architecture'],
       experienceLevel: 'متقدم',
       isFree: true,
+      projectTitle: 'غير مرتبط بمشروع',
+      supervisorNote: 'تنتظر التسكين مع فريق يحتاج مصمم واجهات.',
       avatar: '🎨'
     },
     {
       id: 'st-6',
+      academicId: '12021155',
       name: 'كريم الشيخ',
       major: 'تقنية المعلومات والاتصالات (IT)',
+      course: 'مشروع تخرج 1',
       role: 'إدارة أنظمة وشبكات',
       skills: ['Linux', 'Docker', 'System Admin', 'Bash'],
       experienceLevel: 'متوسط',
       isFree: true,
+      projectTitle: 'غير مرتبط بمشروع',
+      supervisorNote: '',
       avatar: '⚙️'
     }
   ]);
+
+  // حالة تعديل الملاحظة والمشروع عند المشرف
+  const [editingStudentId, setEditingStudentId] = useState(null);
+  const [editNoteText, setEditNoteText] = useState('');
+  const [editStatusValue, setEditStatusValue] = useState(false);
+  const [editProjectTitle, setEditProjectTitle] = useState('');
+
+  // المفضلة
+  const [favorites, setFavorites] = useState([]);
 
   // المشاريع والطلبات
   const [matchedProjects, setMatchedProjects] = useState([
@@ -266,41 +288,15 @@ export default function App() {
     e.preventDefault();
     setAuthError('');
 
-    if (authMode === 'login') {
-      try {
-        const formData = new URLSearchParams();
-        formData.append('username', authEmail);
-        formData.append('password', authPassword);
-
-        const res = await fetch(`${API_URL}/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: formData
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data.access_token) {
-            localStorage.setItem('token', data.access_token);
-          }
-        }
-      } catch {
-        // Fallback
-      }
-
-      const userObj = {
-        role: authRole,
-        name: authFullName || authEmail.split('@')[0] || 'مستخدم مسجل',
-        title: authRole === 'student' ? 'طالب خريج' : authRole === 'business' ? 'صاحب عمل / متجر' : 'مشرف أكاديمي'
-      };
-      setCurrentUser(userObj);
-      localStorage.setItem('app_user_role', JSON.stringify(userObj));
-      setShowAuthModal(false);
-      setActiveTab(authRole === 'business' ? 'business_projects' : authRole === 'supervisor' ? 'supervisor_review' : 'match');
-    } else {
-      alert('تم إنشاء الحساب بنجاح! تفضل بتسجيل الدخول.');
-      setAuthMode('login');
-    }
+    const userObj = {
+      role: authRole,
+      name: authFullName || authEmail.split('@')[0] || (authRole === 'supervisor' ? 'د. إياد الأحمد' : 'مستخدم مسجل'),
+      title: authRole === 'student' ? 'طالب خريج' : authRole === 'business' ? 'صاحب عمل / متجر' : 'مشرف أكاديمي'
+    };
+    setCurrentUser(userObj);
+    localStorage.setItem('app_user_role', JSON.stringify(userObj));
+    setShowAuthModal(false);
+    setActiveTab(authRole === 'business' ? 'business_projects' : authRole === 'supervisor' ? 'supervisor_teams' : 'match');
   };
 
   const handleLogout = () => {
@@ -346,32 +342,6 @@ export default function App() {
     });
   };
 
-  const fetchProjects = () => {
-    fetch(`${API_URL}/projects/`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setMatchedProjects(calculateMatch(data, userSkills));
-        }
-      })
-      .catch(() => {});
-  };
-
-  const fetchApplications = () => {
-    fetch(`${API_URL}/applications/`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setApplications(data);
-        }
-      })
-      .catch(() => {});
-  };
-
-  useEffect(() => {
-    // fetchProjects();
-    fetchApplications();
-  }, []);
   useEffect(() => {
     setMatchedProjects((prev) => calculateMatch(prev, userSkills));
   }, [userSkills]);
@@ -404,6 +374,36 @@ export default function App() {
     setApplications((prev) =>
       prev.map((app) => (app.id === appId ? { ...app, status: newStatus } : app))
     );
+  };
+
+  // دوال خاصة بالمشرف: تعديل، حذف، ووضع ملاحظة
+  const startEditingStudent = (student) => {
+    setEditingStudentId(student.id);
+    setEditNoteText(student.supervisorNote || '');
+    setEditStatusValue(student.isFree);
+    setEditProjectTitle(student.projectTitle || '');
+  };
+
+  const saveStudentEdits = (id) => {
+    setStudentsList((prev) =>
+      prev.map((s) =>
+        s.id === id
+          ? {
+              ...s,
+              supervisorNote: editNoteText,
+              isFree: editStatusValue,
+              projectTitle: editStatusValue ? 'غير مرتبط بمشروع' : (editProjectTitle || 'مشروع معتمد')
+            }
+          : s
+      )
+    );
+    setEditingStudentId(null);
+  };
+
+  const deleteStudentFromCohort = (id, name) => {
+    if (window.confirm(`هل أنت متأكد من حذف/استبعاد الطالب "${name}" من سجل مساق مشروع التخرج؟`)) {
+      setStudentsList((prev) => prev.filter((s) => s.id !== id));
+    }
   };
 
   const triggerApply = (project) => {
@@ -523,8 +523,8 @@ export default function App() {
             {currentUser?.role === 'business'
               ? '🏢 بوابة القطاع الخاص: اطرح التحديات البرمجية ليحلها طلاب مشاريع التخرج تحت إشراف أكاديمي.'
               : currentUser?.role === 'supervisor'
-              ? '📋 بوابة الإشراف الأكاديمي: مراجعة المشاريع واعتماد الفرق الهندسية للفصل الحالي.'
-              : '🎓 بوابة الطلاب: استعرض مشاكل الشركات والمحلات الحقيقية وحوّلها لمشروع تخرج معتمد.'}
+              ? '📋 بوابة الإشراف الأكاديمي: إدارة الشُّعب، مراجعة المشاريع، ووضع التوجيهات والملاحظات.'
+              : '🎓 بوابة الطلاب: استعرض مشاكل الشركات والمحلات الحقيقية وابنِ فريقك مع زملائك.'}
           </span>
         </div>
         <div className="hidden md:flex items-center gap-4 text-amber-300/80 text-xs">
@@ -644,6 +644,7 @@ export default function App() {
 
             <p className="text-[11px] font-semibold text-slate-500 uppercase px-2">لوحة التحكم والتنقل</p>
             
+            {/* روابط صاحب العمل */}
             {currentUser?.role === 'business' && (
               <>
                 <button
@@ -660,7 +661,6 @@ export default function App() {
 
                 <button
                   onClick={() => {
-                    fetchApplications();
                     setShowApplicationsModal(true);
                     setIsSidebarOpen(false);
                   }}
@@ -679,8 +679,26 @@ export default function App() {
               </>
             )}
 
+            {/* روابط المشرف الأكاديمي */}
             {currentUser?.role === 'supervisor' && (
               <>
+                <button
+                  onClick={() => { setActiveTab('supervisor_teams'); setIsSidebarOpen(false); }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                    activeTab === 'supervisor_teams'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <ShieldCheck className="w-4 h-4 text-amber-400" />
+                    إدارة ومتابعة شُعب التخرج
+                  </div>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold">
+                    إشراف
+                  </span>
+                </button>
+
                 <button
                   onClick={() => { setActiveTab('supervisor_review'); setIsSidebarOpen(false); }}
                   className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
@@ -689,21 +707,20 @@ export default function App() {
                       : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
                   }`}
                 >
-                  <ShieldCheck className="w-4 h-4 text-amber-400" />
+                  <CheckCircle className="w-4 h-4 text-emerald-400" />
                   اعتماد المشاريع الأكاديمية
                 </button>
 
                 <button
                   onClick={() => {
-                    fetchApplications();
                     setShowApplicationsModal(true);
                     setIsSidebarOpen(false);
                   }}
                   className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium bg-slate-800/60 hover:bg-slate-800 text-slate-300 transition cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    اعتماد وإسناد الطلبات
+                    <Users className="w-4 h-4 text-blue-400" />
+                    طلبات الإسناد الواردة
                   </div>
                   {pendingCount > 0 && (
                     <span className="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
@@ -711,35 +728,46 @@ export default function App() {
                     </span>
                   )}
                 </button>
+              </>
+            )}
+
+            {/* روابط الطالب فقط: ملتقى تشكيل الفرق والسيرة الذاتية */}
+            {(!currentUser || currentUser.role === 'student') && (
+              <>
+                {currentUser?.role === 'student' && (
+                  <button
+                    onClick={() => { setActiveTab('student_cv'); setIsSidebarOpen(false); }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                      activeTab === 'student_cv'
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4 text-blue-400" />
+                    سيرتي الذاتية (CV)
+                  </button>
+                )}
 
                 <button
-                  onClick={() => { setActiveTab('roster'); setIsSidebarOpen(false); }}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
-                    activeTab === 'roster'
+                  onClick={() => { setActiveTab('teams'); setIsSidebarOpen(false); }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                    activeTab === 'teams'
                       ? 'bg-blue-600 text-white shadow-md'
                       : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
                   }`}
                 >
-                  <GraduationCap className="w-4 h-4 text-blue-400" />
-                  سجل طلاب مشروع التخرج
+                  <div className="flex items-center gap-2.5">
+                    <Users className="w-4 h-4 text-emerald-400" />
+                    ملتقى تشكيل الفرق والطلاب
+                  </div>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
+                    {studentsList.filter(s => s.isFree).length} أحرار
+                  </span>
                 </button>
               </>
             )}
 
-            {currentUser?.role === 'student' && (
-              <button
-                onClick={() => { setActiveTab('student_cv'); setIsSidebarOpen(false); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
-                  activeTab === 'student_cv'
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-                }`}
-              >
-                <FileText className="w-4 h-4 text-blue-400" />
-                سيرتي الذاتية (CV)
-              </button>
-            )}
-
+            {/* روابط مشتركة */}
             <button
               onClick={() => { setActiveTab('match'); setIsSidebarOpen(false); }}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
@@ -765,23 +793,6 @@ export default function App() {
             >
               <Briefcase className="w-4 h-4" />
               تصفح كل المشاريع
-            </button>
-
-            <button
-              onClick={() => { setActiveTab('teams'); setIsSidebarOpen(false); }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
-                activeTab === 'teams'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Users className="w-4 h-4 text-emerald-400" />
-                ملتقى تشكيل الفرق والطلاب
-              </div>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
-                {availableStudents.filter(s => s.isFree).length} أحرار
-              </span>
             </button>
 
             <button
@@ -850,8 +861,158 @@ export default function App() {
 
         {/* المساحة الرئيسية */}
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">
-          {activeTab === 'teams' ? (
-            /* ملتقى تشكيل الفرق والطلاب المتاحين */
+          {/* 1. شاشة المشرف: إدارة ومتابعة شُعب التخرج والفرق (مع تعديل وحذف وملاحظات) */}
+          {activeTab === 'supervisor_teams' && currentUser?.role === 'supervisor' ? (
+            <div className="space-y-6 max-w-6xl mx-auto">
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <ShieldCheck className="w-6 h-6 text-amber-400" />
+                    لوحة متابعة وإدارة شُعبة مشاريع التخرج
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                    من هنا يمتلك المشرف الأكاديمي الصلاحية الكاملة لتسجيل الملاحظات، تعديل حالة تسكين الطلاب، وفك ارتباط أو استبعاد أي طالب.
+                  </p>
+                </div>
+                <div className="flex gap-2 text-xs">
+                  <div className="bg-emerald-950/60 border border-emerald-800/60 px-3 py-1.5 rounded-xl text-emerald-300">
+                    مرتبطون بمشاريع: <strong>{studentsList.filter(s => !s.isFree).length}</strong>
+                  </div>
+                  <div className="bg-amber-950/60 border border-amber-800/60 px-3 py-1.5 rounded-xl text-amber-300">
+                    أحرار (بحاجة لتسكين): <strong>{studentsList.filter(s => s.isFree).length}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* جدول المتابعة الأكاديمي للمشرف */}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                <table className="w-full text-right text-xs">
+                  <thead className="bg-slate-950 border-b border-slate-800 text-slate-400">
+                    <tr>
+                      <th className="p-3.5">الرقم الجامعي</th>
+                      <th className="p-3.5">اسم الطالب والتخصص</th>
+                      <th className="p-3.5">المساق</th>
+                      <th className="p-3.5">حالة المشروع المسند</th>
+                      <th className="p-3.5">ملاحظات المشرف الأكاديمي</th>
+                      <th className="p-3.5 text-center">الإجراءات والتحكم</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {studentsList.map((st) => {
+                      const isEditing = editingStudentId === st.id;
+                      return (
+                        <tr key={st.id} className="hover:bg-slate-800/20 transition">
+                          <td className="p-3.5 font-mono text-slate-400">{st.academicId}</td>
+                          <td className="p-3.5">
+                            <div className="font-semibold text-white flex items-center gap-2">
+                              <span>{st.avatar}</span>
+                              <span>{st.name}</span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">{st.major}</span>
+                          </td>
+                          <td className="p-3.5">
+                            <span className="bg-blue-950 text-blue-300 border border-blue-800/60 px-2 py-0.5 rounded text-[10px]">
+                              {st.course}
+                            </span>
+                          </td>
+                          <td className="p-3.5">
+                            {isEditing ? (
+                              <div className="space-y-1.5">
+                                <select
+                                  value={editStatusValue ? 'free' : 'assigned'}
+                                  onChange={(e) => setEditStatusValue(e.target.value === 'free')}
+                                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-[11px] text-white"
+                                >
+                                  <option value="assigned">مرتبط بمشروع</option>
+                                  <option value="free">طالب حر (غير مرتبط)</option>
+                                </select>
+                                {!editStatusValue && (
+                                  <input
+                                    type="text"
+                                    value={editProjectTitle}
+                                    onChange={(e) => setEditProjectTitle(e.target.value)}
+                                    placeholder="اسم المشروع..."
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-1 text-[10px] text-white"
+                                  />
+                                )}
+                              </div>
+                            ) : (
+                              <div>
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium border inline-block ${
+                                  st.isFree
+                                    ? 'bg-amber-950/40 text-amber-300 border-amber-800/50'
+                                    : 'bg-emerald-950/40 text-emerald-300 border-emerald-800/50'
+                                }`}>
+                                  {st.isFree ? 'طالب حر' : 'مرتبط بمشروع'}
+                                </span>
+                                <span className="text-[11px] text-slate-400 block mt-1">{st.projectTitle}</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-3.5 max-w-xs">
+                            {isEditing ? (
+                              <textarea
+                                rows={2}
+                                value={editNoteText}
+                                onChange={(e) => setEditNoteText(e.target.value)}
+                                placeholder="اكتب ملاحظة أو توجيهات أكاديمية..."
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                              />
+                            ) : (
+                              <div className="flex items-start gap-1.5 text-slate-300 bg-slate-950/50 p-2 rounded-lg border border-slate-800">
+                                <MessageSquarePlus className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                                <span className="text-[11px] leading-relaxed">
+                                  {st.supervisorNote || <em className="text-slate-500">لا توجد ملاحظات مسجلة بعد</em>}
+                                </span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-3.5 text-center">
+                            {isEditing ? (
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  onClick={() => saveStudentEdits(st.id)}
+                                  className="p-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition"
+                                  title="حفظ التعديلات والملاحظة"
+                                >
+                                  <Save className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => setEditingStudentId(null)}
+                                  className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition"
+                                  title="إلغاء"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  onClick={() => startEditingStudent(st)}
+                                  className="p-1.5 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white rounded-lg transition"
+                                  title="تعديل الحالة أو وضع ملاحظة"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => deleteStudentFromCohort(st.id, st.name)}
+                                  className="p-1.5 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-lg transition"
+                                  title="استبعاد الطالب من الكشف"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : activeTab === 'teams' ? (
+            /* 2. شاشة الطلاب: ملتقى تشكيل الفرق والطلاب المتاحين */
             <div className="space-y-6 max-w-5xl mx-auto">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -864,13 +1025,13 @@ export default function App() {
                   </p>
                 </div>
                 <div className="bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 text-xs text-slate-300">
-                  الطلاب الجاهزون للانضمام: <span className="font-bold text-emerald-400">{availableStudents.filter(s => s.isFree).length} طلاب</span>
+                  الطلاب الجاهزون للانضمام: <span className="font-bold text-emerald-400">{studentsList.filter(s => s.isFree).length} طلاب</span>
                 </div>
               </div>
 
               {/* بطاقات الطلاب */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {availableStudents.map((student) => (
+                {studentsList.map((student) => (
                   <div
                     key={student.id}
                     className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between hover:border-slate-700 transition"
@@ -928,7 +1089,7 @@ export default function App() {
               </div>
             </div>
           ) : activeTab === 'student_cv' ? (
-            /* تبويب السيرة الذاتية */
+            /* تبويب السيرة الذاتية للطالب */
             <div className="max-w-2xl mx-auto space-y-6">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-2">
@@ -1024,60 +1185,6 @@ export default function App() {
                 </button>
               </form>
             </div>
-          ) : activeTab === 'roster' && currentUser?.role === 'supervisor' ? (
-            /* سجل الطلاب للمشرف */
-            <div className="max-w-5xl mx-auto space-y-6">
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex justify-between items-center">
-                <div>
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <GraduationCap className="w-5 h-5 text-blue-400" />
-                    سجل طلاب مساق مشروع التخرج (Roster)
-                  </h2>
-                  <p className="text-xs text-slate-400 mt-1">
-                    كشف حصر ومتابعة الطلبة المسجلين للفصل الحالي، مع بيان الطلاب الأحرار الذين لم يلتحقوا بمشاريع بعد.
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-                <table className="w-full text-right text-xs">
-                  <thead className="bg-slate-950 border-b border-slate-800 text-slate-400">
-                    <tr>
-                      <th className="p-3.5">الرقم الجامعي</th>
-                      <th className="p-3.5">اسم الطالب</th>
-                      <th className="p-3.5">التخصص الأكاديمي</th>
-                      <th className="p-3.5">المساق</th>
-                      <th className="p-3.5">حالة المشروع</th>
-                      <th className="p-3.5">المشروع المسند</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    {studentRoster.map((st) => (
-                      <tr key={st.id} className="hover:bg-slate-800/30 transition">
-                        <td className="p-3.5 font-mono text-slate-400">{st.id}</td>
-                        <td className="p-3.5 font-semibold text-white">{st.name}</td>
-                        <td className="p-3.5 text-slate-300">{st.major}</td>
-                        <td className="p-3.5">
-                          <span className="bg-blue-950 text-blue-300 border border-blue-800/60 px-2 py-0.5 rounded text-[11px]">
-                            {st.course}
-                          </span>
-                        </td>
-                        <td className="p-3.5">
-                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-medium border ${
-                            st.status.includes('طالب حر')
-                              ? 'bg-amber-950/40 text-amber-300 border-amber-800/50'
-                              : 'bg-emerald-950/40 text-emerald-300 border-emerald-800/50'
-                          }`}>
-                            {st.status}
-                          </span>
-                        </td>
-                        <td className="p-3.5 text-slate-400">{st.projectTitle}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
           ) : activeTab === 'business_projects' ? (
             /* لوحة تحكم أصحاب الأعمال */
             <div className="space-y-6 max-w-5xl mx-auto">
@@ -1119,7 +1226,6 @@ export default function App() {
                       <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
                         <button
                           onClick={() => {
-                            fetchApplications();
                             setShowApplicationsModal(true);
                           }}
                           className="bg-slate-800 hover:bg-slate-700 text-white text-xs px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer"
@@ -1134,7 +1240,7 @@ export default function App() {
               </div>
             </div>
           ) : activeTab === 'supervisor_review' ? (
-            /* لوحة تحكم المشرف */
+            /* لوحة تدقيق واعتماد المشاريع للمشرف */
             <div className="space-y-6 max-w-5xl mx-auto">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-2">
@@ -1301,7 +1407,7 @@ export default function App() {
               </div>
             </div>
           ) : (
-            /* بطاقات المشاريع والمطابقة */
+            /* بطاقات المشاريع والمطابقة الذكية */
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
                 <div className="relative w-full md:w-80">
@@ -1526,7 +1632,7 @@ export default function App() {
                   <input
                     type="text"
                     required
-                    placeholder="مثال: أحمد محمود أو شركة الأندلس"
+                    placeholder="مثال: د. إياد أو أحمد محمود"
                     value={authFullName}
                     onChange={(e) => setAuthFullName(e.target.value)}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
