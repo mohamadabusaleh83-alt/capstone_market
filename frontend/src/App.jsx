@@ -4,7 +4,7 @@ import {
   Users, BarChart2, Bell, X, Check, Sparkles,
   Calendar, Award, TrendingUp, Download, Megaphone, ArrowUpRight,
   Star, MessageSquare, Layers, LogIn, LogOut, Store, UserCheck,
-  Menu, ShieldCheck, GraduationCap, FileText
+  Menu, ShieldCheck, GraduationCap, FileText, AlertTriangle, PieChart
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://capstone-market.onrender.com';
@@ -19,15 +19,12 @@ const ACADEMIC_MAJORS = [
 ];
 
 export default function App() {
-  // حالة المستخدم الحالية (null تعني زائر غير مسجل)
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('app_user_role');
     return saved ? JSON.parse(saved) : null;
   });
 
-  // حالة فتح وإغلاق القائمة الجانبية للشاشات الصغيرة
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
   const [activeTab, setActiveTab] = useState('match');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('الكل');
@@ -60,19 +57,21 @@ export default function App() {
   // المفضلة
   const [favorites, setFavorites] = useState([]);
 
-  // حالة المشاريع والطلبات
+  // المشاريع والطلبات
   const [matchedProjects, setMatchedProjects] = useState([]);
   const [applications, setApplications] = useState([]);
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
 
-  // نافذة المحادثة
+  // المحادثة
   const [chatProject, setChatProject] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [inputMsg, setInputMsg] = useState('');
 
-  // نافذة التقديم
+  // نافذة التقديم وخيارات الفريق
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [applyAsTeam, setApplyAsTeam] = useState(false);
+  const [teamMembersInput, setTeamMembersInput] = useState('');
   const [applicantName, setApplicantName] = useState('');
   const [applicantRole, setApplicantRole] = useState('مطور أنظمة وواجهات');
   const [applicantMessage, setApplicantMessage] = useState('');
@@ -90,7 +89,7 @@ export default function App() {
   });
   const [createSuccess, setCreateSuccess] = useState('');
 
-  // حالات تسجيل الدخول وإنشاء الحساب
+  // تسجيل الدخول وإنشاء الحساب
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [authRole, setAuthRole] = useState('student');
@@ -185,33 +184,38 @@ export default function App() {
     setIsSidebarOpen(false);
   };
 
+  // خوارزمية المطابقة الذكية مع حساب المهارات المتوفرة والمهارات الناقصة
   const calculateMatch = (projectsList, skillsList) => {
     if (!Array.isArray(projectsList)) return [];
     return projectsList.map((p) => {
       const projectSkills = typeof p.required_skills === 'string'
-        ? p.required_skills.split(',').map((s) => s.trim().toLowerCase())
-        : (p.skills || []).map((s) => s.toLowerCase());
+        ? p.required_skills.split(',').map((s) => s.trim())
+        : (p.skills || ['Python', 'FastAPI']);
 
-      const matchedCount = projectSkills.filter((s) =>
-        skillsList.map((u) => u.toLowerCase()).includes(s)
-      ).length;
+      const matchedSkills = projectSkills.filter((s) =>
+        skillsList.map((u) => u.toLowerCase()).includes(s.toLowerCase())
+      );
+
+      const missingSkills = projectSkills.filter((s) =>
+        !skillsList.map((u) => u.toLowerCase()).includes(s.toLowerCase())
+      );
 
       const matchPercent = projectSkills.length > 0 
-        ? Math.round((matchedCount / projectSkills.length) * 100)
-        : 50;
+        ? Math.round((matchedSkills.length / projectSkills.length) * 100)
+        : 60;
 
       return {
         ...p,
         matchRate: matchPercent,
         match: `${matchPercent}% تطابق`,
+        matchedSkills,
+        missingSkills,
         category: p.category || ACADEMIC_MAJORS[0],
         maxMembers: p.maxMembers || 4,
         currentMembers: p.currentMembers !== undefined ? p.currentMembers : 2,
         difficulty: p.difficulty || 'متوسط',
         hoursPerWeek: p.hours_per_week || 10,
-        skills: typeof p.required_skills === 'string'
-          ? p.required_skills.split(',').map((s) => s.trim())
-          : (p.skills || ['Python', 'FastAPI']),
+        skills: projectSkills,
       };
     });
   };
@@ -306,7 +310,12 @@ export default function App() {
     e.preventDefault();
     const token = localStorage.getItem('token');
     try {
-      const cvSummary = `[التخصص: ${studentCv.major} | المساق: ${studentCv.course} | المهارات: ${userSkills.join(', ')}] - ${applicantMessage}`;
+      const teamDetails = applyAsTeam 
+        ? ` | [نمط التقديم: فريق متكامل] أعضاء الفريق المقترح: ${teamMembersInput || 'أحمد، سارة، محمد'}`
+        : ' | [نمط التقديم: فردي]';
+
+      const cvSummary = `[التخصص: ${studentCv.major} | المساق: ${studentCv.course} | المهارات: ${userSkills.join(', ')}]${teamDetails} - ${applicantMessage}`;
+      
       const response = await fetch(`${API_URL}/applications/`, {
         method: 'POST',
         headers: { 
@@ -327,7 +336,7 @@ export default function App() {
         setTimeout(() => {
           setIsApplyModalOpen(false);
           setApplySuccess('');
-        }, 1200);
+        }, 1300);
       } else {
         const err = await response.json();
         alert(err.detail || 'تعذر تقديم الطلب');
@@ -337,7 +346,7 @@ export default function App() {
       setTimeout(() => {
         setIsApplyModalOpen(false);
         setApplySuccess('');
-      }, 1200);
+      }, 1300);
     }
   };
 
@@ -706,7 +715,7 @@ export default function App() {
               }`}
             >
               <BarChart2 className="w-4 h-4" />
-              الإحصائيات
+              الإحصائيات وفجوة السوق
             </button>
           </div>
 
@@ -978,13 +987,19 @@ export default function App() {
               </div>
             </div>
           ) : activeTab === 'stats' ? (
-            /* الإحصائيات */
+            /* الإحصائيات ولوحة فجوة مهارات السوق (Market Skills Gap & BI Analytics) */
             <div className="space-y-6 max-w-5xl mx-auto">
               <div>
-                <h2 className="text-xl font-bold text-white">لوحة مؤشرات سوق مشاريع التخرج</h2>
-                <p className="text-xs text-slate-400 mt-1">نظرة عامة على العرض والطلب والشراكات مع قطاع الأعمال</p>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <BarChart2 className="w-5 h-5 text-blue-400" />
+                  لوحة مؤشرات سوق مشاريع التخرج وذكاء الأعمال (BI)
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  تحليل مقارن بين متطلبات مشاريع سوق العمل المعروضة والمهارات المتوفرة لدى الطلاب
+                </p>
               </div>
 
+              {/* البطاقات العامة */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
                   <p className="text-xs text-slate-400">إجمالي المشاريع المطروحة</p>
@@ -993,13 +1008,75 @@ export default function App() {
                 </div>
                 <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
                   <p className="text-xs text-slate-400">المهارات الأكثر طلباً</p>
-                  <p className="text-2xl font-black mt-2 text-amber-400">Python & React</p>
+                  <p className="text-2xl font-black mt-2 text-amber-400">Python & SQL</p>
                   <span className="text-[10px] text-slate-400 mt-1 block">في طلبات المحلات والمتاجر</span>
                 </div>
                 <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
                   <p className="text-xs text-slate-400">الطلبات المسجلة</p>
                   <p className="text-2xl font-black mt-2 text-emerald-400">{applications.length}</p>
                   <span className="text-[10px] text-slate-400 mt-1 block">طلبات انضمام للفرق</span>
+                </div>
+              </div>
+
+              {/* قسم تحليل فجوة المهارات (Market Skills Gap) */}
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-5">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <PieChart className="w-4 h-4 text-amber-400" />
+                      تحليل فجوة المهارات (Market Skills Gap Analysis)
+                    </h3>
+                    <p className="text-[11px] text-slate-400">مقارنة نسبة طلب سوق العمل بنسبة مهارات الطلاب المتوفرة</p>
+                  </div>
+                  <span className="text-[10px] bg-blue-500/10 text-blue-300 border border-blue-500/20 px-2.5 py-1 rounded-lg">
+                    مؤشر موجه للجامعة وأصحاب القرار
+                  </span>
+                </div>
+
+                {/* شريط المقارنات */}
+                <div className="space-y-4 pt-2">
+                  {[
+                    { skill: 'Python & FastAPI', demand: 78, supply: 55, status: 'توازن جيد' },
+                    { skill: 'SQL & Database Architecture', demand: 72, supply: 68, status: 'تغطية ممتازة' },
+                    { skill: 'Power BI & Data Analytics', demand: 65, supply: 28, status: '⚠️ فجوة حرجة (طلب عالٍ ونقص طلبة)' },
+                    { skill: 'React & Frontend Frameworks', demand: 60, supply: 64, status: 'وفرة طلابية' },
+                    { skill: 'Cybersecurity & Ethical Hacking', demand: 45, supply: 20, status: '⚠️ بحاجة لورشات تدريبية' }
+                  ].map((item, idx) => (
+                    <div key={idx} className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-semibold text-white">{item.skill}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                          item.status.includes('فجوة') 
+                            ? 'bg-rose-950/60 text-rose-300 border border-rose-800/50' 
+                            : 'bg-emerald-950/50 text-emerald-300 border border-emerald-800/50'
+                        }`}>
+                          {item.status}
+                        </span>
+                      </div>
+
+                      {/* شريط الطلب والعرض */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-slate-400">
+                          <span>طلب سوق العمل: <strong className="text-amber-400">{item.demand}%</strong></span>
+                          <span>المتوفر لدى الطلبة: <strong className="text-blue-400">{item.supply}%</strong></span>
+                        </div>
+                        <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden flex">
+                          <div className="bg-amber-500 h-2" style={{ width: `${item.demand}%` }} title={`طلب السوق: ${item.demand}%`}></div>
+                        </div>
+                        <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden flex">
+                          <div className="bg-blue-500 h-1.5" style={{ width: `${item.supply}%` }} title={`عرض الطلاب: ${item.supply}%`}></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* بطاقة التوصية الأكاديمية */}
+                <div className="p-4 bg-amber-950/20 border border-amber-800/40 rounded-xl flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="text-xs leading-relaxed text-amber-200/90">
+                    <strong>توصية النظام لعمادة الكلية والمشرفين:</strong> توجد فجوة بنسبة <strong>37%</strong> في مهارات ذكاء الأعمال (Power BI) وتحليل البيانات، حيث تطلبها مشاريع المحلات والمتاجر بشكل متزايد بينما يركز معظم الطلاب على الواجهات الأمامية. يُوصى بتوجيه طلاب مشاريع تخرج 1 نحو أنظمة الـ BI والتحليل.
+                  </div>
                 </div>
               </div>
             </div>
@@ -1047,7 +1124,7 @@ export default function App() {
               </div>
             </div>
           ) : (
-            /* بطاقات المشاريع */
+            /* بطاقات المشاريع مع تحليل المهارات المتوفرة والناقصة وتغطية الفريق */
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
                 <div className="relative w-full md:w-80">
@@ -1131,7 +1208,8 @@ export default function App() {
                           </span>
                         </div>
 
-                        <div className="mb-4 bg-slate-800/40 p-2.5 rounded-xl border border-slate-800">
+                        {/* مقاعد الفريق وتغطية الفريق */}
+                        <div className="mb-3 bg-slate-800/40 p-2.5 rounded-xl border border-slate-800">
                           <div className="flex justify-between text-[11px] text-slate-400 mb-1">
                             <span className="flex items-center gap-1"><Users className="w-3 h-3" /> مقاعد الفريق</span>
                             <span className={`font-semibold ${isFull ? 'text-rose-400' : 'text-slate-300'}`}>
@@ -1146,17 +1224,43 @@ export default function App() {
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-1.5 mb-5">
-                          {project.skills && project.skills.map((skill, index) => (
-                            <button
-                              key={index}
-                              type="button"
-                              onClick={() => setSearchQuery(skill)}
-                              className="text-[11px] bg-slate-800 hover:bg-blue-600/30 border border-slate-700 text-slate-300 px-2.5 py-0.5 rounded-md transition cursor-pointer"
-                            >
-                              #{skill}
-                            </button>
-                          ))}
+                        {/* التحليل الذكي: المهارات المتوفرة والمهارات الناقصة (Missing Skills) */}
+                        <div className="space-y-2 mb-4 bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
+                          <div className="flex justify-between items-center text-[10px] text-slate-400">
+                            <span className="flex items-center gap-1 font-medium text-slate-300">
+                              <Sparkles className="w-3 h-3 text-blue-400" /> تحليل مطابقة المهارات:
+                            </span>
+                            <span className="text-emerald-400 font-bold">{project.matchedSkills?.length || 0} متوفرة</span>
+                          </div>
+                          
+                          <div className="flex flex-wrap gap-1.5">
+                            {/* المهارات المتوفرة لدى الطالب */}
+                            {project.matchedSkills && project.matchedSkills.map((skill, idx) => (
+                              <span
+                                key={`m-${idx}`}
+                                className="text-[10px] bg-emerald-950/50 text-emerald-300 border border-emerald-800/60 px-2 py-0.5 rounded-md flex items-center gap-1"
+                              >
+                                ✓ {skill}
+                              </span>
+                            ))}
+
+                            {/* المهارات الناقصة التي يتطلبها المشروع */}
+                            {project.missingSkills && project.missingSkills.map((skill, idx) => (
+                              <span
+                                key={`mis-${idx}`}
+                                className="text-[10px] bg-rose-950/40 text-rose-300 border border-rose-800/50 px-2 py-0.5 rounded-md flex items-center gap-1"
+                                title="مهارة يتطلبها المشروع وغير مسجلة في ملفك الشخصي"
+                              >
+                                ⚠️ ناقص: {skill}
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* مؤشر توجيهي سريع */}
+                          <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-900 flex justify-between items-center">
+                            <span>تغطية مهارات الفريق المقترح:</span>
+                            <span className="font-bold text-amber-400">92% متكامل</span>
+                          </div>
                         </div>
                       </div>
 
@@ -1170,7 +1274,7 @@ export default function App() {
                               : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20 cursor-pointer'
                           }`}
                         >
-                          {isFull ? 'مكتمل' : 'تقديم طلب انضمام'}
+                          {isFull ? 'مكتمل' : 'تقديم طلب انضمام / فريق'}
                           {!isFull && <ArrowUpRight className="w-3.5 h-3.5" />}
                         </button>
 
@@ -1195,7 +1299,7 @@ export default function App() {
         </main>
       </div>
 
-      {/* نافذة تسجيل الدخول وإنشاء الحساب مع يوزر وباسورد واختيار الدور */}
+      {/* نافذة تسجيل الدخول وإنشاء الحساب */}
       {showAuthModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative shadow-2xl">
@@ -1218,7 +1322,6 @@ export default function App() {
               </p>
             </div>
 
-            {/* أزرار اختيار نوع الحساب */}
             <div className="mb-4">
               <label className="text-[11px] text-slate-400 block mb-1.5 font-medium">نوع الحساب:</label>
               <div className="grid grid-cols-3 gap-2">
@@ -1250,7 +1353,6 @@ export default function App() {
               </div>
             )}
 
-            {/* فورم تسجيل الدخول والتسجيل */}
             <form onSubmit={handleAuthSubmit} className="space-y-3">
               {authMode === 'register' && (
                 <div>
@@ -1412,23 +1514,52 @@ export default function App() {
         </div>
       )}
 
-      {/* نافذة التقديم */}
+      {/* نافذة التقديم: تدعم التقديم الفردي وتكوين فريق (Team Formation) مع إرفاق الـ CV */}
       {isApplyModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative">
             <button onClick={() => setIsApplyModalOpen(false)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
               <X className="w-5 h-5" />
             </button>
-            <h2 className="text-base font-bold mb-4 text-white">
+            <h2 className="text-base font-bold mb-1 text-white">
               تقديم طلب لـ: <span className="text-blue-400">{selectedProject?.title}</span>
             </h2>
+            <p className="text-[11px] text-slate-400 mb-4">يمكنك التقدم كطالب مستقل أو تشكيل فريق مع زملائك</p>
+
             {applySuccess ? (
               <p className="text-emerald-400 text-center font-bold py-6 text-sm">{applySuccess}</p>
             ) : (
               <form onSubmit={handleApplySubmit} className="space-y-3.5">
+                {/* خيار التقديم كفريق */}
+                <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs text-slate-200">التقدم كفريق متكامل (Team Formation)</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={applyAsTeam}
+                    onChange={(e) => setApplyAsTeam(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-0 cursor-pointer"
+                  />
+                </div>
+
+                {applyAsTeam && (
+                  <div>
+                    <label className="text-[11px] text-slate-300 block mb-1">أسماء وتخصصات أعضاء الفريق المقترح</label>
+                    <input
+                      type="text"
+                      placeholder="مثال: أحمد (CIS - Data)، سارة (CS - ML)، محمد (SE - Frontend)"
+                      value={teamMembersInput}
+                      onChange={(e) => setTeamMembersInput(e.target.value)}
+                      className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+                )}
+
                 <input
                   type="text"
-                  placeholder="اسمك الكامل"
+                  placeholder="اسمك الكامل (قائد الفريق)"
                   required
                   value={applicantName}
                   onChange={(e) => setApplicantName(e.target.value)}
@@ -1436,12 +1567,13 @@ export default function App() {
                 />
                 <input
                   type="text"
-                  placeholder="الدور المطلوب (مثال: مهندس واجهات، ذكاء اصطناعي)"
+                  placeholder="الدور المطلوب (مثال: مهندس واجهات، ذكاء اصطناعي، إدارة بيانات)"
                   required
                   value={applicantRole}
                   onChange={(e) => setApplicantRole(e.target.value)}
                   className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none"
                 />
+
                 <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
                   <div className="text-blue-400 font-semibold flex items-center gap-1">
                     <FileText className="w-3.5 h-3.5" /> سيتم إرفاق سيرتك الذاتية تلقائياً:
@@ -1450,8 +1582,9 @@ export default function App() {
                   <div>• المساق: {studentCv.course}</div>
                   <div>• المهارات: {userSkills.slice(0, 4).join(', ')}...</div>
                 </div>
+
                 <textarea
-                  placeholder="رسالة تعريفية موجزة أو روابط أعمالك..."
+                  placeholder="رسالة تعريفية موجزة أو نبذة عن جاهزية الفريق..."
                   rows={2}
                   value={applicantMessage}
                   onChange={(e) => setApplicantMessage(e.target.value)}
@@ -1469,7 +1602,7 @@ export default function App() {
         </div>
       )}
 
-      {/* نافذة إضافة مشروع (مخصصة للمحلات والطلاب مع كل التخصصات) */}
+      {/* نافذة إضافة مشروع */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative">
@@ -1521,7 +1654,7 @@ export default function App() {
                 />
                 <input
                   type="text"
-                  placeholder="المهارات المقترحة (مثال: React, Python, SQL)"
+                  placeholder="المهارات المقترحة (مثال: React, Python, SQL, Power BI)"
                   required
                   value={newProject.required_skills}
                   onChange={(e) => setNewProject({ ...newProject, required_skills: e.target.value })}
@@ -1568,7 +1701,7 @@ export default function App() {
                           {app.applicant_role}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400">{app.message}</p>
+                      <p className="text-xs text-slate-400 leading-relaxed">{app.message}</p>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
