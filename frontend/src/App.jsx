@@ -168,6 +168,30 @@ export default function App() {
   // المفضلة
   const [favorites, setFavorites] = useState([]);
 
+  // ==========================================
+  // نظام التنبيهات المنبثقة (Toasts System)
+  // ==========================================
+  const [toasts, setToasts] = useState([]);
+
+  const removeToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const showToast = useCallback((message, type = 'info') => {
+    const id = Date.now() + Math.random().toString(36).substring(2, 6);
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  }, []);
+
+  // ==========================================
+  // حالات الإشعارات الحية (Live Notifications)
+  // ==========================================
+  const [notifications, setNotifications] = useState([]);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
   // التقارير والمتابعة الأكاديمية
   const [reportsTimeline, setReportsTimeline] = useState([
     {
@@ -464,6 +488,57 @@ export default function App() {
   }, [currentUser, fetchApplications]);
 
   // ==========================================
+  // جلب إشعارات المستخدم الحية من الباك إند (GET /notifications)
+  // ==========================================
+  const fetchNotifications = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    setIsLoadingNotifications(true);
+    try {
+      const res = await apiFetch('/notifications');
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.warn('تعذر جلب الإشعارات:', err.message);
+    } finally {
+      setIsLoadingNotifications(false);
+    }
+  }, [apiFetch]);
+
+  const handleMarkNotificationRead = useCallback(async (notificationId) => {
+    try {
+      await apiFetch(`/notifications/${notificationId}/read`, { method: 'PUT' });
+      setNotifications((prev) =>
+        prev.map((n) => n.id === notificationId ? { ...n, is_read: true } : n)
+      );
+    } catch (err) {
+      console.error('تعذر تحديث حالة الإشعار:', err);
+    }
+  }, [apiFetch]);
+
+  const handleMarkAllNotificationsRead = useCallback(async () => {
+    try {
+      await apiFetch('/notifications/read-all', { method: 'PUT' });
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      showToast('تم تحديد كافة الإشعارات كمقروءة بنجاح!', 'success');
+    } catch (err) {
+      showToast('تعذر تحديث الإشعارات، يرجى المحاولة لاحقاً', 'error');
+    }
+  }, [apiFetch, showToast]);
+
+  // جلب الإشعارات دورياً وتلقائياً عند تسجيل الدخول (كل 30 ثانية)
+  useEffect(() => {
+    if (currentUser) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [currentUser, fetchNotifications]);
+
+  // ==========================================
   // حساب نسبة المطابقة الذكية للمشاريع
   // ==========================================
   const matchedProjects = useMemo(() => {
@@ -636,14 +711,15 @@ export default function App() {
       }
 
       await fetchProjects();
+      fetchNotifications();
       setIsCreateModalOpen(false);
       setNewProjectTitle('');
       setNewProjectDesc('');
       setNewProjectSkills('');
       setNewProjectMaxMembers(4);
-      alert('تم طرح المشروع بنجاح وحفظه في قاعدة البيانات!');
+      showToast('تم طرح المشروع بنجاح وحفظه في قاعدة البيانات!', 'success');
     } catch (err) {
-      alert(`خطأ: ${err.message}`);
+      showToast(`خطأ: ${err.message}`, 'error');
     } finally {
       setIsSubmittingProject(false);
     }
@@ -671,9 +747,10 @@ export default function App() {
       };
 
       await fetchProjects();
-      alert(`تم ${statusLabels[targetStatus] || targetStatus} المشروع بنجاح!`);
+      fetchNotifications();
+      showToast(`تم ${statusLabels[targetStatus] || targetStatus} المشروع بنجاح!`, 'success');
     } catch (err) {
-      alert(`خطأ: ${err.message}`);
+      showToast(`خطأ: ${err.message}`, 'error');
     }
   };
 
@@ -703,11 +780,12 @@ export default function App() {
 
       await fetchApplications();
       await fetchProjects();
+      fetchNotifications();
       setIsApplyModalOpen(false);
       setApplyMessage('');
-      alert('تم إرسال طلب انضمامك بنجاح وحفظه في قاعدة البيانات!');
+      showToast('تم إرسال طلب انضمامك بنجاح وحفظه في قاعدة البيانات!', 'success');
     } catch (err) {
-      alert(`تنبيه: ${err.message}`);
+      showToast(`تنبيه: ${err.message}`, 'error');
     } finally {
       setIsSubmittingApply(false);
     }
@@ -733,9 +811,10 @@ export default function App() {
       );
       // تحديث المشاريع لتحديث عداد المقاعد المحجوزة لحظياً
       await fetchProjects();
-      alert(`تم ${targetStatus === 'accepted' ? 'قبول' : 'رفض'} الطلب بنجاح!`);
+      fetchNotifications();
+      showToast(`تم ${targetStatus === 'accepted' ? 'قبول' : 'رفض'} الطلب بنجاح!`, 'success');
     } catch (err) {
-      alert(`خطأ: ${err.message}`);
+      showToast(`خطأ: ${err.message}`, 'error');
     }
   };
 
@@ -761,8 +840,9 @@ export default function App() {
       const newMsg = await res.json();
       setChatMessages((prev) => [...prev, newMsg]);
       setChatMessageInput('');
+      fetchNotifications();
     } catch (err) {
-      alert(`خطأ في إرسال الرسالة: ${err.message}`);
+      showToast(`خطأ في إرسال الرسالة: ${err.message}`, 'error');
     } finally {
       setIsSendingChat(false);
     }
@@ -814,22 +894,63 @@ export default function App() {
     );
     setSubmitReportModal(null);
     setReportUrlInput('');
-    alert('تم رفع التقرير بنجاح للمشرف الأكاديمي!');
+    showToast('تم رفع التقرير بنجاح للمشرف الأكاديمي!', 'success');
   };
 
-  // تصفية المشاريع للبحث والتصنيف
-  const filteredProjects = matchedProjects
-    .filter((p) => {
-      const matchSearch =
-        p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.skills && p.skills.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase())));
-      
-      const matchCategory = selectedCategory === 'الكل' || p.category === selectedCategory;
-      const matchFav = activeTab === 'favorites' ? favorites.includes(p.id) : true;
-      return matchSearch && matchCategory && matchFav;
-    })
-    .sort((a, b) => (activeTab === 'match' ? (b.matchRate || 0) - (a.matchRate || 0) : 0));
+  // تصفية المشاريع للبحث والتصنيف بمرونة عالية (Flexible Search & Filter)
+  const filteredProjects = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const queryTerms = query ? query.split(/\s+/).filter(Boolean) : [];
+
+    return matchedProjects
+      .filter((p) => {
+        // 1. فلترة المفضلة
+        if (activeTab === 'favorites' && !favorites.includes(p.id)) {
+          return false;
+        }
+
+        // 2. فلترة التخصص بمرونة ودعم الاختصارات (مثل CIS أو Cybersecurity)
+        if (selectedCategory !== 'الكل') {
+          const catSelected = selectedCategory.trim().toLowerCase();
+          const pCat = (p.category || '').trim().toLowerCase();
+
+          // استخراج ما بين الأقواس للاختصارات الإنجليزية
+          const matchAcronym = catSelected.match(/\(([^)]+)\)/);
+          const acronym = matchAcronym ? matchAcronym[1].toLowerCase() : '';
+
+          const isDirectMatch = pCat.includes(catSelected) || catSelected.includes(pCat);
+          const isAcronymMatch = acronym ? pCat.includes(acronym) : false;
+
+          if (!isDirectMatch && !isAcronymMatch) {
+            return false;
+          }
+        }
+
+        // 3. فلترة البحث بمرونة متقدمة (مطابقة كل الكلمات المفتاحية عبر العنوان والوصف والمهارات)
+        if (queryTerms.length > 0) {
+          const title = (p.title || '').toLowerCase();
+          const desc = (p.description || '').toLowerCase();
+          const cat = (p.category || '').toLowerCase();
+          const reqSkills = (p.required_skills || '').toLowerCase();
+          const skillsList = Array.isArray(p.skills) ? p.skills.map((s) => s.toLowerCase()) : [];
+
+          const allTermsMatch = queryTerms.every((term) =>
+            title.includes(term) ||
+            desc.includes(term) ||
+            cat.includes(term) ||
+            reqSkills.includes(term) ||
+            skillsList.some((s) => s.includes(term))
+          );
+
+          if (!allTermsMatch) {
+            return false;
+          }
+        }
+
+        return true;
+      })
+      .sort((a, b) => (activeTab === 'match' ? (b.matchRate || 0) - (a.matchRate || 0) : 0));
+  }, [matchedProjects, searchQuery, selectedCategory, activeTab, favorites]);
 
   // تصفية مشاريع الشركة الحالية
   const myCompanyProjects = useMemo(() => {
@@ -1071,6 +1192,84 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* أيقونة الإشعارات والتنبيهات التفاعلية */}
+          <div className="relative">
+            <button
+              onClick={() => setIsNotificationsOpen((prev) => !prev)}
+              className="relative p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer border border-slate-700/60 shadow-sm"
+              title="الإشعارات والتنبيهات"
+              aria-label="الإشعارات والتنبيهات"
+            >
+              <Bell className="w-4 h-4 text-blue-400" />
+              {notifications.filter((n) => !n.is_read).length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold animate-pulse shadow-md shadow-rose-500/50">
+                  {notifications.filter((n) => !n.is_read).length}
+                </span>
+              )}
+            </button>
+
+            {/* القائمة المنسدلة للإشعارات */}
+            {isNotificationsOpen && (
+              <div 
+                className="absolute left-0 mt-2 w-80 sm:w-96 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                dir="rtl"
+              >
+                <div className="p-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-blue-400" />
+                    <span className="text-xs font-bold text-white">الإشعارات والتنبيهات</span>
+                    <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded-full font-mono">
+                      {notifications.length}
+                    </span>
+                  </div>
+                  {notifications.some((n) => !n.is_read) && (
+                    <button
+                      onClick={handleMarkAllNotificationsRead}
+                      className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold cursor-pointer transition"
+                    >
+                      تحديد الكل كمقروء
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-80 overflow-y-auto divide-y divide-slate-800/60">
+                  {isLoadingNotifications && notifications.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-slate-400">
+                      <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2 text-blue-400" />
+                      جاري جلب الإشعارات...
+                    </div>
+                  ) : notifications.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-slate-400">
+                      <CheckCircle2 className="w-6 h-6 mx-auto mb-2 text-slate-600" />
+                      لا توجد إشعارات جديدة حالياً
+                    </div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        onClick={() => !n.is_read && handleMarkNotificationRead(n.id)}
+                        className={`p-3 text-xs transition cursor-pointer flex items-start gap-2.5 ${
+                          n.is_read ? 'bg-slate-900/60 hover:bg-slate-850/60 opacity-75' : 'bg-slate-850/90 hover:bg-slate-800 border-r-2 border-blue-500'
+                        }`}
+                      >
+                        <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.is_read ? 'bg-transparent' : 'bg-blue-400'}`} />
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-white">{n.title}</span>
+                            <span className="text-[10px] text-slate-500">
+                              {new Date(n.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="text-slate-300 text-[11px] leading-relaxed">{n.message}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <span className={`text-[11px] px-2.5 py-1 rounded-full font-bold border ${
             currentUser.role === 'supervisor'
               ? 'bg-amber-950/60 text-amber-300 border-amber-800/60'
@@ -1306,6 +1505,25 @@ export default function App() {
             >
               <Search className="w-4 h-4 text-slate-400" />
               استعراض كافة المشاريع
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('favorites'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                activeTab === 'favorites'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Star className="w-4 h-4 text-amber-400" />
+                المشاريع المفضلة
+              </div>
+              {favorites.length > 0 && (
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full font-bold">
+                  {favorites.length}
+                </span>
+              )}
             </button>
           </div>
 
@@ -1925,7 +2143,7 @@ export default function App() {
 
                     <button
                       disabled={!student.isFree}
-                      onClick={() => alert(`تم إرسال دعوة انضمام للطالب ${student.name}`)}
+                      onClick={() => showToast(`تم إرسال دعوة انضمام للطالب ${student.name} بنجاح!`, 'success')}
                       className={`w-full py-2 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${
                         student.isFree
                           ? 'bg-slate-800 hover:bg-blue-600 text-slate-200 hover:text-white border border-slate-700'
@@ -2097,7 +2315,35 @@ export default function App() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {filteredProjects.map((project) => {
+                {filteredProjects.length === 0 ? (
+                  <div className="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-12 text-center space-y-4 my-2 shadow-inner">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center mx-auto text-slate-400 shadow-md">
+                      <Search className="w-7 h-7 text-blue-400" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <h3 className="text-base font-bold text-white">لا توجد مشاريع مطابقة لبحثك</h3>
+                      <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                        {activeTab === 'favorites'
+                          ? 'لم تقم بإضافة أي مشروع إلى قائمة المفضلة بعد. انقر على أيقونة النجمة على بطاقة أي مشروع لحفظه هنا.'
+                          : 'حاول تعديل كلمات البحث، أو تغيير تخصص البحث، أو مسح الفلاتر لاستعراض جميع المشاريع المتاحة.'}
+                      </p>
+                    </div>
+                    {(searchQuery || selectedCategory !== 'الكل' || activeTab === 'favorites') && (
+                      <button
+                        onClick={() => {
+                          setSearchQuery('');
+                          setSelectedCategory('الكل');
+                          if (activeTab === 'favorites') setActiveTab('browse');
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-md shadow-blue-500/20"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        مسح الفلاتر واستعراض الكل
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  filteredProjects.map((project) => {
                   const isFull = (project.currentMembers || 0) >= (project.maxMembers || 4);
                   const isRejected = project.status === 'rejected';
                   const isFav = favorites.includes(project.id);
@@ -2253,11 +2499,44 @@ export default function App() {
                       </div>
                     </div>
                   );
-                })}
+                })
+              )}
               </div>
             </div>
           )}
         </main>
+      </div>
+
+      {/* ==========================================
+          نظام التنبيهات الفورية العائمة (Toast Container)
+      ========================================== */}
+      <div className="fixed top-20 left-4 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none" dir="rtl">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`pointer-events-auto flex items-start justify-between gap-3 p-3.5 rounded-xl border shadow-2xl text-xs font-medium backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-top-2 ${
+              toast.type === 'success'
+                ? 'bg-emerald-950/95 border-emerald-500/60 text-emerald-100 shadow-emerald-900/30'
+                : toast.type === 'error'
+                  ? 'bg-rose-950/95 border-rose-500/60 text-rose-100 shadow-rose-900/30'
+                  : 'bg-slate-900/95 border-slate-700 text-slate-100 shadow-slate-900/50'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              {toast.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
+              {toast.type === 'error' && <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />}
+              {toast.type === 'info' && <Bell className="w-4 h-4 text-blue-400 shrink-0" />}
+              <span className="leading-snug">{toast.message}</span>
+            </div>
+            <button
+              onClick={() => removeToast(toast.id)}
+              className="text-slate-400 hover:text-white p-0.5 rounded cursor-pointer shrink-0"
+              aria-label="إغلاق التنبيه"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
       </div>
 
       {/* ==========================================
@@ -2267,7 +2546,7 @@ export default function App() {
       {/* نافذة شات المشروع التفاعلي الحقيقي (GET & POST /projects/{id}/messages) */}
       {activeChatProject && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl flex flex-col h-[600px] shadow-2xl relative overflow-hidden">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl flex flex-col h-[600px] max-h-[90vh] shadow-2xl relative overflow-hidden">
             {/* رأس الشات */}
             <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -2393,7 +2672,7 @@ export default function App() {
       {/* نافذة تسليم التقرير للطلاب */}
       {submitReportModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative">
             <button onClick={() => setSubmitReportModal(null)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
               <X className="w-5 h-5" />
             </button>
@@ -2433,7 +2712,7 @@ export default function App() {
       {/* نافذة تعديل المهارات */}
       {showSkillsModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative">
             <button onClick={() => setShowSkillsModal(false)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
               <X className="w-5 h-5" />
             </button>
@@ -2471,7 +2750,7 @@ export default function App() {
       {/* نافذة إضافة مشروع (للشركات والمشرفين - POST /projects/) */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative">
             <button onClick={() => setIsCreateModalOpen(false)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
               <X className="w-5 h-5" />
             </button>
@@ -2560,7 +2839,7 @@ export default function App() {
       {/* نافذة التقديم على مشروع (POST /applications/) */}
       {isApplyModalOpen && selectedProject && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative">
             <button onClick={() => setIsApplyModalOpen(false)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
               <X className="w-5 h-5" />
             </button>
@@ -2635,7 +2914,7 @@ export default function App() {
       {/* نافذة طلبات الطلاب المتقدمين وإدارتها (قبول / رفض عبر PUT /applications/{id}/status) */}
       {showApplicationsModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl p-6 relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative">
             <button onClick={() => setShowApplicationsModal(false)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
               <X className="w-5 h-5" />
             </button>

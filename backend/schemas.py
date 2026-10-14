@@ -118,3 +118,19 @@ class TokenData(BaseModel):
     user_id: Optional[int] = None
     email: Optional[str] = None
     role: Optional[str] = None
+
+
+# ==========================================
+# نماذج الإشعارات والتنبيهات (Notification Schemas)
+# ==========================================
+
+class NotificationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+    title: str
+    message: str
+    link: Optional[str] = None
+    is_read: bool = False
+    created_at: Optional[datetime] = None

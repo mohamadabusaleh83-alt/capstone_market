@@ -143,6 +143,31 @@ def get_project_accepted_members(project_id: int, db: Session) -> int:
     ).count()
 
 
+def create_notification(
+    db: Session,
+    user_id: int,
+    title: str,
+    message: str,
+    link: Optional[str] = None
+):
+    """إنشاء وحفظ إشعار جديد لمستخدم محدد"""
+    try:
+        notif = models.Notification(
+            user_id=user_id,
+            title=title,
+            message=message,
+            link=link,
+            is_read=False
+        )
+        db.add(notif)
+        db.commit()
+        return notif
+    except Exception as e:
+        logger.error(f"Error creating notification for user {user_id}: {e}")
+        db.rollback()
+        return None
+
+
 # ==========================================
 # المسار الترحيبي (Root)
 # ==========================================
@@ -474,6 +499,17 @@ def apply_to_project(
     db.add(new_app)
     db.commit()
     db.refresh(new_app)
+
+    # توليد إشعار فوري لصاحب المشروع (الشركة أو المشرف)
+    if project.created_by:
+        create_notification(
+            db=db,
+            user_id=project.created_by,
+            title="طلب انضمام جديد",
+            message=f"قام الطالب {current_user.full_name} بتقديم طلب انضمام لمشروعك: {project.title}",
+            link=f"/projects/{project.id}"
+        )
+
     return new_app
 
 
@@ -579,6 +615,18 @@ def update_application_status(
     application.status = new_status
     db.commit()
     db.refresh(application)
+
+    # توليد إشعار فوري للطالب بالنتيجة
+    action_text = "قبول" if new_status == "accepted" else ("رفض" if new_status == "rejected" else "تحديث")
+    status_title = "تم قبول طلب انضمامك! 🎉" if new_status == "accepted" else ("تم رفض طلب انضمامك" if new_status == "rejected" else "تحديث حالة الطلب")
+    create_notification(
+        db=db,
+        user_id=application.student_id,
+        title=status_title,
+        message=f"تم {action_text} طلب انضمامك لمشروع: {project.title if project else ''}",
+        link=f"/projects/{application.project_id}"
+    )
+
     return application
 
 
@@ -628,6 +676,16 @@ def create_project_message(
     db.commit()
     db.refresh(new_msg)
 
+    # توليد إشعار فوري لصاحب المشروع عند إرسال رسالة جديدة
+    if project.created_by and project.created_by != current_user.id:
+        create_notification(
+            db=db,
+            user_id=project.created_by,
+            title="رسالة جديدة في شات المشروع",
+            message=f"أرسل {current_user.full_name} رسالة في مشروع {project.title}: '{text_content[:60]}'",
+            link=f"/projects/{project.id}"
+        )
+
     return schemas.MessageResponse(
         id=new_msg.id,
         project_id=new_msg.project_id,
@@ -671,3 +729,55 @@ def get_project_messages(
             created_at=m.created_at
         ))
     return results
+
+
+# ==========================================
+# مسارات الإشعارات والتنبيهات (Notifications)
+# ==========================================
+
+@app.get("/notifications", response_model=List[schemas.NotificationResponse])
+@app.get("/notifications/", response_model=List[schemas.NotificationResponse])
+def get_user_notifications(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """جلب إشعارات المستخدم الحالي مرتبة حسب الأحدث تنازلياً"""
+    return db.query(models.Notification).filter(
+        models.Notification.user_id == current_user.id
+    ).order_by(models.Notification.created_at.desc()).limit(50).all()
+
+
+@app.put("/notifications/{id}/read", response_model=schemas.NotificationResponse)
+def mark_notification_as_read(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """تحديد الإشعار كمقروء للمستخدم الحالي"""
+    notif = db.query(models.Notification).filter(
+        models.Notification.id == id,
+        models.Notification.user_id == current_user.id
+    ).first()
+    if not notif:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="الإشعار غير موجود"
+        )
+    notif.is_read = True
+    db.commit()
+    db.refresh(notif)
+    return notif
+
+
+@app.put("/notifications/read-all", status_code=status.HTTP_200_OK)
+def mark_all_notifications_as_read(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """تحديد كافة إشعارات المستخدم كمقروءة"""
+    db.query(models.Notification).filter(
+        models.Notification.user_id == current_user.id,
+        models.Notification.is_read == False
+    ).update({"is_read": True}, synchronize_session=False)
+    db.commit()
+    return {"message": "تم تحديد جميع الإشعارات كمقروءة"}

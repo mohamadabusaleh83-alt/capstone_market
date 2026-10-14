@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, TIMESTAMP
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, TIMESTAMP, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from database import Base
@@ -16,6 +16,7 @@ class User(Base):
     profile = relationship("StudentProfile", back_populates="user", uselist=False)
     projects = relationship("Project", back_populates="creator")
     messages = relationship("Message", back_populates="sender")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     skills = Column(String, default="")
 
     @property
@@ -80,3 +81,17 @@ class Message(Base):
 
     project = relationship("Project", back_populates="messages")
     sender = relationship("User", back_populates="messages")
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String(200), nullable=False)
+    message = Column(Text, nullable=False)
+    link = Column(String(255), nullable=True)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    user = relationship("User", back_populates="notifications")
