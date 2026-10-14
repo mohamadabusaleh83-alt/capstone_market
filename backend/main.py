@@ -359,13 +359,12 @@ def update_project_status(
             detail=f"المشروع برقم {project_id} غير موجود"
         )
 
-    is_owner = project.created_by == current_user.id
     is_supervisor_or_admin = (current_user.role or "").lower() in ["supervisor", "admin"]
 
-    if not (is_owner or is_supervisor_or_admin):
+    if not is_supervisor_or_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
-            detail="ليس لديك الصلاحية لتعديل حالة هذا المشروع، فقط المشرف أو مالك المشروع يمكنه ذلك"
+            detail="ليس لديك الصلاحية لتعديل حالة هذا المشروع، فقط المشرف الأكاديمي أو الأدمن يمكنه ذلك"
         )
 
     new_status = None
