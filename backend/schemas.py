@@ -33,12 +33,18 @@ class ProjectCreate(BaseModel):
     title: str
     description: Optional[str] = ""
     required_skills: Optional[str] = ""
+    max_members: Optional[int] = 4
 
 
 class ProjectUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     required_skills: Optional[str] = None
+    max_members: Optional[int] = None
+
+
+class ProjectStatusUpdate(BaseModel):
+    status: str  # approved, rejected, pending
 
 
 class ProjectResponse(BaseModel):
@@ -48,6 +54,10 @@ class ProjectResponse(BaseModel):
     title: str
     description: Optional[str] = None
     required_skills: Optional[str] = None
+    status: Optional[str] = "pending"
+    max_members: Optional[int] = 4
+    current_members: Optional[int] = 0
+    available_seats: Optional[int] = 4
     created_by: Optional[int] = None
     created_at: Optional[datetime] = None
 
@@ -73,6 +83,26 @@ class ApplicationResponse(BaseModel):
     student_id: int
     status: str
     message: Optional[str] = None
+
+
+# ==========================================
+# نماذج الرسائل والشات (Message Schemas)
+# ==========================================
+
+class MessageCreate(BaseModel):
+    text: str
+
+
+class MessageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    project_id: int
+    sender_id: int
+    sender_name: Optional[str] = None
+    sender_role: Optional[str] = None
+    text: str
+    created_at: Optional[datetime] = None
 
 
 # ==========================================

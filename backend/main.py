@@ -1,23 +1,42 @@
 import os
+import logging
 from typing import List, Optional
+from datetime import datetime
+
 from fastapi import FastAPI, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 import models
 import schemas
 import utils
 from database import engine, get_db
 
+logger = logging.getLogger("capstone_api")
+
 # إنشاء الجداول تلقائياً إن لم تكن موجودة مسبقاً
 models.Base.metadata.create_all(bind=engine)
+
+# التحقق من وجود الأعمدة الحديثة في قاعدة البيانات (PostgreSQL/SQLite) دون تعطيل التشغيل
+with engine.connect() as conn:
+    try:
+        conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS status VARCHAR DEFAULT 'pending'"))
+        conn.commit()
+    except Exception as e:
+        logger.debug(f"projects.status column check: {e}")
+    try:
+        conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS max_members INTEGER DEFAULT 4"))
+        conn.commit()
+    except Exception as e:
+        logger.debug(f"projects.max_members column check: {e}")
 
 app = FastAPI(
     title="Capstone Platform API",
     description="واجهة برمجة التطبيقات لمنصة مشاريع التخرج (Capstone Market)",
-    version="1.0.0"
+    version="1.1.0"
 )
 
 # إعداد CORS للنطاقات المصرح لها
@@ -56,6 +75,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         headers["Access-Control-Allow-Credentials"] = "true"
         headers["Access-Control-Allow-Methods"] = "*"
         headers["Access-Control-Allow-Headers"] = "*"
+    logger.error(f"Global unhandled exception: {str(exc)}", exc_info=True)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": f"خطأ داخلي في الخادم: {str(exc)}"},
@@ -115,22 +135,26 @@ def require_role(allowed_roles: List[str]):
     return role_checker
 
 
+def get_project_accepted_members(project_id: int, db: Session) -> int:
+    """حساب عدد المقاعد المشغولة حالياً (الطلبات المقبولة) لمشروع محدد"""
+    return db.query(models.Application).filter(
+        models.Application.project_id == project_id,
+        models.Application.status == "accepted"
+    ).count()
+
+
 # ==========================================
 # المسار الترحيبي (Root)
 # ==========================================
 
 @app.get("/")
 def home():
-    return {"message": "Capstone Backend API is running successfully!"}
+    return {"message": "Capstone Platform API is running successfully!"}
 
 
 # ==========================================
 # مسارات التوثيق والمستخدمين (Auth & Users)
 # ==========================================
-
-import logging
-
-logger = logging.getLogger("capstone_api")
 
 @app.post("/login", response_model=schemas.Token)
 def login(
@@ -158,7 +182,6 @@ def login(
         raise
     except Exception as e:
         logger.error(f"Error in login: {str(e)}", exc_info=True)
-        print(f"Error in login: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"حدث خطأ أثناء تسجيل الدخول: {str(e)}"
@@ -202,7 +225,6 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         logger.error(f"Error in create_user: {str(e)}", exc_info=True)
-        print(f"Error in create_user: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"حدث خطأ أثناء إنشاء المستخدم: {str(e)}"
@@ -219,7 +241,7 @@ def get_users(
 
 
 # ==========================================
-# مسارات المشاريع (Projects)
+# مسارات المشاريع (Projects & Approvals)
 # ==========================================
 
 @app.post("/projects/", response_model=schemas.ProjectResponse, status_code=status.HTTP_201_CREATED)
@@ -229,33 +251,58 @@ def create_project(
     current_user: models.User = Depends(require_role(["partner", "company", "business", "supervisor"]))
 ):
     """طرح مشروع جديد بواسطة الشريك الصناعي أو المشرف، وتسجيل current_user.id كمالك للمشروع"""
+    user_role = (current_user.role or "").lower()
+    # مشاريع المشرفين أو الإدارة تعتمد تلقائياً، بينما مشاريع الشركات تحتاج اعتماد المشرف
+    initial_status = "approved" if user_role in ["supervisor", "admin"] else "pending"
+
     db_project = models.Project(
         title=project.title,
         description=project.description,
         required_skills=project.required_skills,
+        status=initial_status,
+        max_members=project.max_members or 4,
         created_by=current_user.id
     )
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
+    
+    # ربط عدد الأعضاء الحاليين والمقاعد المتاحة للرد
+    db_project.current_members = 0
+    db_project.available_seats = db_project.max_members or 4
     return db_project
 
 
 @app.get("/projects/", response_model=List[schemas.ProjectResponse])
-def get_projects(db: Session = Depends(get_db)):
-    """جلب جميع المشاريع المتاحة في المنصة"""
-    return db.query(models.Project).all()
+def get_projects(
+    status: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """جلب المشاريع المتاحة في المنصة مع التحديث الديناميكي للمقاعد المحجوزة والمتاحة"""
+    query = db.query(models.Project)
+    if status:
+        query = query.filter(models.Project.status == status.strip().lower())
+    projects = query.order_by(models.Project.id.desc()).all()
+
+    results = []
+    for p in projects:
+        p.current_members = get_project_accepted_members(p.id, db)
+        p.available_seats = max(0, (p.max_members or 4) - p.current_members)
+        results.append(p)
+    return results
 
 
 @app.get("/projects/{id}", response_model=schemas.ProjectResponse)
 def get_project(id: int, db: Session = Depends(get_db)):
-    """جلب تفاصيل مشروع محدد بواسطة معرّفه"""
+    """جلب تفاصيل مشروع محدد بواسطة معرّفه مع عدد المقاعد المحجوزة والمتاحة"""
     project = db.query(models.Project).filter(models.Project.id == id).first()
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
             detail=f"المشروع برقم {id} غير موجود"
         )
+    project.current_members = get_project_accepted_members(project.id, db)
+    project.available_seats = max(0, (project.max_members or 4) - project.current_members)
     return project
 
 
@@ -290,6 +337,56 @@ def update_project(
 
     db.commit()
     db.refresh(project)
+    project.current_members = get_project_accepted_members(project.id, db)
+    project.available_seats = max(0, (project.max_members or 4) - project.current_members)
+    return project
+
+
+@app.put("/projects/{project_id}/status", response_model=schemas.ProjectResponse)
+@app.put("/projects/{project_id}/approve", response_model=schemas.ProjectResponse)
+def update_project_status(
+    project_id: int,
+    status_update: Optional[schemas.ProjectStatusUpdate] = None,
+    status_query: Optional[str] = Query(None, alias="status"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """اعتماد أو رفض أو تعليق مشروع بواسطة المشرف الأكاديمي أو مالك المشروع (PUT /projects/{project_id}/status)"""
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"المشروع برقم {project_id} غير موجود"
+        )
+
+    is_owner = project.created_by == current_user.id
+    is_supervisor_or_admin = (current_user.role or "").lower() in ["supervisor", "admin"]
+
+    if not (is_owner or is_supervisor_or_admin):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="ليس لديك الصلاحية لتعديل حالة هذا المشروع، فقط المشرف أو مالك المشروع يمكنه ذلك"
+        )
+
+    new_status = None
+    if status_update and status_update.status:
+        new_status = status_update.status.strip().lower()
+    elif status_query:
+        new_status = status_query.strip().lower()
+    else:
+        new_status = "approved"
+
+    if new_status not in ["approved", "rejected", "pending"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="الحالة غير صالحة. الحالات المسموحة: approved, rejected, pending"
+        )
+
+    project.status = new_status
+    db.commit()
+    db.refresh(project)
+    project.current_members = get_project_accepted_members(project.id, db)
+    project.available_seats = max(0, (project.max_members or 4) - project.current_members)
     return project
 
 
@@ -316,7 +413,8 @@ def delete_project(
             detail="ليس لديك الصلاحية لحذف هذا المشروع، فقط المالك أو المشرف يمكنه ذلك"
         )
 
-    # حذف الطلبات المرتبطة بالمشروع أولاً لتفادي تعارض المفاتيح الخارجية
+    # حذف الرسائل والطلبات المرتبطة بالمشروع لتفادي تعارض المفاتيح الخارجية
+    db.query(models.Message).filter(models.Message.project_id == id).delete(synchronize_session=False)
     db.query(models.Application).filter(models.Application.project_id == id).delete(synchronize_session=False)
     db.query(models.Project).filter(models.Project.id == id).delete(synchronize_session=False)
     db.commit()
@@ -324,7 +422,7 @@ def delete_project(
 
 
 # ==========================================
-# مسارات التقديم على المشاريع (Applications)
+# مسارات التقديم على المشاريع (Applications & Seats)
 # ==========================================
 
 @app.post("/applications/", response_model=schemas.ApplicationResponse, status_code=status.HTTP_201_CREATED)
@@ -333,12 +431,28 @@ def apply_to_project(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_role(["student"]))
 ):
-    """تقديم طلب انضمام لمشروع بواسطة الطالب الحالي مع منع التقديم المتكرر"""
+    """تقديم طلب انضمام لمشروع بواسطة الطالب الحالي مع فحص المقاعد ومنع التقديم المتكرر"""
     project = db.query(models.Project).filter(models.Project.id == application.project_id).first()
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
             detail="المشروع المطلوب غير موجود"
+        )
+
+    # التحقق من أن المشروع معتمد
+    if project.status == "rejected":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="لا يمكن التقديم على مشروع تم رفضه من قبل المشرف الأكاديمي"
+        )
+
+    # التحقق من توفر مقاعد شاغرة في المشروع
+    accepted_count = get_project_accepted_members(project.id, db)
+    max_cap = project.max_members or 4
+    if accepted_count >= max_cap:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"المشروع مكتمل المقاعد بالفعل ({accepted_count}/{max_cap}) ولا يقبل طلبات جديدة"
         )
 
     # منع الطالب من التقديم على نفس المشروع أكثر من مرة
@@ -373,14 +487,14 @@ def get_all_applications(
     user_role = (current_user.role or "").lower()
 
     if user_role in ["supervisor", "admin"]:
-        return db.query(models.Application).all()
+        return db.query(models.Application).order_by(models.Application.id.desc()).all()
 
     if user_role in ["partner", "company", "business"]:
         user_projects = db.query(models.Project.id).filter(models.Project.created_by == current_user.id).all()
         project_ids = [p[0] for p in user_projects]
-        return db.query(models.Application).filter(models.Application.project_id.in_(project_ids)).all()
+        return db.query(models.Application).filter(models.Application.project_id.in_(project_ids)).order_by(models.Application.id.desc()).all()
 
-    return db.query(models.Application).filter(models.Application.student_id == current_user.id).all()
+    return db.query(models.Application).filter(models.Application.student_id == current_user.id).order_by(models.Application.id.desc()).all()
 
 
 @app.get("/projects/{project_id}/applications", response_model=List[schemas.ApplicationResponse])
@@ -406,19 +520,19 @@ def get_project_applications(
             detail="ليس لديك الصلاحية لعرض طلبات هذا المشروع"
         )
 
-    return db.query(models.Application).filter(models.Application.project_id == project_id).all()
+    return db.query(models.Application).filter(models.Application.project_id == project_id).order_by(models.Application.id.desc()).all()
 
 
-@app.put("/applications/{application_id}/status", response_model=schemas.ApplicationResponse)
+@app.put("/applications/{id}/status", response_model=schemas.ApplicationResponse)
 def update_application_status(
-    application_id: int,
+    id: int,
     status_update: Optional[schemas.ApplicationStatusUpdate] = None,
     status_query: Optional[str] = Query(None, alias="status"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """تحديث حالة الطلب (قبول/رفض) - حل تعارض status مع حصر الصلاحية لمالك المشروع أو المشرف"""
-    application = db.query(models.Application).filter(models.Application.id == application_id).first()
+    """تحديث حالة الطلب (قبول/رفض) من الشركة أو المشرف مع حماية سعة المقاعد (PUT /applications/{id}/status)"""
+    application = db.query(models.Application).filter(models.Application.id == id).first()
     if not application:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
@@ -453,7 +567,108 @@ def update_application_status(
             detail="الحالة غير صالحة. الحالات المقبولة هي: accepted, rejected, pending"
         )
 
+    # التحقق من سعة المقاعد عند القبول وخصم مقعد متاح
+    if new_status == "accepted" and application.status != "accepted":
+        current_accepted = get_project_accepted_members(application.project_id, db)
+        max_cap = project.max_members if (project and project.max_members) else 4
+        if current_accepted >= max_cap:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"لا يمكن قبول الطلب، المقاعد مكتملة للمشروع ({current_accepted}/{max_cap})"
+            )
+
     application.status = new_status
     db.commit()
     db.refresh(application)
     return application
+
+
+@app.put("/applications/{application_id}/status", response_model=schemas.ApplicationResponse, include_in_schema=False)
+def update_application_status_alias(
+    application_id: int,
+    status_update: Optional[schemas.ApplicationStatusUpdate] = None,
+    status_query: Optional[str] = Query(None, alias="status"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    return update_application_status(application_id, status_update, status_query, db, current_user)
+
+
+# ==========================================
+# مسارات الرسائل والشات التفاعلي (Project Messages)
+# ==========================================
+
+@app.post("/projects/{project_id}/messages", response_model=schemas.MessageResponse, status_code=status.HTTP_201_CREATED)
+def create_project_message(
+    project_id: int,
+    msg_in: schemas.MessageCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """إرسال رسالة جديدة في شات المشروع مع تسجيل بيانات المرسل وتوقيت الرسالة"""
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"المشروع برقم {project_id} غير موجود"
+        )
+
+    text_content = msg_in.text.strip()
+    if not text_content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="لا يمكن إرسال رسالة فارغة"
+        )
+
+    new_msg = models.Message(
+        project_id=project_id,
+        sender_id=current_user.id,
+        text=text_content
+    )
+    db.add(new_msg)
+    db.commit()
+    db.refresh(new_msg)
+
+    return schemas.MessageResponse(
+        id=new_msg.id,
+        project_id=new_msg.project_id,
+        sender_id=new_msg.sender_id,
+        sender_name=current_user.full_name,
+        sender_role=current_user.role,
+        text=new_msg.text,
+        created_at=new_msg.created_at
+    )
+
+
+@app.get("/projects/{project_id}/messages", response_model=List[schemas.MessageResponse])
+def get_project_messages(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """جلب سجل رسائل شات مشروع محدد بالترتيب الزمني التصاعدي"""
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"المشروع برقم {project_id} غير موجود"
+        )
+
+    messages = db.query(models.Message).filter(
+        models.Message.project_id == project_id
+    ).order_by(models.Message.created_at.asc()).all()
+
+    results = []
+    for m in messages:
+        sender_name = m.sender.full_name if m.sender else f"مستخدم #{m.sender_id}"
+        sender_role = m.sender.role if m.sender else "user"
+        results.append(schemas.MessageResponse(
+            id=m.id,
+            project_id=m.project_id,
+            sender_id=m.sender_id,
+            sender_name=sender_name,
+            sender_role=sender_role,
+            text=m.text,
+            created_at=m.created_at
+        ))
+    return results

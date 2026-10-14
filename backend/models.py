@@ -15,6 +15,7 @@ class User(Base):
 
     profile = relationship("StudentProfile", back_populates="user", uselist=False)
     projects = relationship("Project", back_populates="creator")
+    messages = relationship("Message", back_populates="sender")
     skills = Column(String, default="")
 
     @property
@@ -45,18 +46,37 @@ class Project(Base):
     title = Column(String(150), nullable=False)
     description = Column(Text)
     required_skills = Column(Text)
+    status = Column(String, default="pending")  # pending, approved, rejected
+    max_members = Column(Integer, default=4)
     created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     creator = relationship("User", back_populates="projects")
     applications = relationship("Application", back_populates="project")
+    messages = relationship("Message", back_populates="project")
+
+
 class Application(Base):
     __tablename__ = "applications"
 
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     student_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    status = Column(String, default="pending")
+    status = Column(String, default="pending")  # pending, accepted, rejected
     message = Column(String, nullable=True)
-    project = relationship("Project", back_populates="applications")
     
+    project = relationship("Project", back_populates="applications")
+    student = relationship("User")
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    sender_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    text = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    project = relationship("Project", back_populates="messages")
+    sender = relationship("User", back_populates="messages")
