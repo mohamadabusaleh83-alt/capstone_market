@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Briefcase, CheckCircle, Clock, Search, PlusCircle, 
-  Users, BarChart2, Bell, X, Check, Sparkles,
-  Calendar, Award, TrendingUp, Download, Megaphone, ArrowUpRight,
+  Users, Bell, X, Check, Sparkles,
+  Calendar, Award, ArrowUpRight,
   Star, MessageSquare, Layers, LogIn, LogOut, Store, UserCheck,
-  Menu, ShieldCheck, GraduationCap, FileText, AlertTriangle, PieChart,
-  Edit2, Trash2, MessageSquarePlus, Save, UploadCloud, Send, ExternalLink,
-  Lock, KeyRound, Mail, AlertCircle, RefreshCw, UserPlus, CheckCircle2, XCircle
+  Menu, ShieldCheck, GraduationCap, FileText,
+  Edit2, Trash2, Save, UploadCloud, Send, ExternalLink,
+  Lock, Mail, AlertCircle, RefreshCw, UserPlus, CheckCircle2
 } from 'lucide-react';
 
 // عنوان الباك إند API: يدعم السيرفر المحلي تلقائياً عند التشغيل على localhost
@@ -229,9 +229,6 @@ export default function App() {
     }
   ]);
 
-  const [editingReportId, setEditingReportId] = useState(null);
-  const [editDeadlineInput, setEditDeadlineInput] = useState('');
-  const [editFeedbackInput, setEditFeedbackInput] = useState('');
   const [submitReportModal, setSubmitReportModal] = useState(null);
   const [reportUrlInput, setReportUrlInput] = useState('');
 
@@ -524,7 +521,7 @@ export default function App() {
       await apiFetch('/notifications/read-all', { method: 'PUT' });
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
       showToast('تم تحديد كافة الإشعارات كمقروءة بنجاح!', 'success');
-    } catch (err) {
+    } catch {
       showToast('تعذر تحديث الإشعارات، يرجى المحاولة لاحقاً', 'error');
     }
   }, [apiFetch, showToast]);
@@ -1579,7 +1576,6 @@ export default function App() {
                 <div className="space-y-4">
                   {reportsTimeline.map((rep) => {
                     const isSubmitted = rep.status === 'submitted';
-                    const isEditing = editingReportId === rep.id;
 
                     return (
                       <div
