@@ -1,11 +1,8 @@
 import os
+import bcrypt
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import jwt, JWTError
-from passlib.context import CryptContext
-
-# تهيئة سياق تشفير كلمات المرور باستخدام bcrypt
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # قراءة إعدادات التشفير والتوكن من متغيرات البيئة مع قيم افتراضية للتطوير
 SECRET_KEY = os.getenv("SECRET_KEY", "your-super-secret-key-change-this-in-production")
@@ -14,15 +11,25 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 
 
 def hash_password(password: str) -> str:
-    """تشفير كلمة المرور مع تقليمها إلى 72 بايت لتفادي حدود bcrypt"""
-    pwd_bytes = password.encode("utf-8")[:72].decode("utf-8", errors="ignore")
-    return pwd_context.hash(pwd_bytes)
+    """تشفير كلمة المرور عبر bcrypt مباشرة مع تقليمها لـ 72 بايت لتفادي أخطاء passlib و bcrypt 4+"""
+    if not password:
+        password = ""
+    pwd_bytes = password.encode("utf-8")[:72]
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """التحقق من مطابقة كلمة المرور المدخلة مع الهاش المخزن"""
-    pwd_bytes = plain_password.encode("utf-8")[:72].decode("utf-8", errors="ignore")
-    return pwd_context.verify(pwd_bytes, hashed_password)
+    """التحقق من صحة كلمة المرور المدخلة مقارنة بالتشفير المخزن"""
+    try:
+        if not plain_password or not hashed_password:
+            return False
+        pwd_bytes = plain_password.encode("utf-8")[:72]
+        hash_bytes = hashed_password.encode("utf-8")
+        return bcrypt.checkpw(pwd_bytes, hash_bytes)
+    except Exception as e:
+        print(f"Error in verify_password: {e}")
+        return False
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

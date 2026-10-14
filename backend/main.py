@@ -128,26 +128,41 @@ def home():
 # مسارات التوثيق والمستخدمين (Auth & Users)
 # ==========================================
 
+import logging
+
+logger = logging.getLogger("capstone_api")
+
 @app.post("/login", response_model=schemas.Token)
 def login(
     user_credentials: OAuth2PasswordRequestForm = Depends(), 
     db: Session = Depends(get_db)
 ):
     """تسجيل الدخول وتوليد رمز الوصول JWT"""
-    user = db.query(models.User).filter(models.User.email == user_credentials.username).first()
+    try:
+        clean_username = user_credentials.username.strip().lower()
+        user = db.query(models.User).filter(models.User.email == clean_username).first()
 
-    if not user or not utils.verify_password(user_credentials.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="البريد الإلكتروني أو كلمة المرور غير صحيحة",
-            headers={"WWW-Authenticate": "Bearer"},
+        if not user or not utils.verify_password(user_credentials.password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="البريد الإلكتروني أو كلمة المرور غير صحيحة",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        access_token = utils.create_access_token(
+            data={"sub": str(user.id), "user_id": user.id, "email": user.email, "role": user.role}
         )
 
-    access_token = utils.create_access_token(
-        data={"sub": str(user.id), "user_id": user.id, "email": user.email, "role": user.role}
-    )
-
-    return {"access_token": access_token, "token_type": "bearer"}
+        return {"access_token": access_token, "token_type": "bearer"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in login: {str(e)}", exc_info=True)
+        print(f"Error in login: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"حدث خطأ أثناء تسجيل الدخول: {str(e)}"
+        )
 
 
 @app.get("/me", response_model=schemas.UserResponse)
@@ -160,7 +175,8 @@ def get_me(current_user: models.User = Depends(get_current_user)):
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     """إنشاء حساب مستخدم جديد مع معالجة آمنة للأخطاء لمنع أخطاء 500"""
     try:
-        db_user = db.query(models.User).filter(models.User.email == user.email).first()
+        clean_email = user.email.strip().lower()
+        db_user = db.query(models.User).filter(models.User.email == clean_email).first()
         if db_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, 
@@ -168,11 +184,14 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
             )
 
         hashed_pwd = utils.hash_password(user.password)
+        user_role = (user.role or "student").strip().lower()
+
         new_user = models.User(
-            full_name=user.full_name,
-            email=user.email,
+            full_name=user.full_name.strip(),
+            email=clean_email,
             password_hash=hashed_pwd,
-            role=user.role.lower() if user.role else "student"
+            role=user_role,
+            skills=""
         )
         db.add(new_user)
         db.commit()
@@ -182,6 +201,8 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         db.rollback()
+        logger.error(f"Error in create_user: {str(e)}", exc_info=True)
+        print(f"Error in create_user: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"حدث خطأ أثناء إنشاء المستخدم: {str(e)}"

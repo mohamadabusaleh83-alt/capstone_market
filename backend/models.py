@@ -17,6 +17,14 @@ class User(Base):
     projects = relationship("Project", back_populates="creator")
     skills = Column(String, default="")
 
+    @property
+    def hashed_password(self):
+        return self.password_hash
+
+    @hashed_password.setter
+    def hashed_password(self, value):
+        self.password_hash = value
+
 
 class StudentProfile(Base):
     __tablename__ = "student_profiles"
