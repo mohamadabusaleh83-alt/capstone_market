@@ -1,6 +1,7 @@
 import os
 from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException, Query, status
+from fastapi import FastAPI, Depends, HTTPException, Query, Request, status
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -19,15 +20,47 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# إعداد CORS
-origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+# إعداد CORS للنطاقات المصرح لها
+origins = [
+    "https://capstone-market.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]
+
+env_origins = os.getenv("ALLOWED_ORIGINS", "")
+if env_origins:
+    for o in env_origins.split(","):
+        cleaned = o.strip()
+        if cleaned and cleaned not in origins:
+            origins.append(cleaned)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins if origins != ["*"] else ["*"],
-    allow_credentials=True if origins != ["*"] else False,
+    allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# معالج عام لأي خطأ غير متوقع لضمان عودة الاستجابة بترويسات CORS دائماً
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    origin = request.headers.get("origin")
+    headers = {}
+    if origin:
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+        headers["Access-Control-Allow-Methods"] = "*"
+        headers["Access-Control-Allow-Headers"] = "*"
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": f"خطأ داخلي في الخادم: {str(exc)}"},
+        headers=headers
+    )
 
 # نظام استخراج التوكن OAuth2
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -125,25 +158,34 @@ def get_me(current_user: models.User = Depends(get_current_user)):
 
 @app.post("/users/", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    """إنشاء حساب مستخدم جديد"""
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
-    if db_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="البريد الإلكتروني مسجل مسبقاً لمستخدم آخر"
-        )
+    """إنشاء حساب مستخدم جديد مع معالجة آمنة للأخطاء لمنع أخطاء 500"""
+    try:
+        db_user = db.query(models.User).filter(models.User.email == user.email).first()
+        if db_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail="البريد الإلكتروني مسجل مسبقاً لمستخدم آخر"
+            )
 
-    hashed_pwd = utils.hash_password(user.password)
-    new_user = models.User(
-        full_name=user.full_name,
-        email=user.email,
-        password_hash=hashed_pwd,
-        role=user.role.lower() if user.role else "student"
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
+        hashed_pwd = utils.hash_password(user.password)
+        new_user = models.User(
+            full_name=user.full_name,
+            email=user.email,
+            password_hash=hashed_pwd,
+            role=user.role.lower() if user.role else "student"
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"حدث خطأ أثناء إنشاء المستخدم: {str(e)}"
+        )
 
 
 @app.get("/users/", response_model=List[schemas.UserResponse])
