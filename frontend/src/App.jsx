@@ -7,9 +7,8 @@ import {
   Star, MessageSquare, Layers, LogIn, LogOut, Store, UserCheck,
   Menu, ShieldCheck, GraduationCap, FileText,
   Edit2, Trash2, Save, UploadCloud, Send, ExternalLink,
-  Lock, Mail, AlertCircle, RefreshCw, UserPlus, CheckCircle2
+  Lock, Mail, AlertCircle, RefreshCw, UserPlus, CheckCircle2, Globe
 } from 'lucide-react';
-import LanguageSwitcher from './components/LanguageSwitcher.jsx';
 
 // عنوان الباك إند API: يدعم السيرفر المحلي تلقائياً عند التشغيل على localhost
 const API_URL = import.meta.env.VITE_API_URL || (
@@ -75,7 +74,46 @@ const INITIAL_FALLBACK_PROJECTS = [
 
 export default function App() {
   const { t, i18n } = useTranslation();
-  const isRtl = (i18n.language || 'ar') === 'ar';
+  const [currentLang, setCurrentLang] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('app_language') || i18n.language || 'ar';
+    }
+    return i18n.language || 'ar';
+  });
+
+  const isRtl = currentLang === 'ar';
+
+  const toggleLanguage = useCallback(() => {
+    const nextLang = currentLang === 'ar' ? 'en' : 'ar';
+    setCurrentLang(nextLang);
+    i18n.changeLanguage(nextLang);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('app_language', nextLang);
+      document.documentElement.dir = nextLang === 'ar' ? 'rtl' : 'ltr';
+      document.documentElement.lang = nextLang;
+      if (nextLang === 'ar') {
+        document.documentElement.classList.add('font-arabic');
+        document.documentElement.classList.remove('font-english');
+      } else {
+        document.documentElement.classList.add('font-english');
+        document.documentElement.classList.remove('font-arabic');
+      }
+    }
+  }, [currentLang, i18n]);
+
+  useEffect(() => {
+    const handleLangChange = (lng) => {
+      setCurrentLang(lng);
+      if (typeof document !== 'undefined') {
+        document.documentElement.dir = lng === 'ar' ? 'rtl' : 'ltr';
+        document.documentElement.lang = lng;
+      }
+    };
+    i18n.on('languageChanged', handleLangChange);
+    return () => {
+      i18n.off('languageChanged', handleLangChange);
+    };
+  }, [i18n]);
 
   // مساعد لترجمة أسماء التخصصات الأكاديمية
   const translateMajor = useCallback((major) => {
@@ -1038,9 +1076,24 @@ export default function App() {
             <span className="text-slate-400 text-[11px] hidden md:inline">
               {t('auth.banner_subtitle')}
             </span>
-            <LanguageSwitcher onLanguageChange={(lng) => {
-              showToast(lng === 'ar' ? 'تم تغيير لغة الواجهة إلى العربية بنجاح' : 'Interface language switched to English successfully', 'info');
-            }} />
+            <button
+              type="button"
+              onClick={() => {
+                toggleLanguage();
+                showToast(
+                  currentLang === 'ar'
+                    ? 'Interface language switched to English successfully'
+                    : 'تم تغيير لغة الواجهة إلى العربية بنجاح',
+                  'info'
+                );
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-100 hover:text-white border border-slate-700 hover:border-blue-500/60 shadow-sm text-xs font-bold transition-all duration-200 cursor-pointer select-none"
+              title={currentLang === 'ar' ? 'Switch to English' : 'التحويل إلى اللغة العربية'}
+              aria-label="Language Switcher"
+            >
+              <Globe className="w-4 h-4 text-blue-400 shrink-0" />
+              <span>{currentLang === 'ar' ? 'English' : 'العربية'}</span>
+            </button>
           </div>
         </div>
 
@@ -1250,11 +1303,26 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 sm:gap-3">
-          {/* زر تبديل اللغة الأنيق (AR | EN) بجانب أيقونة الإشعارات */}
-          <LanguageSwitcher onLanguageChange={(lng) => {
-            showToast(lng === 'ar' ? 'تم تغيير لغة الواجهة إلى العربية بنجاح' : 'Interface language switched to English successfully', 'info');
-          }} />
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* زر تبديل اللغة (Language Switcher) بجانب أيقونة الإشعارات وزر تسجيل الخروج */}
+          <button
+            type="button"
+            onClick={() => {
+              toggleLanguage();
+              showToast(
+                currentLang === 'ar'
+                  ? 'Interface language switched to English successfully'
+                  : 'تم تغيير لغة الواجهة إلى العربية بنجاح',
+                'info'
+              );
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 hover:text-white border border-slate-700 hover:border-blue-500/60 shadow-sm text-xs font-bold transition-all duration-200 cursor-pointer select-none"
+            title={currentLang === 'ar' ? 'Switch to English' : 'التحويل إلى اللغة العربية'}
+            aria-label="Language Switcher"
+          >
+            <Globe className="w-4 h-4 text-blue-400 shrink-0" />
+            <span>{currentLang === 'ar' ? 'English' : 'العربية'}</span>
+          </button>
 
           {/* أيقونة الإشعارات والتنبيهات التفاعلية */}
           <div className="relative">
