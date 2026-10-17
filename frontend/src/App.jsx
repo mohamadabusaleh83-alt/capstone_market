@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Briefcase, CheckCircle, Clock, Search, PlusCircle, 
   Users, Bell, X, Check, Sparkles,
@@ -8,6 +9,7 @@ import {
   Edit2, Trash2, Save, UploadCloud, Send, ExternalLink,
   Lock, Mail, AlertCircle, RefreshCw, UserPlus, CheckCircle2
 } from 'lucide-react';
+import LanguageSwitcher from './components/LanguageSwitcher.jsx';
 
 // عنوان الباك إند API: يدعم السيرفر المحلي تلقائياً عند التشغيل على localhost
 const API_URL = import.meta.env.VITE_API_URL || (
@@ -72,6 +74,60 @@ const INITIAL_FALLBACK_PROJECTS = [
 ];
 
 export default function App() {
+  const { t, i18n } = useTranslation();
+  const isRtl = (i18n.language || 'ar') === 'ar';
+
+  // مساعد لترجمة أسماء التخصصات الأكاديمية
+  const translateMajor = useCallback((major) => {
+    if (!major) return '';
+    if (major.includes('CIS') || major.includes('أنظمة المعلومات')) return t('majors.cis');
+    if (major.includes('Computer Science') || major.includes('علم الحاسوب')) return t('majors.cs');
+    if (major.includes('IT') || major.includes('تقنية المعلومات')) return t('majors.it');
+    if (major.includes('Cybersecurity') || major.includes('أمن المعلومات')) return t('majors.cybersecurity');
+    if (major.includes('الوسائط') || major.includes('Media')) return t('majors.web');
+    if (major.includes('هندسة البرمجيات') || major.includes('Software')) return t('majors.se');
+    return major;
+  }, [t]);
+
+  // مساعد لترجمة مستوى الصعوبة
+  const translateDifficulty = useCallback((diff) => {
+    if (!diff) return '';
+    if (diff === 'متوسط' || diff === 'Intermediate') return isRtl ? 'متوسط' : 'Intermediate';
+    if (diff === 'متقدم' || diff === 'Advanced') return isRtl ? 'متقدم' : 'Advanced';
+    if (diff === 'مبتدئ' || diff === 'Beginner') return isRtl ? 'مبتدئ' : 'Beginner';
+    return diff;
+  }, [isRtl]);
+
+  // مساعد لترجمة مسمى الدور
+  const getRoleLabel = useCallback((role) => {
+    if (role === 'supervisor') return t('roles.supervisor');
+    if (role === 'company' || role === 'partner') return t('roles.company');
+    if (role === 'admin') return t('roles.admin');
+    return t('roles.student');
+  }, [t]);
+
+  // مساعد لترجمة رسائل الأخطاء القادمة من الباك إند
+  const translateErrorMessage = useCallback((detail) => {
+    if (!detail) return t('common.error');
+    if (typeof detail !== 'string') return String(detail);
+    if (detail.includes('البريد الإلكتروني أو كلمة المرور')) {
+      return isRtl ? detail : 'Invalid email or password.';
+    }
+    if (detail.includes('الصلاحية') || detail.includes('permission')) {
+      return isRtl ? 'ليس لديك الصلاحية لتنفيذ هذا الإجراء.' : 'You do not have permission to perform this action.';
+    }
+    if (detail.includes('غير موجود') || detail.includes('not found')) {
+      return isRtl ? 'العنصر المطلوب غير موجود.' : 'Requested item not found.';
+    }
+    if (detail.includes('المقاعد') || detail.includes('مكتملة') || detail.includes('seats')) {
+      return isRtl ? 'المقاعد مكتملة لهذا المشروع.' : 'Seats are already full for this project.';
+    }
+    if (detail.includes('مسبقاً') || detail.includes('مسجل') || detail.includes('already')) {
+      return isRtl ? 'تم تقديم طلب مسبقاً لهذا المشروع.' : 'You have already applied for this project.';
+    }
+    return detail;
+  }, [t, isRtl]);
+
   // ==========================================
   // حالات المستخدم والجلسة (Auth & User State)
   // ==========================================
@@ -149,7 +205,7 @@ export default function App() {
   // فورم التقديم على مشروع
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
-  const [applicantRole, setApplicantRole] = useState('مطور أنظمة وواجهات');
+  const [applicantRole, setApplicantRole] = useState('');
   const [applyMessage, setApplyMessage] = useState('');
   const [isSubmittingApply, setIsSubmittingApply] = useState(false);
 
@@ -336,11 +392,11 @@ export default function App() {
 
     if (response.status === 401) {
       handleLogout();
-      throw new Error('انتهت صلاحية جلسة الدخول، يرجى تسجيل الدخول مجدداً.');
+      throw new Error(isRtl ? 'انتهت صلاحية جلسة الدخول، يرجى تسجيل الدخول مجدداً.' : 'Session expired, please sign in again.');
     }
 
     return response;
-  }, [handleLogout]);
+  }, [handleLogout, isRtl]);
 
   // ==========================================
   // جلب المشاريع الحية من الباك إند
@@ -520,11 +576,11 @@ export default function App() {
     try {
       await apiFetch('/notifications/read-all', { method: 'PUT' });
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      showToast('تم تحديد كافة الإشعارات كمقروءة بنجاح!', 'success');
+      showToast(isRtl ? 'تم تحديد كافة الإشعارات كمقروءة بنجاح!' : 'All notifications marked as read!', 'success');
     } catch {
-      showToast('تعذر تحديث الإشعارات، يرجى المحاولة لاحقاً', 'error');
+      showToast(isRtl ? 'تعذر تحديث الإشعارات، يرجى المحاولة لاحقاً' : 'Failed to update notifications, please try again', 'error');
     }
-  }, [apiFetch, showToast]);
+  }, [apiFetch, showToast, isRtl]);
 
   // جلب الإشعارات دورياً وتلقائياً عند تسجيل الدخول (كل 30 ثانية)
   useEffect(() => {
@@ -563,12 +619,12 @@ export default function App() {
         ...p,
         skills: projectSkills,
         matchRate: matchPercent,
-        match: `${matchPercent}% تطابق`,
+        match: `${matchPercent}% ${isRtl ? 'تطابق' : 'Match'}`,
         matchedSkills,
         missingSkills
       };
     });
-  }, [rawProjects, userSkills]);
+  }, [rawProjects, userSkills, isRtl]);
 
   // ==========================================
   // عمليات تسجيل الدخول والتسجيل الحقيقي
@@ -594,10 +650,10 @@ export default function App() {
 
         if (!regRes.ok) {
           const errData = await regRes.json().catch(() => ({}));
-          throw new Error(errData.detail || 'تعذر إنشاء الحساب، يرجى التأكد من البيانات.');
+          throw new Error(translateErrorMessage(errData.detail || (isRtl ? 'تعذر إنشاء الحساب، يرجى التأكد من البيانات.' : 'Could not create account, please verify data.')));
         }
 
-        setAuthSuccess('تم إنشاء الحساب بنجاح! جاري تسجيل الدخول...');
+        setAuthSuccess(isRtl ? 'تم إنشاء الحساب بنجاح! جاري تسجيل الدخول...' : 'Account created successfully! Signing in...');
       }
 
       const loginParams = new URLSearchParams();
@@ -612,7 +668,7 @@ export default function App() {
 
       if (!loginRes.ok) {
         const errData = await loginRes.json().catch(() => ({}));
-        throw new Error(errData.detail || 'البريد الإلكتروني أو كلمة المرور غير صحيحة.');
+        throw new Error(translateErrorMessage(errData.detail || (isRtl ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' : 'Invalid email or password.')));
       }
 
       const tokenData = await loginRes.json();
@@ -624,7 +680,7 @@ export default function App() {
       });
 
       if (!meRes.ok) {
-        throw new Error('فشل جلب بيانات وصلاحيات المستخدم.');
+        throw new Error(isRtl ? 'فشل جلب بيانات وصلاحيات المستخدم.' : 'Failed to retrieve user profile.');
       }
 
       const userData = await meRes.json();
@@ -659,7 +715,7 @@ export default function App() {
       fetchProjects();
       fetchApplications();
     } catch (err) {
-      setAuthError(err.message || 'حدث خطأ أثناء الاتصال بالخادم.');
+      setAuthError(err.message || (isRtl ? 'حدث خطأ أثناء الاتصال بالخادم.' : 'Error connecting to server.'));
     } finally {
       setIsLoadingAuth(false);
     }
@@ -669,15 +725,15 @@ export default function App() {
     setAuthRole(role);
     setAuthError('');
     if (role === 'student') {
-      setAuthFullName('أحمد منصور');
+      setAuthFullName(isRtl ? 'أحمد منصور' : 'Ahmed Mansour');
       setAuthEmail('student@capstone.ps');
       setAuthPassword('pass1234');
     } else if (role === 'company') {
-      setAuthFullName('شركة النور للحلول البرمجية');
+      setAuthFullName(isRtl ? 'شركة النور للحلول البرمجية' : 'Al-Noor Software Solutions');
       setAuthEmail('company@capstone.ps');
       setAuthPassword('pass1234');
     } else {
-      setAuthFullName('د. إياد الأحمد');
+      setAuthFullName(isRtl ? 'د. إياد الأحمد' : 'Dr. Eyad Al-Ahmad');
       setAuthEmail('supervisor@capstone.ps');
       setAuthPassword('pass1234');
     }
@@ -704,7 +760,7 @@ export default function App() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || 'تعذر إضافة المشروع.');
+        throw new Error(translateErrorMessage(errData.detail || (isRtl ? 'تعذر إضافة المشروع.' : 'Could not create project.')));
       }
 
       await fetchProjects();
@@ -714,9 +770,9 @@ export default function App() {
       setNewProjectDesc('');
       setNewProjectSkills('');
       setNewProjectMaxMembers(4);
-      showToast('تم طرح المشروع بنجاح وحفظه في قاعدة البيانات!', 'success');
+      showToast(t('toasts.project_created'), 'success');
     } catch (err) {
-      showToast(`خطأ: ${err.message}`, 'error');
+      showToast(`${isRtl ? 'خطأ' : 'Error'}: ${err.message}`, 'error');
     } finally {
       setIsSubmittingProject(false);
     }
@@ -734,20 +790,16 @@ export default function App() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || 'تعذر تحديث حالة المشروع.');
+        throw new Error(translateErrorMessage(errData.detail || (isRtl ? 'تعذر تحديث حالة المشروع.' : 'Could not update project status.')));
       }
-
-      const statusLabels = {
-        approved: 'اعتماد وقبول',
-        rejected: 'رفض',
-        pending: 'إعادة للتعليق'
-      };
 
       await fetchProjects();
       fetchNotifications();
-      showToast(`تم ${statusLabels[targetStatus] || targetStatus} المشروع بنجاح!`, 'success');
+      showToast(t('toasts.project_status_updated', { 
+        status: targetStatus === 'approved' ? (isRtl ? 'معتمد' : 'Approved') : targetStatus === 'rejected' ? (isRtl ? 'مرفوض' : 'Rejected') : (isRtl ? 'قيد المراجعة' : 'Pending')
+      }), 'success');
     } catch (err) {
-      showToast(`خطأ: ${err.message}`, 'error');
+      showToast(`${isRtl ? 'خطأ' : 'Error'}: ${err.message}`, 'error');
     }
   };
 
@@ -760,7 +812,9 @@ export default function App() {
 
     setIsSubmittingApply(true);
     try {
-      const fullMsg = `[الدور: ${applicantRole}] [التخصص: ${studentCv.major}] - ${applyMessage || 'أرغب بالانضمام لتنفيذ هذا المشروع ومتحمس لتقديم أفضل نتائج.'}`;
+      const defaultRole = applicantRole || (isRtl ? 'مطور برمجيات' : 'Software Developer');
+      const defaultMsg = applyMessage || (isRtl ? 'أرغب بالانضمام لتنفيذ هذا المشروع ومتحمس لتقديم أفضل نتائج.' : 'Interested in joining this project team.');
+      const fullMsg = `[Role: ${defaultRole}] [Major: ${studentCv.major}] - ${defaultMsg}`;
 
       const res = await apiFetch('/applications/', {
         method: 'POST',
@@ -772,7 +826,7 @@ export default function App() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || 'تعذر تقديم الطلب.');
+        throw new Error(translateErrorMessage(errData.detail || (isRtl ? 'تعذر تقديم الطلب.' : 'Could not submit application.')));
       }
 
       await fetchApplications();
@@ -780,9 +834,10 @@ export default function App() {
       fetchNotifications();
       setIsApplyModalOpen(false);
       setApplyMessage('');
-      showToast('تم إرسال طلب انضمامك بنجاح وحفظه في قاعدة البيانات!', 'success');
+      setApplicantRole('');
+      showToast(t('toasts.apply_success'), 'success');
     } catch (err) {
-      showToast(`تنبيه: ${err.message}`, 'error');
+      showToast(`${isRtl ? 'تنبيه' : 'Notice'}: ${err.message}`, 'error');
     } finally {
       setIsSubmittingApply(false);
     }
@@ -800,7 +855,7 @@ export default function App() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || 'تعذر تحديث حالة الطلب.');
+        throw new Error(translateErrorMessage(errData.detail || (isRtl ? 'تعذر تحديث حالة الطلب.' : 'Could not update application status.')));
       }
 
       setApplications((prev) =>
@@ -809,9 +864,11 @@ export default function App() {
       // تحديث المشاريع لتحديث عداد المقاعد المحجوزة لحظياً
       await fetchProjects();
       fetchNotifications();
-      showToast(`تم ${targetStatus === 'accepted' ? 'قبول' : 'رفض'} الطلب بنجاح!`, 'success');
+      showToast(t('toasts.status_updated', {
+        status: targetStatus === 'accepted' ? (isRtl ? 'مقبول' : 'Accepted') : (isRtl ? 'مرفوض' : 'Rejected')
+      }), 'success');
     } catch (err) {
-      showToast(`خطأ: ${err.message}`, 'error');
+      showToast(`${isRtl ? 'خطأ' : 'Error'}: ${err.message}`, 'error');
     }
   };
 
@@ -831,7 +888,7 @@ export default function App() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || 'تعذر إرسال الرسالة.');
+        throw new Error(translateErrorMessage(errData.detail || (isRtl ? 'تعذر إرسال الرسالة.' : 'Could not send message.')));
       }
 
       const newMsg = await res.json();
@@ -839,7 +896,7 @@ export default function App() {
       setChatMessageInput('');
       fetchNotifications();
     } catch (err) {
-      showToast(`خطأ في إرسال الرسالة: ${err.message}`, 'error');
+      showToast(`${isRtl ? 'خطأ في إرسال الرسالة' : 'Error sending message'}: ${err.message}`, 'error');
     } finally {
       setIsSendingChat(false);
     }
@@ -861,7 +918,7 @@ export default function App() {
   const handleSaveCv = (e) => {
     e.preventDefault();
     localStorage.setItem('student_academic_cv', JSON.stringify(studentCv));
-    setCvUpdateMessage('تم حفظ وتحديث السيرة الذاتية بنجاح!');
+    setCvUpdateMessage(t('toasts.cv_saved'));
     setTimeout(() => setCvUpdateMessage(''), 2500);
   };
 
@@ -884,14 +941,14 @@ export default function App() {
               ...r,
               status: 'submitted',
               submissionLink: reportUrlInput,
-              submittedAt: 'اليوم، تم التسليم بنجاح'
+              submittedAt: isRtl ? 'اليوم، تم التسليم بنجاح' : 'Today, submitted successfully'
             }
           : r
       )
     );
     setSubmitReportModal(null);
     setReportUrlInput('');
-    showToast('تم رفع التقرير بنجاح للمشرف الأكاديمي!', 'success');
+    showToast(t('toasts.report_submitted'), 'success');
   };
 
   // تصفية المشاريع للبحث والتصنيف بمرونة عالية (Flexible Search & Filter)
@@ -971,15 +1028,20 @@ export default function App() {
   // ==========================================
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between font-sans" dir="rtl">
-        <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-xs py-2.5 px-6 border-b border-amber-500/20 flex justify-between items-center shadow-md">
-          <div className="flex items-center gap-2 text-amber-300 font-semibold">
-            <ShieldCheck className="w-4 h-4 text-amber-400" />
-            بوابة منظومة مشاريع التخرج وربط سوق العمل (Capstone Market)
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-xs py-2.5 px-4 sm:px-6 border-b border-amber-500/20 flex justify-between items-center shadow-md">
+          <div className="flex items-center gap-2 text-amber-300 font-semibold truncate">
+            <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+            <span className="truncate">{t('auth.banner_title')}</span>
           </div>
-          <span className="text-slate-400 text-[11px] hidden md:inline">
-            الدخول الموحد للطلبة والمشرفين والشركات
-          </span>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-slate-400 text-[11px] hidden md:inline">
+              {t('auth.banner_subtitle')}
+            </span>
+            <LanguageSwitcher onLanguageChange={(lng) => {
+              showToast(lng === 'ar' ? 'تم تغيير لغة الواجهة إلى العربية بنجاح' : 'Interface language switched to English successfully', 'info');
+            }} />
+          </div>
         </div>
 
         <div className="flex-1 flex items-center justify-center p-4">
@@ -989,12 +1051,12 @@ export default function App() {
                 <GraduationCap className="w-8 h-8" />
               </div>
               <h1 className="text-2xl font-bold text-white tracking-tight">
-                {authMode === 'login' ? 'تسجيل الدخول للمنصة' : 'إنشاء حساب جديد'}
+                {authMode === 'login' ? t('auth.login_title') : t('auth.register_title')}
               </h1>
-              <p className="text-xs text-slate-400 max-w-xs mx-auto">
+              <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
                 {authMode === 'login' 
-                  ? 'تسجيل الدخول المباشر مع الباك إند عبر الرمز الأمني (JWT)'
-                  : 'انضم كطالب أو شريك صناعي أو مشرف أكاديمي'
+                  ? t('auth.login_desc')
+                  : t('auth.register_desc')
                 }
               </p>
             </div>
@@ -1002,7 +1064,7 @@ export default function App() {
             {/* أزرار التجربة السريعة */}
             <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2">
               <span className="text-[11px] text-slate-400 font-medium block text-center">
-                تعبئة بيانات تجريبية سريعة بنقرة واحدة:
+                {t('auth.demo_title')}
               </span>
               <div className="grid grid-cols-3 gap-2">
                 <button
@@ -1010,21 +1072,21 @@ export default function App() {
                   onClick={() => fillDemoCredentials('student')}
                   className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-lg text-[11px] font-bold border border-emerald-900/40 transition cursor-pointer"
                 >
-                  طالب خريج
+                  {t('roles.student')}
                 </button>
                 <button
                   type="button"
                   onClick={() => fillDemoCredentials('supervisor')}
                   className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg text-[11px] font-bold border border-amber-900/40 transition cursor-pointer"
                 >
-                  مشرف أكاديمي
+                  {t('roles.supervisor')}
                 </button>
                 <button
                   type="button"
                   onClick={() => fillDemoCredentials('company')}
                   className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-blue-300 rounded-lg text-[11px] font-bold border border-blue-900/40 transition cursor-pointer"
                 >
-                  شركة / شريك
+                  {t('roles.company')}
                 </button>
               </div>
             </div>
@@ -1047,12 +1109,12 @@ export default function App() {
               {authMode === 'register' && (
                 <>
                   <div>
-                    <label className="text-xs text-slate-300 block mb-1">الاسم الكامل / اسم الجهة</label>
+                    <label className="text-xs text-slate-300 block mb-1">{t('auth.full_name')}</label>
                     <div className="relative">
                       <input
                         type="text"
                         required
-                        placeholder="مثال: أحمد منصور أو شركة النور"
+                        placeholder={t('auth.full_name_placeholder')}
                         value={authFullName}
                         onChange={(e) => setAuthFullName(e.target.value)}
                         className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
@@ -1061,22 +1123,22 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="text-xs text-slate-300 block mb-1">نوع الحساب والصلاحية</label>
+                    <label className="text-xs text-slate-300 block mb-1">{t('auth.account_type')}</label>
                     <select
                       value={authRole}
                       onChange={(e) => setAuthRole(e.target.value)}
                       className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
                     >
-                      <option value="student">طالب خريج (Student)</option>
-                      <option value="company">شركة / شريك تجاري (Company / Partner)</option>
-                      <option value="supervisor">مشرف أكاديمي (Supervisor)</option>
+                      <option value="student">{t('auth.option_student')}</option>
+                      <option value="company">{t('auth.option_company')}</option>
+                      <option value="supervisor">{t('auth.option_supervisor')}</option>
                     </select>
                   </div>
                 </>
               )}
 
               <div>
-                <label className="text-xs text-slate-300 block mb-1">البريد الإلكتروني</label>
+                <label className="text-xs text-slate-300 block mb-1">{t('auth.email')}</label>
                 <div className="relative">
                   <input
                     type="email"
@@ -1084,15 +1146,15 @@ export default function App() {
                     placeholder="name@capstone.ps"
                     value={authEmail}
                     onChange={(e) => setAuthEmail(e.target.value)}
-                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 text-left"
+                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 text-left ps-3 pe-10"
                     dir="ltr"
                   />
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <Mail className="w-4 h-4 text-slate-400 absolute end-3 top-3" />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs text-slate-300 block mb-1">كلمة المرور</label>
+                <label className="text-xs text-slate-300 block mb-1">{t('auth.password')}</label>
                 <div className="relative">
                   <input
                     type="password"
@@ -1100,10 +1162,10 @@ export default function App() {
                     placeholder="••••••••"
                     value={authPassword}
                     onChange={(e) => setAuthPassword(e.target.value)}
-                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 text-left"
+                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 text-left ps-3 pe-10"
                     dir="ltr"
                   />
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute end-3 top-3" />
                 </div>
               </div>
 
@@ -1115,17 +1177,17 @@ export default function App() {
                 {isLoadingAuth ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    جاري التحقق والاتصال بالخادم...
+                    {t('auth.connecting')}
                   </>
                 ) : authMode === 'login' ? (
                   <>
                     <LogIn className="w-4 h-4" />
-                    تسجيل الدخول (POST /login)
+                    {t('auth.login_submit')}
                   </>
                 ) : (
                   <>
                     <UserPlus className="w-4 h-4" />
-                    إنشاء الحساب (POST /users/)
+                    {t('auth.register_submit')}
                   </>
                 )}
               </button>
@@ -1142,15 +1204,15 @@ export default function App() {
                 className="text-xs text-blue-400 hover:text-blue-300 transition cursor-pointer"
               >
                 {authMode === 'login' 
-                  ? 'ليس لديك حساب بعد؟ اضغط لإنشاء حساب جديد' 
-                  : 'لديك حساب بالفعل؟ العودة لتسجيل الدخول'}
+                  ? t('auth.switch_to_register')
+                  : t('auth.switch_to_login')}
               </button>
             </div>
           </div>
         </div>
 
         <div className="text-center py-4 text-[11px] text-slate-500 border-t border-slate-900">
-          منصة مشاريع التخرج الأكاديمية (Capstone Market) • متصلة بنظام FastAPI و PostgreSQL
+          {t('auth.footer')}
         </div>
       </div>
     );
@@ -1160,7 +1222,7 @@ export default function App() {
   // الشاشة الرئيسية للمستخدم المسجل
   // ==========================================
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans" dir="rtl">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
       
       {/* الشريط العلوي المميز: محدد الارتفاع بـ h-16 مع z-40 ليظل فوق السايد بار دائماً */}
       <header className="h-16 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-4 flex items-center justify-between">
@@ -1168,7 +1230,7 @@ export default function App() {
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 md:hidden transition cursor-pointer"
-            aria-label="القائمة الجانبية"
+            aria-label={t('nav.sidebar_toggle')}
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -1179,27 +1241,32 @@ export default function App() {
             </div>
             <div>
               <span className="font-extrabold text-sm sm:text-base text-white tracking-wide block leading-tight">
-                سوق مشاريع التخرج
+                {t('nav.platform_title')}
               </span>
               <span className="text-[10px] text-blue-400 font-mono hidden sm:inline-block">
-                Capstone Market v1.1
+                {t('nav.platform_version')}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* زر تبديل اللغة الأنيق (AR | EN) بجانب أيقونة الإشعارات */}
+          <LanguageSwitcher onLanguageChange={(lng) => {
+            showToast(lng === 'ar' ? 'تم تغيير لغة الواجهة إلى العربية بنجاح' : 'Interface language switched to English successfully', 'info');
+          }} />
+
           {/* أيقونة الإشعارات والتنبيهات التفاعلية */}
           <div className="relative">
             <button
               onClick={() => setIsNotificationsOpen((prev) => !prev)}
               className="relative p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer border border-slate-700/60 shadow-sm"
-              title="الإشعارات والتنبيهات"
-              aria-label="الإشعارات والتنبيهات"
+              title={t('notifications.title')}
+              aria-label={t('notifications.title')}
             >
               <Bell className="w-4 h-4 text-blue-400" />
               {notifications.filter((n) => !n.is_read).length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold animate-pulse shadow-md shadow-rose-500/50">
+                <span className={`absolute -top-1 ${isRtl ? '-left-1' : '-right-1'} bg-rose-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold animate-pulse shadow-md shadow-rose-500/50`}>
                   {notifications.filter((n) => !n.is_read).length}
                 </span>
               )}
@@ -1208,13 +1275,13 @@ export default function App() {
             {/* القائمة المنسدلة للإشعارات */}
             {isNotificationsOpen && (
               <div 
-                className="absolute left-0 mt-2 w-80 sm:w-96 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl z-50 overflow-hidden"
-                dir="rtl"
+                className={`absolute ${isRtl ? 'left-0' : 'right-0'} mt-2 w-80 sm:w-96 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl z-50 overflow-hidden`}
+                dir={isRtl ? 'rtl' : 'ltr'}
               >
                 <div className="p-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Bell className="w-4 h-4 text-blue-400" />
-                    <span className="text-xs font-bold text-white">الإشعارات والتنبيهات</span>
+                    <span className="text-xs font-bold text-white">{t('notifications.title')}</span>
                     <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded-full font-mono">
                       {notifications.length}
                     </span>
@@ -1224,7 +1291,7 @@ export default function App() {
                       onClick={handleMarkAllNotificationsRead}
                       className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold cursor-pointer transition"
                     >
-                      تحديد الكل كمقروء
+                      {t('notifications.mark_all_read')}
                     </button>
                   )}
                 </div>
@@ -1233,12 +1300,12 @@ export default function App() {
                   {isLoadingNotifications && notifications.length === 0 ? (
                     <div className="py-8 text-center text-xs text-slate-400">
                       <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2 text-blue-400" />
-                      جاري جلب الإشعارات...
+                      {t('notifications.loading')}
                     </div>
                   ) : notifications.length === 0 ? (
                     <div className="py-8 text-center text-xs text-slate-400">
                       <CheckCircle2 className="w-6 h-6 mx-auto mb-2 text-slate-600" />
-                      لا توجد إشعارات جديدة حالياً
+                      {t('notifications.empty')}
                     </div>
                   ) : (
                     notifications.map((n) => (
@@ -1246,7 +1313,7 @@ export default function App() {
                         key={n.id}
                         onClick={() => !n.is_read && handleMarkNotificationRead(n.id)}
                         className={`p-3 text-xs transition cursor-pointer flex items-start gap-2.5 ${
-                          n.is_read ? 'bg-slate-900/60 hover:bg-slate-850/60 opacity-75' : 'bg-slate-850/90 hover:bg-slate-800 border-r-2 border-blue-500'
+                          n.is_read ? 'bg-slate-900/60 hover:bg-slate-850/60 opacity-75' : `bg-slate-850/90 hover:bg-slate-800 border-s-2 border-blue-500`
                         }`}
                       >
                         <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.is_read ? 'bg-transparent' : 'bg-blue-400'}`} />
@@ -1254,7 +1321,7 @@ export default function App() {
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-white">{n.title}</span>
                             <span className="text-[10px] text-slate-500">
-                              {new Date(n.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(n.created_at).toLocaleTimeString(isRtl ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
                           <p className="text-slate-300 text-[11px] leading-relaxed">{n.message}</p>
@@ -1274,7 +1341,7 @@ export default function App() {
                 ? 'bg-blue-950/60 text-blue-300 border-blue-800/60'
                 : 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
           }`}>
-            {currentUser.title}
+            {getRoleLabel(currentUser.role)}
           </span>
 
           <div className="flex items-center gap-2">
@@ -1286,10 +1353,10 @@ export default function App() {
             <button
               onClick={handleLogout}
               className="flex items-center gap-1.5 bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-200 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-sm"
-              title="تسجيل الخروج والعودة لشاشة الدخول"
+              title={t('nav.logout_tooltip')}
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">تسجيل الخروج</span>
+              <span className="hidden sm:inline">{t('nav.logout')}</span>
             </button>
           </div>
         </div>
@@ -1306,16 +1373,16 @@ export default function App() {
           />
         )}
 
-        {/* القائمة الجانبية: تبدأ على الموبايل من top-16 و z-30 وتكون sticky على الديسكتوب */}
+        {/* القائمة الجانبية: متوافقة تماماً مع RTL و LTR */}
         <aside className={`
-          fixed top-16 bottom-0 right-0 z-30 w-64 bg-slate-900 border-l border-slate-800 p-4 
+          fixed top-16 bottom-0 ${isRtl ? 'right-0 border-l' : 'left-0 border-r'} z-30 w-64 bg-slate-900 border-slate-800 p-4 
           overflow-y-auto flex flex-col justify-between transition-transform duration-300 ease-in-out
           md:static md:top-auto md:bottom-auto md:h-auto md:z-auto
-          ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
+          ${isSidebarOpen ? 'translate-x-0' : isRtl ? 'translate-x-full md:translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}>
           <div className="space-y-3">
             <div className="p-3 bg-slate-800/50 border border-slate-700/60 rounded-xl mb-4">
-              <span className="text-[10px] text-slate-400 block mb-0.5">الحساب النشط (GET /me):</span>
+              <span className="text-[10px] text-slate-400 block mb-0.5">{t('nav.active_account')}</span>
               <p className="text-xs font-bold text-white flex items-center gap-1.5 truncate">
                 {currentUser.role === 'company' ? (
                   <Store className="w-3.5 h-3.5 text-blue-400 shrink-0" />
@@ -1327,11 +1394,11 @@ export default function App() {
                 {currentUser.name}
               </p>
               <span className="text-[10px] text-slate-400 block mt-1">
-                {currentUser.title}
+                {getRoleLabel(currentUser.role)}
               </span>
             </div>
 
-            <p className="text-[11px] font-semibold text-slate-500 uppercase px-2">لوحة التحكم والتنقل</p>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase px-2">{t('nav.dashboard_title')}</p>
             
             {currentUser.role !== 'company' && (
               <button
@@ -1344,10 +1411,10 @@ export default function App() {
               >
                 <div className="flex items-center gap-2.5">
                   <Clock className="w-4 h-4 text-amber-400" />
-                  تسليم ومتابعة التقارير
+                  {t('nav.reports_hub')}
                 </div>
                 <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold">
-                  الثلاثاء
+                  {t('nav.tuesday')}
                 </span>
               </button>
             )}
@@ -1364,10 +1431,10 @@ export default function App() {
                 >
                   <div className="flex items-center gap-2.5">
                     <ShieldCheck className="w-4 h-4 text-amber-400" />
-                    إدارة ومتابعة شُعب التخرج
+                    {t('nav.supervisor_teams')}
                   </div>
                   <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold">
-                    شُعبة 1
+                    {t('nav.section_1')}
                   </span>
                 </button>
 
@@ -1381,11 +1448,11 @@ export default function App() {
                 >
                   <div className="flex items-center gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    اعتماد المشاريع الأكاديمية
+                    {t('nav.supervisor_projects_review')}
                   </div>
                   {pendingProjectsCount > 0 && (
                     <span className="text-[10px] bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded-full font-bold">
-                      {pendingProjectsCount} معلق
+                      {t('nav.pending_badge', { count: pendingProjectsCount })}
                     </span>
                   )}
                 </button>
@@ -1399,7 +1466,7 @@ export default function App() {
                 >
                   <div className="flex items-center gap-2.5">
                     <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    اعتماد وإدارة الطلبات
+                    {t('nav.manage_applications')}
                   </div>
                   {pendingCount > 0 && (
                     <span className="bg-amber-500 text-slate-950 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
@@ -1421,7 +1488,7 @@ export default function App() {
                   }`}
                 >
                   <Briefcase className="w-4 h-4 text-blue-400" />
-                  مشاريع شركتنا المطروحة
+                  {t('nav.company_projects')}
                 </button>
 
                 <button
@@ -1433,7 +1500,7 @@ export default function App() {
                 >
                   <div className="flex items-center gap-2.5">
                     <Users className="w-4 h-4 text-emerald-400" />
-                    طلبات الطلاب المتقدمين
+                    {t('nav.company_applicants')}
                   </div>
                   {pendingCount > 0 && (
                     <span className="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
@@ -1455,7 +1522,7 @@ export default function App() {
                   }`}
                 >
                   <FileText className="w-4 h-4 text-blue-400" />
-                  سيرتي الذاتية (CV)
+                  {t('nav.student_cv')}
                 </button>
 
                 <button
@@ -1468,10 +1535,10 @@ export default function App() {
                 >
                   <div className="flex items-center gap-2.5">
                     <Users className="w-4 h-4 text-emerald-400" />
-                    ملتقى تشكيل الفرق والطلاب
+                    {t('nav.teams_hub')}
                   </div>
                   <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
-                    {studentsList.filter(s => s.isFree).length} أحرار
+                    {t('nav.free_students', { count: studentsList.filter(s => s.isFree).length })}
                   </span>
                 </button>
               </>
@@ -1487,7 +1554,7 @@ export default function App() {
             >
               <div className="flex items-center gap-2.5">
                 <Sparkles className="w-4 h-4 text-blue-400" />
-                المطابقة الذكية
+                {t('nav.smart_match')}
               </div>
               <span className="text-[10px] bg-blue-500/20 border border-blue-400/30 px-1.5 py-0.5 rounded text-blue-200">AI</span>
             </button>
@@ -1501,7 +1568,7 @@ export default function App() {
               }`}
             >
               <Search className="w-4 h-4 text-slate-400" />
-              استعراض كافة المشاريع
+              {t('nav.browse_all')}
             </button>
 
             <button
@@ -1514,7 +1581,7 @@ export default function App() {
             >
               <div className="flex items-center gap-2.5">
                 <Star className="w-4 h-4 text-amber-400" />
-                المشاريع المفضلة
+                {t('nav.favorites')}
               </div>
               {favorites.length > 0 && (
                 <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full font-bold">
@@ -1525,8 +1592,8 @@ export default function App() {
           </div>
 
           <div className="pt-4 border-t border-slate-800 text-[11px] text-slate-500 space-y-1">
-            <div>حالة الاتصال: <span className="text-emerald-400">متصل بالخادم ✓</span></div>
-            <div>المشاريع بالخادم: <span className="text-white font-mono">{rawProjects.length}</span></div>
+            <div>{t('nav.connection_status')} <span className="text-emerald-400">{t('nav.connected_server')}</span></div>
+            <div>{t('nav.projects_on_server')} <span className="text-white font-mono">{rawProjects.length}</span></div>
           </div>
         </aside>
 
@@ -1539,16 +1606,16 @@ export default function App() {
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      متابعة أسبوعية مباشرة
+                      {t('reports.hub_badge')}
                     </span>
-                    <span className="text-xs text-slate-400">الفصل الدراسي الأول 2026</span>
+                    <span className="text-xs text-slate-400">{t('reports.semester')}</span>
                   </div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
                     <Clock className="w-6 h-6 text-amber-400" />
-                    بوابة تسليم التقارير والتقييم الأكاديمي لمشاريع التخرج
+                    {t('reports.hub_title')}
                   </h2>
                   <p className="text-xs text-slate-300 mt-1.5 max-w-2xl leading-relaxed">
-                    منصة التسليم المباشر للمخرجات الأكاديمية. تسليم التقارير إلزامي كل أسبوع في موعد أقصاه <strong className="text-amber-400">يوم الثلاثاء</strong> لتثبيت التقييم.
+                    {t('reports.hub_desc')}
                   </p>
                 </div>
 
@@ -1561,7 +1628,7 @@ export default function App() {
                     className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-md shrink-0"
                   >
                     <MessageSquare className="w-4 h-4" />
-                    شات ومحادثة المشروع المباشرة
+                    {t('reports.open_chat')}
                   </button>
                 )}
               </div>
@@ -1570,7 +1637,7 @@ export default function App() {
               <div className="space-y-4">
                 <h3 className="font-bold text-base text-white flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-blue-400" />
-                  الجدول الزمني ومحطات التسليم الرسمية
+                  {t('reports.timeline_title')}
                 </h3>
 
                 <div className="space-y-4">
@@ -1594,13 +1661,13 @@ export default function App() {
                                 : 'bg-amber-950/80 text-amber-300 border border-amber-800'
                             }`}>
                               {isSubmitted ? <CheckCircle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
-                              {isSubmitted ? 'تم التسليم' : 'بانتظار التسليم'}
+                              {isSubmitted ? t('reports.submitted') : t('reports.pending_submission')}
                             </span>
                             <h4 className="font-bold text-sm text-white">{rep.title}</h4>
                           </div>
 
                           <div className="flex items-center gap-2 text-xs">
-                            <span className="text-slate-400">الموعد النهائي:</span>
+                            <span className="text-slate-400">{t('reports.deadline_label')}</span>
                             <span className="bg-slate-800 px-2.5 py-1 rounded-lg text-amber-300 font-bold border border-slate-700">
                               {rep.deadlineDay} ({rep.deadlineDate})
                             </span>
@@ -1610,7 +1677,7 @@ export default function App() {
                         {/* تفاصيل التسليم والملاحظات */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 mb-3">
                           <div>
-                            <span className="text-slate-400 block mb-1">رابط المستند المسلّم:</span>
+                            <span className="text-slate-400 block mb-1">{t('reports.doc_link')}</span>
                             {rep.submissionLink ? (
                               <a
                                 href={rep.submissionLink}
@@ -1622,17 +1689,17 @@ export default function App() {
                                 {rep.submissionLink}
                               </a>
                             ) : (
-                              <span className="text-slate-500 italic">لم يتم إرفاق رابط بعد</span>
+                              <span className="text-slate-500 italic">{t('reports.no_doc')}</span>
                             )}
                             {rep.submittedAt && (
-                              <span className="text-[10px] text-slate-500 block mt-1">تاريخ الرفع: {rep.submittedAt}</span>
+                              <span className="text-[10px] text-slate-500 block mt-1">{t('reports.upload_date', { date: rep.submittedAt })}</span>
                             )}
                           </div>
 
                           <div>
-                            <span className="text-slate-400 block mb-1">تقييم وملاحظات المشرف:</span>
+                            <span className="text-slate-400 block mb-1">{t('reports.supervisor_feedback')}</span>
                             <p className="text-slate-300 leading-relaxed">{rep.supervisorFeedback}</p>
-                            <span className="text-[10px] text-amber-400 block mt-1 font-bold">الدرجة: {rep.grade}</span>
+                            <span className="text-[10px] text-amber-400 block mt-1 font-bold">{t('reports.grade', { grade: rep.grade })}</span>
                           </div>
                         </div>
 
@@ -1647,7 +1714,7 @@ export default function App() {
                               className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-4 py-2 rounded-xl font-bold flex items-center gap-1.5 transition shadow-sm cursor-pointer"
                             >
                               <UploadCloud className="w-4 h-4" />
-                              {rep.status === 'submitted' ? 'تحديث / تسليم مسودة جديدة' : 'رفع وتسليم التقرير'}
+                              {rep.status === 'submitted' ? t('reports.submit_new') : t('reports.submit_report')}
                             </button>
                           </div>
                         )}
@@ -1664,15 +1731,15 @@ export default function App() {
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      بوابة التدقيق والاعتماد الأكاديمي (PUT /projects/{'{id}'}/approve)
+                      {t('supervisor.review_badge')}
                     </span>
                   </div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
                     <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-                    مراجعة واعتماد المشاريع المقترحة من الشركاء الصناعيين
+                    {t('supervisor.review_title')}
                   </h2>
                   <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                    من هنا يمكنك مراجعة جودة التحديات المقترحة من الشركات والتحقق من ملاءمتها لمتطلبات مشاريع التخرج قبل إتاحتها للطلبة.
+                    {t('supervisor.review_desc')}
                   </p>
                 </div>
                 
@@ -1680,14 +1747,14 @@ export default function App() {
                   onClick={fetchProjects}
                   className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer border border-slate-700"
                 >
-                  <RefreshCw className="w-4 h-4" /> تحديث القائمة
+                  <RefreshCw className="w-4 h-4" /> {t('supervisor.refresh_list')}
                 </button>
               </div>
 
               {/* أزرار تصفية الحالة */}
               <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 p-3 rounded-2xl border border-slate-800">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400 font-bold ml-2">تصفية حسب الحالة:</span>
+                  <span className="text-xs text-slate-400 font-bold me-2">{t('supervisor.filter_by_status')}</span>
                   <button
                     onClick={() => setReviewFilterStatus('all')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
@@ -1696,7 +1763,7 @@ export default function App() {
                         : 'bg-slate-800 text-slate-400 hover:text-white'
                     }`}
                   >
-                    كافة المشاريع ({rawProjects.length})
+                    {t('supervisor.all_projects_count', { count: rawProjects.length })}
                   </button>
                   <button
                     onClick={() => setReviewFilterStatus('pending')}
@@ -1706,7 +1773,7 @@ export default function App() {
                         : 'bg-slate-800 text-amber-300 hover:text-white'
                     }`}
                   >
-                    <span>بانتظار الاعتماد</span>
+                    <span>{t('supervisor.pending_approval')}</span>
                     <span className="bg-amber-950 text-amber-200 px-1.5 py-0.2 rounded-full text-[10px]">
                       {rawProjects.filter(p => p.status === 'pending').length}
                     </span>
@@ -1719,7 +1786,7 @@ export default function App() {
                         : 'bg-slate-800 text-emerald-300 hover:text-white'
                     }`}
                   >
-                    معتمدة ({rawProjects.filter(p => p.status === 'approved').length})
+                    {t('supervisor.approved_count', { count: rawProjects.filter(p => p.status === 'approved').length })}
                   </button>
                   <button
                     onClick={() => setReviewFilterStatus('rejected')}
@@ -1729,7 +1796,7 @@ export default function App() {
                         : 'bg-slate-800 text-rose-300 hover:text-white'
                     }`}
                   >
-                    مرفوضة ({rawProjects.filter(p => p.status === 'rejected').length})
+                    {t('supervisor.rejected_count', { count: rawProjects.filter(p => p.status === 'rejected').length })}
                   </button>
                 </div>
               </div>
@@ -1738,11 +1805,11 @@ export default function App() {
               {isLoadingProjects ? (
                 <div className="text-center py-12 text-slate-400 text-xs flex items-center justify-center gap-2">
                   <RefreshCw className="w-5 h-5 animate-spin text-blue-400" />
-                  جاري جلب المشاريع من السيرفر...
+                  {t('supervisor.loading_projects')}
                 </div>
               ) : projectsForSupervisorReview.length === 0 ? (
                 <div className="text-center py-12 bg-slate-900 border border-slate-800 rounded-2xl text-slate-400 text-xs">
-                  لا توجد مشاريع تطابق هذا التصنيف حالياً.
+                  {t('supervisor.no_projects_matching')}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -1760,11 +1827,11 @@ export default function App() {
                                 ? 'bg-rose-950/80 text-rose-300 border-rose-800'
                                 : 'bg-amber-950/80 text-amber-300 border-amber-800 animate-pulse'
                           }`}>
-                            {p.status === 'approved' ? '✓ مشروع معتمد' : p.status === 'rejected' ? '✕ مشروع مرفوض' : '⏳ قيد المراجعة والاعتماد'}
+                            {p.status === 'approved' ? t('projects.status_approved_badge') : p.status === 'rejected' ? t('projects.status_rejected_badge') : t('projects.status_pending_badge')}
                           </span>
 
                           <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
-                            {p.currentMembers} من {p.maxMembers} مقاعد مقبولة
+                            {t('supervisor.seats_status', { current: p.currentMembers, max: p.maxMembers })}
                           </span>
                         </div>
 
@@ -1774,7 +1841,7 @@ export default function App() {
                         </p>
 
                         <div className="mb-4">
-                          <span className="text-[10px] text-slate-400 block mb-1 font-semibold">المهارات المطلوبة:</span>
+                          <span className="text-[10px] text-slate-400 block mb-1 font-semibold">{t('supervisor.required_skills')}</span>
                           <div className="flex flex-wrap gap-1">
                             {p.skills && p.skills.map((sk, i) => (
                               <span key={i} className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
@@ -1798,7 +1865,7 @@ export default function App() {
                             }`}
                           >
                             <Check className="w-3.5 h-3.5" />
-                            <span>اعتماد المشروع</span>
+                            <span>{t('supervisor.approve_button')}</span>
                           </button>
 
                           <button
@@ -1811,16 +1878,16 @@ export default function App() {
                             }`}
                           >
                             <X className="w-3.5 h-3.5" />
-                            <span>رفض</span>
+                            <span>{t('supervisor.reject_button')}</span>
                           </button>
 
                           {p.status !== 'pending' && (
                             <button
                               onClick={() => handleApproveProject(p.id, 'pending')}
                               className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-xl text-xs font-bold transition cursor-pointer"
-                              title="إعادة حالة المشروع إلى قيد المراجعة"
+                              title={t('supervisor.reset_pending_title')}
                             >
-                              إعادة كمعلق
+                              {t('supervisor.reset_pending')}
                             </button>
                           )}
                         </div>
@@ -1830,7 +1897,7 @@ export default function App() {
                           className="px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
                         >
                           <MessageSquare className="w-3.5 h-3.5 text-blue-400" />
-                          <span>شات المشروع</span>
+                          <span>{t('supervisor.project_chat')}</span>
                         </button>
                       </div>
                     </div>
@@ -1845,10 +1912,10 @@ export default function App() {
                 <div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
                     <ShieldCheck className="w-6 h-6 text-amber-400" />
-                    لوحة متابعة وإدارة شُعبة مشاريع التخرج
+                    {t('supervisor.teams_management_title')}
                   </h2>
                   <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
-                    تسجيل الملاحظات، تعديل حالة تسكين الطلاب، وفك ارتباط أو استبعاد أي طالب.
+                    {t('supervisor.teams_management_desc')}
                   </p>
                 </div>
                 
@@ -1858,7 +1925,7 @@ export default function App() {
                     className="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-md"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    اعتماد المشاريع ({pendingProjectsCount} معلق)
+                    {t('supervisor.approve_projects_btn', { count: pendingProjectsCount })}
                   </button>
 
                   <button
@@ -1866,21 +1933,21 @@ export default function App() {
                     className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-md"
                   >
                     <CheckCircle className="w-4 h-4" />
-                    طلبات الطلاب ({applications.length})
+                    {t('supervisor.student_applications_btn', { count: applications.length })}
                   </button>
                 </div>
               </div>
 
               <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-                <table className="w-full text-right text-xs">
+                <table className="w-full text-start text-xs">
                   <thead className="bg-slate-950 border-b border-slate-800 text-slate-400">
                     <tr>
-                      <th className="p-3.5">الرقم الجامعي</th>
-                      <th className="p-3.5">اسم الطالب والتخصص</th>
-                      <th className="p-3.5">المساق</th>
-                      <th className="p-3.5">حالة المشروع المسند</th>
-                      <th className="p-3.5">ملاحظات المشرف الأكاديمي</th>
-                      <th className="p-3.5 text-center">الإجراءات والتحكم</th>
+                      <th className="p-3.5 text-start">{t('supervisor.table_academic_id')}</th>
+                      <th className="p-3.5 text-start">{t('supervisor.table_student_name')}</th>
+                      <th className="p-3.5 text-start">{t('supervisor.table_course')}</th>
+                      <th className="p-3.5 text-start">{t('supervisor.table_project_status')}</th>
+                      <th className="p-3.5 text-start">{t('supervisor.table_supervisor_notes')}</th>
+                      <th className="p-3.5 text-center">{t('supervisor.table_actions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
@@ -1894,7 +1961,7 @@ export default function App() {
                               <span className="text-lg">{st.avatar}</span>
                               <div>
                                 <span className="font-bold text-white block">{st.name}</span>
-                                <span className="text-[10px] text-slate-400">{st.major}</span>
+                                <span className="text-[10px] text-slate-400">{translateMajor(st.major)}</span>
                               </div>
                             </div>
                           </td>
@@ -1926,7 +1993,7 @@ export default function App() {
                                 className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white w-full"
                               />
                             ) : (
-                              st.supervisorNote || <span className="text-slate-500 italic">لا توجد ملاحظات</span>
+                              st.supervisorNote || <span className="text-slate-500 italic">{t('supervisor.no_notes')}</span>
                             )}
                           </td>
                           <td className="p-3.5 text-center">
@@ -1974,7 +2041,7 @@ export default function App() {
                                 </button>
                                 <button
                                   onClick={() => {
-                                    if (window.confirm(`استبعاد الطالب "${st.name}" من الكشف؟`)) {
+                                    if (window.confirm(isRtl ? `استبعاد الطالب "${st.name}" من الكشف؟` : `Remove student "${st.name}"?`)) {
                                       setStudentsList((prev) => prev.filter((s) => s.id !== st.id));
                                     }
                                   }}
@@ -1999,10 +2066,10 @@ export default function App() {
                 <div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
                     <Store className="w-5 h-5 text-amber-400" />
-                    لوحة تحكم: {currentUser.name}
+                    {t('company.dashboard_title', { name: currentUser.name })}
                   </h2>
                   <p className="text-xs text-slate-300 mt-1.5 max-w-xl leading-relaxed">
-                    من هنا تطرح التحديات التقنية التي تواجه أعمالكم ليقوم طلاب مشاريع التخرج بحلها تحت إشراف أكاديمي.
+                    {t('company.dashboard_desc')}
                   </p>
                 </div>
                 <button
@@ -2010,18 +2077,18 @@ export default function App() {
                   className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition shadow-lg flex items-center gap-2 cursor-pointer"
                 >
                   <PlusCircle className="w-4 h-4" />
-                  طرح فكرة مشروع لشركتك (POST /projects/)
+                  {t('company.post_project_btn')}
                 </button>
               </div>
 
               <div>
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-bold text-base text-white">المشاريع التي طرحتموها للطلاب ({myCompanyProjects.length})</h3>
+                  <h3 className="font-bold text-base text-white">{t('company.my_projects_title', { count: myCompanyProjects.length })}</h3>
                   <button
                     onClick={fetchProjects}
                     className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 transition cursor-pointer"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" /> تحديث القائمة
+                    <RefreshCw className="w-3.5 h-3.5" /> {t('company.refresh_list')}
                   </button>
                 </div>
 
@@ -2031,21 +2098,21 @@ export default function App() {
                       <div>
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-[11px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-0.5 rounded-md">
-                            {p.category}
+                            {translateMajor(p.category)}
                           </span>
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
                             p.status === 'approved'
                               ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
                               : 'bg-amber-950/60 text-amber-300 border-amber-800/60'
                           }`}>
-                            {p.status === 'approved' ? 'معتمد أكاديمياً' : 'قيد مراجعة المشرف'}
+                            {p.status === 'approved' ? t('company.status_approved') : t('company.status_pending')}
                           </span>
                         </div>
                         <h4 className="font-bold text-base text-white mb-2">{p.title}</h4>
                         <p className="text-xs text-slate-400 line-clamp-3 mb-3">{p.description}</p>
                         
                         <div className="text-xs text-slate-400 mb-2">
-                          السعة: <strong className="text-white">{p.currentMembers} من {p.maxMembers} مقاعد محجوزة</strong>
+                          {t('company.capacity')} <strong className="text-white">{t('company.seats_reserved', { current: p.currentMembers, max: p.maxMembers })}</strong>
                         </div>
                         <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden mb-4">
                           <div
@@ -2061,7 +2128,7 @@ export default function App() {
                           className="bg-slate-800 hover:bg-slate-700 text-white text-xs px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer"
                         >
                           <Users className="w-3.5 h-3.5 text-blue-400" />
-                          طلبات المتقدمين ({applications.filter(a => a.project_id === p.id).length})
+                          {t('company.applicants_requests', { count: applications.filter(a => a.project_id === p.id).length })}
                         </button>
 
                         <button
@@ -2069,7 +2136,7 @@ export default function App() {
                           className="bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer"
                         >
                           <MessageSquare className="w-3.5 h-3.5 text-blue-400" />
-                          محادثة المشروع
+                          {t('company.project_chat')}
                         </button>
                       </div>
                     </div>
@@ -2084,14 +2151,14 @@ export default function App() {
                 <div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
                     <Users className="w-5 h-5 text-emerald-400" />
-                    دليل الطلاب المتاحين وبناء الفرق الهندسية
+                    {t('teams_hub.title')}
                   </h2>
                   <p className="text-xs text-slate-400 mt-1.5 max-w-2xl leading-relaxed">
-                    استكشف زملاءك من مختلف تخصصات الكلية لتكوين فرق متعددة المهارات (Cross-functional Teams).
+                    {t('teams_hub.desc')}
                   </p>
                 </div>
                 <div className="bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 text-xs text-slate-300">
-                  الطلاب الجاهزون للانضمام: <span className="font-bold text-emerald-400">{studentsList.filter(s => s.isFree).length} طلاب</span>
+                  {t('teams_hub.ready_students')} <span className="font-bold text-emerald-400">{t('teams_hub.ready_count', { count: studentsList.filter(s => s.isFree).length })}</span>
                 </div>
               </div>
 
@@ -2115,18 +2182,18 @@ export default function App() {
                             ? 'bg-emerald-950/50 text-emerald-300 border-emerald-800/60'
                             : 'bg-slate-800 text-slate-400 border-slate-700'
                         }`}>
-                          {student.isFree ? 'طالب حر' : 'ضمن فريق'}
+                          {student.isFree ? t('teams_hub.free_student') : t('teams_hub.in_team')}
                         </span>
                       </div>
 
                       <div className="mb-3">
                         <span className="text-[10px] bg-blue-950/60 text-blue-300 border border-blue-800/40 px-2 py-0.5 rounded inline-block">
-                          {student.major}
+                          {translateMajor(student.major)}
                         </span>
                       </div>
 
                       <div className="space-y-1 mb-4">
-                        <span className="text-[10px] text-slate-400 block">المهارات:</span>
+                        <span className="text-[10px] text-slate-400 block">{t('teams_hub.skills_label')}</span>
                         <div className="flex flex-wrap gap-1.5">
                           {student.skills.map((sk, i) => (
                             <span key={i} className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
@@ -2139,7 +2206,7 @@ export default function App() {
 
                     <button
                       disabled={!student.isFree}
-                      onClick={() => showToast(`تم إرسال دعوة انضمام للطالب ${student.name} بنجاح!`, 'success')}
+                      onClick={() => showToast(t('toasts.invite_sent', { name: student.name }), 'success')}
                       className={`w-full py-2 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${
                         student.isFree
                           ? 'bg-slate-800 hover:bg-blue-600 text-slate-200 hover:text-white border border-slate-700'
@@ -2147,7 +2214,7 @@ export default function App() {
                       }`}
                     >
                       <Users className="w-3.5 h-3.5" />
-                      {student.isFree ? 'دعوة للانضمام للفريق' : 'مرتبط بمشروع تخرج'}
+                      {student.isFree ? t('teams_hub.invite_to_team') : t('teams_hub.assigned_to_project')}
                     </button>
                   </div>
                 ))}
@@ -2160,13 +2227,13 @@ export default function App() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
                     <FileText className="w-5 h-5 text-blue-400" />
-                    الملف الأكاديمي والسيرة الذاتية (Student Academic CV)
+                    {t('student_cv.title')}
                   </h2>
                   <button
                     onClick={() => setShowSkillsModal(true)}
                     className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer"
                   >
-                    <Award className="w-4 h-4" /> تعديل المهارات
+                    <Award className="w-4 h-4" /> {t('student_cv.edit_skills')}
                   </button>
                 </div>
 
@@ -2180,7 +2247,7 @@ export default function App() {
                 <form onSubmit={handleSaveCv} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs text-slate-400 block mb-1">الاسم الكامل</label>
+                      <label className="text-xs text-slate-400 block mb-1">{t('student_cv.full_name')}</label>
                       <input
                         type="text"
                         disabled
@@ -2190,7 +2257,7 @@ export default function App() {
                     </div>
 
                     <div>
-                      <label className="text-xs text-slate-400 block mb-1">البريد الإلكتروني الجامعي</label>
+                      <label className="text-xs text-slate-400 block mb-1">{t('student_cv.university_email')}</label>
                       <input
                         type="email"
                         disabled
@@ -2203,33 +2270,33 @@ export default function App() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs text-slate-400 block mb-1">التخصص الأكاديمي</label>
+                      <label className="text-xs text-slate-400 block mb-1">{t('student_cv.major')}</label>
                       <select
                         value={studentCv.major}
                         onChange={(e) => setStudentCv({ ...studentCv, major: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
                       >
                         {ACADEMIC_MAJORS.map((m, idx) => (
-                          <option key={idx} value={m}>{m}</option>
+                          <option key={idx} value={m}>{translateMajor(m)}</option>
                         ))}
                       </select>
                     </div>
 
                     <div>
-                      <label className="text-xs text-slate-400 block mb-1">المساق الحالي</label>
+                      <label className="text-xs text-slate-400 block mb-1">{t('student_cv.current_course')}</label>
                       <select
                         value={studentCv.course}
                         onChange={(e) => setStudentCv({ ...studentCv, course: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
                       >
-                        <option value="مشروع تخرج 1">مشروع تخرج 1 (تحليل ومقترح)</option>
-                        <option value="مشروع تخرج 2">مشروع تخرج 2 (تطوير وتسليم نهائي)</option>
+                        <option value="مشروع تخرج 1">{t('student_cv.course_1')}</option>
+                        <option value="مشروع تخرج 2">{t('student_cv.course_2')}</option>
                       </select>
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">رابط الأعمال السابقة أو GitHub</label>
+                    <label className="text-xs text-slate-400 block mb-1">{t('student_cv.portfolio_link')}</label>
                     <input
                       type="url"
                       value={studentCv.portfolioUrl}
@@ -2241,7 +2308,7 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">نبذة عن اهتماماتك وشغفك البرمجي</label>
+                    <label className="text-xs text-slate-400 block mb-1">{t('student_cv.bio')}</label>
                     <textarea
                       rows={3}
                       value={studentCv.bio}
@@ -2251,7 +2318,7 @@ export default function App() {
                   </div>
 
                   <div>
-                    <span className="text-xs text-slate-400 block mb-2">المهارات المسجلة لملفك:</span>
+                    <span className="text-xs text-slate-400 block mb-2">{t('student_cv.registered_skills')}</span>
                     <div className="flex flex-wrap gap-2">
                       {userSkills.map((sk, idx) => (
                         <span key={idx} className="bg-slate-800 text-blue-300 border border-blue-900/50 text-xs px-2.5 py-1 rounded-lg">
@@ -2265,7 +2332,7 @@ export default function App() {
                     type="submit"
                     className="w-full bg-blue-600 hover:bg-blue-500 py-2.5 rounded-xl font-bold text-xs text-white transition shadow-lg cursor-pointer"
                   >
-                    حفظ وتحديث السيرة الذاتية
+                    {t('student_cv.save_cv')}
                   </button>
                 </form>
               </div>
@@ -2276,13 +2343,13 @@ export default function App() {
               {/* شريط البحث وتصفية التخصصات */}
               <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3">
                 <div className="relative">
-                  <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3" />
+                  <Search className="w-4 h-4 text-slate-400 absolute start-3.5 top-3" />
                   <input
                     type="text"
-                    placeholder="ابحث بالاسم، الكلمات المفتاحية، أو المهارات (مثل: Python, React, Cybersecurity)..."
+                    placeholder={t('projects.search_placeholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pr-10 pl-4 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl ps-10 pe-4 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -2297,7 +2364,7 @@ export default function App() {
                           : 'bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800'
                       }`}
                     >
-                      {cat}
+                      {cat === 'الكل' ? t('common.all') : translateMajor(cat)}
                     </button>
                   ))}
                 </div>
@@ -2306,7 +2373,7 @@ export default function App() {
               {isLoadingProjects && (
                 <div className="text-center py-8 text-xs text-slate-400 flex items-center justify-center gap-2">
                   <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
-                  جاري جلب المشاريع الحية من قاعدة البيانات...
+                  {t('projects.loading')}
                 </div>
               )}
 
@@ -2317,11 +2384,11 @@ export default function App() {
                       <Search className="w-7 h-7 text-blue-400" />
                     </div>
                     <div className="space-y-1.5">
-                      <h3 className="text-base font-bold text-white">لا توجد مشاريع مطابقة لبحثك</h3>
+                      <h3 className="text-base font-bold text-white">{t('projects.no_results_title')}</h3>
                       <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
                         {activeTab === 'favorites'
-                          ? 'لم تقم بإضافة أي مشروع إلى قائمة المفضلة بعد. انقر على أيقونة النجمة على بطاقة أي مشروع لحفظه هنا.'
-                          : 'حاول تعديل كلمات البحث، أو تغيير تخصص البحث، أو مسح الفلاتر لاستعراض جميع المشاريع المتاحة.'}
+                          ? t('projects.no_favorites_desc')
+                          : t('projects.no_results_desc')}
                       </p>
                     </div>
                     {(searchQuery || selectedCategory !== 'الكل' || activeTab === 'favorites') && (
@@ -2334,169 +2401,169 @@ export default function App() {
                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-md shadow-blue-500/20"
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
-                        مسح الفلاتر واستعراض الكل
+                        {t('projects.clear_filters')}
                       </button>
                     )}
                   </div>
                 ) : (
                   filteredProjects.map((project) => {
-                  const isFull = (project.currentMembers || 0) >= (project.maxMembers || 4);
-                  const isRejected = project.status === 'rejected';
-                  const isFav = favorites.includes(project.id);
-                  const isAlreadyApplied = applications.some((a) => a.project_id === project.id && a.student_id === currentUser.id);
+                    const isFull = (project.currentMembers || 0) >= (project.maxMembers || 4);
+                    const isRejected = project.status === 'rejected';
+                    const isFav = favorites.includes(project.id);
+                    const isAlreadyApplied = applications.some((a) => a.project_id === project.id && a.student_id === currentUser.id);
 
-                  return (
-                    <div
-                      key={project.id}
-                      className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 group"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-[11px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700">
-                            {project.category}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
-                              project.matchRate >= 60
-                                ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                                : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-                            }`}>
-                              {project.match}
+                    return (
+                      <div
+                        key={project.id}
+                        className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 group"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-[11px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700">
+                              {translateMajor(project.category)}
                             </span>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                                project.matchRate >= 60
+                                  ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                                  : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                              }`}>
+                                {project.match}
+                              </span>
+                              <button
+                                onClick={() => toggleFavorite(project.id)}
+                                className={`p-1 rounded-md border transition cursor-pointer ${
+                                  isFav
+                                    ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+                                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                                }`}
+                              >
+                                <Star className="w-3.5 h-3.5" fill={isFav ? 'currentColor' : 'none'} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* شارات الحالة وسعة المقاعد */}
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              project.status === 'approved'
+                                ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
+                                : project.status === 'rejected'
+                                  ? 'bg-rose-950/60 text-rose-300 border-rose-800/60'
+                                  : 'bg-amber-950/60 text-amber-300 border-amber-800/60'
+                            }`}>
+                              {project.status === 'approved' ? t('projects.status_approved_badge') : project.status === 'rejected' ? t('projects.status_rejected_badge') : t('projects.status_pending_badge')}
+                            </span>
+
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {t('projects.seats_count', { current: project.currentMembers, max: project.maxMembers })}
+                            </span>
+                          </div>
+
+                          {/* مؤشر تقدم المقاعد */}
+                          <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden mb-3">
+                            <div
+                              className={`h-full rounded-full ${isFull ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                              style={{ width: `${Math.min(100, ((project.currentMembers || 0) / (project.maxMembers || 4)) * 100)}%` }}
+                            />
+                          </div>
+
+                          <h3 className="font-bold text-sm mb-2 text-white group-hover:text-blue-400 transition-colors">
+                            {project.title}
+                          </h3>
+
+                          <p className="text-xs text-slate-400 line-clamp-3 mb-3 leading-relaxed">
+                            {project.description}
+                          </p>
+
+                          <div className="flex items-center gap-3 text-[11px] text-slate-400 mb-3 bg-slate-800/40 p-2 rounded-lg">
+                            <span className="flex items-center gap-1">
+                              <Layers className="w-3.5 h-3.5 text-blue-400" /> {translateDifficulty(project.difficulty)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-amber-400" /> {t('projects.hours_per_week', { hours: project.hoursPerWeek })}
+                            </span>
+                          </div>
+
+                          <div className="space-y-2 mb-4 bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
+                            <div className="flex justify-between items-center text-[10px] text-slate-400">
+                              <span className="flex items-center gap-1 font-medium text-slate-300">
+                                <Sparkles className="w-3.5 h-3.5 text-blue-400" /> {t('projects.skills_analysis')}
+                              </span>
+                              <span className="text-emerald-400 font-bold">{t('projects.skills_available', { count: project.matchedSkills?.length || 0 })}</span>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-1.5">
+                              {project.matchedSkills && project.matchedSkills.map((skill, idx) => (
+                                <span
+                                  key={`m-${idx}`}
+                                  className="text-[10px] bg-emerald-950/50 text-emerald-300 border border-emerald-800/60 px-2 py-0.5 rounded-md flex items-center gap-1"
+                                >
+                                  ✓ {skill}
+                                </span>
+                              ))}
+
+                              {project.missingSkills && project.missingSkills.map((skill, idx) => (
+                                <span
+                                  key={`mis-${idx}`}
+                                  className="text-[10px] bg-rose-950/40 text-rose-300 border border-rose-800/50 px-2 py-0.5 rounded-md flex items-center gap-1"
+                                >
+                                  ⚠️ {t('projects.missing_skill', { skill })}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-2 border-t border-slate-800/60">
+                          {currentUser.role === 'student' ? (
                             <button
-                              onClick={() => toggleFavorite(project.id)}
-                              className={`p-1 rounded-md border transition cursor-pointer ${
-                                isFav
-                                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
-                                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                              disabled={isFull || isAlreadyApplied || isRejected}
+                              onClick={() => {
+                                setSelectedProject(project);
+                                setIsApplyModalOpen(true);
+                              }}
+                              className={`flex-1 py-2 rounded-xl text-xs font-semibold shadow-md transition flex items-center justify-center gap-1.5 ${
+                                isAlreadyApplied
+                                  ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 cursor-not-allowed'
+                                  : isRejected
+                                    ? 'bg-rose-950/60 text-rose-400 border border-rose-900 cursor-not-allowed'
+                                    : isFull
+                                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                                      : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20 cursor-pointer'
                               }`}
                             >
-                              <Star className="w-3.5 h-3.5" fill={isFav ? 'currentColor' : 'none'} />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* شارات الحالة وسعة المقاعد */}
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                            project.status === 'approved'
-                              ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
-                              : project.status === 'rejected'
-                                ? 'bg-rose-950/60 text-rose-300 border-rose-800/60'
-                                : 'bg-amber-950/60 text-amber-300 border-amber-800/60'
-                          }`}>
-                            {project.status === 'approved' ? '✓ معتمد أكاديمياً' : project.status === 'rejected' ? '✕ مرفوض' : '⏳ قيد اعتماد المشرف'}
-                          </span>
-
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {project.currentMembers}/{project.maxMembers} مقاعد
-                          </span>
-                        </div>
-
-                        {/* مؤشر تقدم المقاعد */}
-                        <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden mb-3">
-                          <div
-                            className={`h-full rounded-full ${isFull ? 'bg-rose-500' : 'bg-emerald-500'}`}
-                            style={{ width: `${Math.min(100, ((project.currentMembers || 0) / (project.maxMembers || 4)) * 100)}%` }}
-                          />
-                        </div>
-
-                        <h3 className="font-bold text-sm mb-2 text-white group-hover:text-blue-400 transition-colors">
-                          {project.title}
-                        </h3>
-
-                        <p className="text-xs text-slate-400 line-clamp-3 mb-3 leading-relaxed">
-                          {project.description}
-                        </p>
-
-                        <div className="flex items-center gap-3 text-[11px] text-slate-400 mb-3 bg-slate-800/40 p-2 rounded-lg">
-                          <span className="flex items-center gap-1">
-                            <Layers className="w-3.5 h-3.5 text-blue-400" /> {project.difficulty}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5 text-amber-400" /> {project.hoursPerWeek} س/أسبوع
-                          </span>
-                        </div>
-
-                        <div className="space-y-2 mb-4 bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
-                          <div className="flex justify-between items-center text-[10px] text-slate-400">
-                            <span className="flex items-center gap-1 font-medium text-slate-300">
-                              <Sparkles className="w-3.5 h-3.5 text-blue-400" /> تحليل مطابقة المهارات:
-                            </span>
-                            <span className="text-emerald-400 font-bold">{project.matchedSkills?.length || 0} متوفرة</span>
-                          </div>
-                          
-                          <div className="flex flex-wrap gap-1.5">
-                            {project.matchedSkills && project.matchedSkills.map((skill, idx) => (
-                              <span
-                                key={`m-${idx}`}
-                                className="text-[10px] bg-emerald-950/50 text-emerald-300 border border-emerald-800/60 px-2 py-0.5 rounded-md flex items-center gap-1"
-                              >
-                                ✓ {skill}
-                              </span>
-                            ))}
-
-                            {project.missingSkills && project.missingSkills.map((skill, idx) => (
-                              <span
-                                key={`mis-${idx}`}
-                                className="text-[10px] bg-rose-950/40 text-rose-300 border border-rose-800/50 px-2 py-0.5 rounded-md flex items-center gap-1"
-                              >
-                                ⚠️ ناقص: {skill}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 pt-2 border-t border-slate-800/60">
-                        {currentUser.role === 'student' ? (
-                          <button
-                            disabled={isFull || isAlreadyApplied || isRejected}
-                            onClick={() => {
-                              setSelectedProject(project);
-                              setIsApplyModalOpen(true);
-                            }}
-                            className={`flex-1 py-2 rounded-xl text-xs font-semibold shadow-md transition flex items-center justify-center gap-1.5 ${
-                              isAlreadyApplied
-                                ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 cursor-not-allowed'
+                              {isAlreadyApplied
+                                ? t('projects.already_applied')
                                 : isRejected
-                                  ? 'bg-rose-950/60 text-rose-400 border border-rose-900 cursor-not-allowed'
+                                  ? t('projects.project_rejected')
                                   : isFull
-                                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                                    : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20 cursor-pointer'
-                            }`}
-                          >
-                            {isAlreadyApplied
-                              ? '✓ تم التقديم مسبقاً'
-                              : isRejected
-                                ? 'المشروع مرفوض'
-                                : isFull
-                                  ? 'المقاعد مكتملة'
-                                  : 'تقديم طلب انضمام'}
-                            {!isFull && !isAlreadyApplied && !isRejected && <ArrowUpRight className="w-3.5 h-3.5" />}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setShowApplicationsModal(true)}
-                            className="flex-1 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center justify-center gap-1.5 cursor-pointer border border-slate-700"
-                          >
-                            <Users className="w-3.5 h-3.5 text-blue-400" />
-                            عرض طلبات المشروع
-                          </button>
-                        )}
+                                    ? t('projects.seats_full')
+                                    : t('projects.apply_button')}
+                              {!isFull && !isAlreadyApplied && !isRejected && <ArrowUpRight className="w-3.5 h-3.5" />}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setShowApplicationsModal(true)}
+                              className="flex-1 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center justify-center gap-1.5 cursor-pointer border border-slate-700"
+                            >
+                              <Users className="w-3.5 h-3.5 text-blue-400" />
+                              {t('projects.view_applications')}
+                            </button>
+                          )}
 
-                        <button
-                          onClick={() => setActiveChatProject(project)}
-                          title="غرفة نقاش وشات المشروع"
-                          className="p-2 rounded-xl bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white transition cursor-pointer border border-slate-700"
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                        </button>
+                          <button
+                            onClick={() => setActiveChatProject(project)}
+                            title={t('projects.chat_tooltip')}
+                            className="p-2 rounded-xl bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white transition cursor-pointer border border-slate-700"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
-              )}
+                    );
+                  })
+                )}
               </div>
             </div>
           )}
@@ -2506,7 +2573,7 @@ export default function App() {
       {/* ==========================================
           نظام التنبيهات الفورية العائمة (Toast Container)
       ========================================== */}
-      <div className="fixed top-20 left-4 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none" dir="rtl">
+      <div className={`fixed top-20 ${isRtl ? 'left-4' : 'right-4'} z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none`} dir={isRtl ? 'rtl' : 'ltr'}>
         {toasts.map((toast) => (
           <div
             key={toast.id}
@@ -2527,7 +2594,7 @@ export default function App() {
             <button
               onClick={() => removeToast(toast.id)}
               className="text-slate-400 hover:text-white p-0.5 rounded cursor-pointer shrink-0"
-              aria-label="إغلاق التنبيه"
+              aria-label={t('common.close')}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -2557,18 +2624,18 @@ export default function App() {
                         ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
                         : 'bg-amber-950 text-amber-300 border border-amber-800'
                     }`}>
-                      {activeChatProject.status === 'approved' ? 'معتمد' : 'معلق'}
+                      {activeChatProject.status === 'approved' ? t('chat.approved_badge') : t('chat.pending_badge')}
                     </span>
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    غرفة المحادثة والتنسيق المباشر لأعضاء الفريق والمشرف الأكاديمي
+                    {t('chat.subtitle')}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => fetchProjectMessages(activeChatProject.id)}
-                  title="تحديث الرسائل"
+                  title={t('chat.refresh')}
                   className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
                 >
                   <RefreshCw className={`w-4 h-4 ${isLoadingChat ? 'animate-spin text-blue-400' : ''}`} />
@@ -2587,30 +2654,35 @@ export default function App() {
               {isLoadingChat ? (
                 <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2 text-xs">
                   <RefreshCw className="w-5 h-5 animate-spin text-blue-400" />
-                  جاري تحميل الرسائل من السيرفر...
+                  {t('chat.loading')}
                 </div>
               ) : chatMessages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2 text-xs">
                   <MessageSquare className="w-8 h-8 text-slate-600" />
-                  <p>لا توجد رسائل سابقة في هذا المشروع بعد.</p>
-                  <span className="text-[10px] text-slate-500">كن أول من يبدأ النقاش والتنسيق!</span>
+                  <p>{t('chat.empty_title')}</p>
+                  <span className="text-[10px] text-slate-500">{t('chat.empty_desc')}</span>
                 </div>
               ) : (
                 chatMessages.map((msg) => {
                   const isMe = msg.sender_id === currentUser.id;
                   const roleLabels = {
-                    student: 'طالب',
-                    supervisor: 'مشرف أكاديمي',
-                    company: 'شريك تجاري',
-                    admin: 'مسؤول النظام'
+                    student: t('roles.student'),
+                    supervisor: t('roles.supervisor'),
+                    company: t('roles.company'),
+                    partner: t('roles.company'),
+                    admin: t('roles.admin')
                   };
                   return (
                     <div
                       key={msg.id}
-                      className={`flex flex-col max-w-[85%] ${isMe ? 'mr-auto items-end' : 'ml-auto items-start'}`}
+                      className={`flex flex-col max-w-[85%] ${
+                        isMe 
+                          ? (isRtl ? 'mr-auto items-end' : 'ml-auto items-end') 
+                          : (isRtl ? 'ml-auto items-start' : 'mr-auto items-start')
+                      }`}
                     >
                       <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mb-1 px-1">
-                        <span className="font-bold text-slate-200">{msg.sender_name || `مستخدم #${msg.sender_id}`}</span>
+                        <span className="font-bold text-slate-200">{msg.sender_name || t('chat.user_fallback', { id: msg.sender_id })}</span>
                         <span className={`text-[9px] px-1.5 py-0.2 rounded border ${
                           msg.sender_role === 'supervisor'
                             ? 'bg-amber-950/70 text-amber-300 border-amber-800'
@@ -2621,13 +2693,13 @@ export default function App() {
                           {roleLabels[msg.sender_role] || msg.sender_role}
                         </span>
                         <span className="text-[9px] opacity-70">
-                          {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                          {msg.created_at ? new Date(msg.created_at).toLocaleTimeString(isRtl ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
                         </span>
                       </div>
                       <div className={`p-3 rounded-2xl text-xs leading-relaxed shadow-sm ${
                         isMe
-                          ? 'bg-blue-600 text-white rounded-tr-none'
-                          : 'bg-slate-800 text-slate-100 border border-slate-700/80 rounded-tl-none'
+                          ? (isRtl ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-blue-600 text-white rounded-tl-none')
+                          : (isRtl ? 'bg-slate-800 text-slate-100 border border-slate-700/80 rounded-tl-none' : 'bg-slate-800 text-slate-100 border border-slate-700/80 rounded-tr-none')
                       }`}>
                         {msg.text}
                       </div>
@@ -2643,7 +2715,7 @@ export default function App() {
                 type="text"
                 value={chatMessageInput}
                 onChange={(e) => setChatMessageInput(e.target.value)}
-                placeholder="اكتب رسالتك لأعضاء المشروع والمشرف..."
+                placeholder={t('chat.input_placeholder')}
                 className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
               />
               <button
@@ -2656,7 +2728,7 @@ export default function App() {
                 ) : (
                   <>
                     <Send className="w-4 h-4" />
-                    <span>إرسال</span>
+                    <span>{t('chat.send')}</span>
                   </>
                 )}
               </button>
@@ -2669,15 +2741,15 @@ export default function App() {
       {submitReportModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative">
-            <button onClick={() => setSubmitReportModal(null)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
+            <button onClick={() => setSubmitReportModal(null)} className="absolute end-4 top-4 text-slate-400 hover:text-white cursor-pointer">
               <X className="w-5 h-5" />
             </button>
-            <h2 className="text-base font-bold mb-1 text-white">تسليم تقرير المساق الأكاديمي</h2>
+            <h2 className="text-base font-bold mb-1 text-white">{t('reports.modal_title')}</h2>
             <p className="text-xs text-blue-400 mb-4">{submitReportModal.title}</p>
 
             <form onSubmit={handleStudentSubmitReport} className="space-y-4">
               <div>
-                <label className="text-[11px] text-slate-300 block mb-1">رابط المستند (Google Docs / GitHub PDF)</label>
+                <label className="text-[11px] text-slate-300 block mb-1">{t('reports.modal_doc_label')}</label>
                 <input
                   type="url"
                   required
@@ -2690,15 +2762,15 @@ export default function App() {
               </div>
 
               <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
-                <div>• الموعد النهائي المحدد: <strong className="text-amber-400">{submitReportModal.deadlineDay}</strong></div>
-                <div>• سيتم إشعار المشرف الأكاديمي لمراجعة المسودة وتزويدك بالتقييم.</div>
+                <div>• {t('reports.modal_deadline_note', { day: submitReportModal.deadlineDay })}</div>
+                <div>• {t('reports.modal_notify_note')}</div>
               </div>
 
               <button
                 type="submit"
                 className="w-full bg-blue-600 hover:bg-blue-500 py-2.5 rounded-xl font-bold text-xs text-white transition shadow-lg cursor-pointer"
               >
-                تأكيد تسليم التقرير
+                {t('reports.confirm_submit')}
               </button>
             </form>
           </div>
@@ -2709,24 +2781,24 @@ export default function App() {
       {showSkillsModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative">
-            <button onClick={() => setShowSkillsModal(false)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
+            <button onClick={() => setShowSkillsModal(false)} className="absolute end-4 top-4 text-slate-400 hover:text-white cursor-pointer">
               <X className="w-5 h-5" />
             </button>
             <h2 className="text-base font-bold mb-2 text-white flex items-center gap-2">
               <Award className="w-5 h-5 text-amber-400" />
-              تعديل مهاراتي البرمجية
+              {t('skills_modal.title')}
             </h2>
             <div className="flex gap-2 my-4">
               <input
                 type="text"
-                placeholder="أضف مهارة جديدة..."
+                placeholder={t('skills_modal.placeholder')}
                 value={newSkillInput}
                 onChange={(e) => setNewSkillInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addSkill()}
                 className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
               />
               <button onClick={addSkill} className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer">
-                إضافة
+                {t('skills_modal.add_btn')}
               </button>
             </div>
             <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 bg-slate-950 rounded-xl border border-slate-800">
@@ -2747,23 +2819,23 @@ export default function App() {
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative">
-            <button onClick={() => setIsCreateModalOpen(false)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
+            <button onClick={() => setIsCreateModalOpen(false)} className="absolute end-4 top-4 text-slate-400 hover:text-white cursor-pointer">
               <X className="w-5 h-5" />
             </button>
             <h2 className="text-base font-bold mb-2 text-white flex items-center gap-2">
               <PlusCircle className="w-5 h-5 text-blue-400" />
-              طرح فكرة مشروع وتحدي عملي جديد
+              {t('create_project.modal_title')}
             </h2>
             <p className="text-xs text-slate-400 mb-4">
-              سيتم تسجيل المشروع باسمك الحقيقي (معرّف #{currentUser.id}) وتحديد عدد المقاعد في قاعدة البيانات.
+              {t('create_project.modal_desc', { id: currentUser.id })}
             </p>
 
             <form onSubmit={handleCreateProjectSubmit} className="space-y-3.5">
               <div>
-                <label className="text-[11px] text-slate-300 block mb-1">عنوان المشروع</label>
+                <label className="text-[11px] text-slate-300 block mb-1">{t('create_project.title_label')}</label>
                 <input
                   type="text"
-                  placeholder="مثال: نظام إدارة عمليات التوزيع والتوصيل السحابي"
+                  placeholder={t('create_project.title_placeholder')}
                   required
                   value={newProjectTitle}
                   onChange={(e) => setNewProjectTitle(e.target.value)}
@@ -2772,9 +2844,9 @@ export default function App() {
               </div>
 
               <div>
-                <label className="text-[11px] text-slate-300 block mb-1">وصف المشروع والمتطلبات</label>
+                <label className="text-[11px] text-slate-300 block mb-1">{t('create_project.desc_label')}</label>
                 <textarea
-                  placeholder="شرح المشكلة والميزات المطلوبة من فريق الطلاب..."
+                  placeholder={t('create_project.desc_placeholder')}
                   rows={3}
                   required
                   value={newProjectDesc}
@@ -2785,10 +2857,10 @@ export default function App() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">المهارات المطلوبة</label>
+                  <label className="text-[11px] text-slate-300 block mb-1">{t('create_project.skills_label')}</label>
                   <input
                     type="text"
-                    placeholder="Python, React, SQL"
+                    placeholder={t('create_project.skills_placeholder')}
                     required
                     value={newProjectSkills}
                     onChange={(e) => setNewProjectSkills(e.target.value)}
@@ -2797,7 +2869,7 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">الحد الأقصى للمقاعد</label>
+                  <label className="text-[11px] text-slate-300 block mb-1">{t('create_project.max_members_label')}</label>
                   <input
                     type="number"
                     min="1"
@@ -2818,12 +2890,12 @@ export default function App() {
                 {isSubmittingProject ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    جاري الحفظ في الخادم...
+                    {t('create_project.saving')}
                   </>
                 ) : (
                   <>
                     <PlusCircle className="w-4 h-4" />
-                    تأكيد ونشر المشروع في الباك إند
+                    {t('create_project.submit_btn')}
                   </>
                 )}
               </button>
@@ -2836,19 +2908,19 @@ export default function App() {
       {isApplyModalOpen && selectedProject && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative">
-            <button onClick={() => setIsApplyModalOpen(false)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
+            <button onClick={() => setIsApplyModalOpen(false)} className="absolute end-4 top-4 text-slate-400 hover:text-white cursor-pointer">
               <X className="w-5 h-5" />
             </button>
             <h2 className="text-base font-bold mb-1 text-white">
-              تقديم طلب لـ: <span className="text-blue-400">{selectedProject.title}</span>
+              {t('apply_project.modal_title', { title: selectedProject.title })}
             </h2>
             <p className="text-[11px] text-slate-400 mb-4">
-              سيتم تسجيل الطلب في الباك إند باسمك ({currentUser.name}) وربطه بالسيرة الذاتية.
+              {t('apply_project.modal_desc', { name: currentUser.name })}
             </p>
 
             <form onSubmit={handleApplySubmit} className="space-y-3.5">
               <div>
-                <label className="text-[11px] text-slate-300 block mb-1">اسم الطالب المتقدم</label>
+                <label className="text-[11px] text-slate-300 block mb-1">{t('apply_project.student_name')}</label>
                 <input
                   type="text"
                   readOnly
@@ -2858,10 +2930,10 @@ export default function App() {
               </div>
 
               <div>
-                <label className="text-[11px] text-slate-300 block mb-1">الدور المطلوب في المشروع</label>
+                <label className="text-[11px] text-slate-300 block mb-1">{t('apply_project.desired_role')}</label>
                 <input
                   type="text"
-                  placeholder="مثال: مهندس واجهات، مطور باك إند، محلل بيانات"
+                  placeholder={t('apply_project.desired_role_placeholder')}
                   required
                   value={applicantRole}
                   onChange={(e) => setApplicantRole(e.target.value)}
@@ -2870,9 +2942,9 @@ export default function App() {
               </div>
 
               <div>
-                <label className="text-[11px] text-slate-300 block mb-1">رسالة الطلب / نبذة عن جاهزية الفريق</label>
+                <label className="text-[11px] text-slate-300 block mb-1">{t('apply_project.message_label')}</label>
                 <textarea
-                  placeholder="اكتب نبذة عن مهاراتك ولماذا ترغب بهذا المشروع تحديداً..."
+                  placeholder={t('apply_project.message_placeholder')}
                   rows={3}
                   value={applyMessage}
                   onChange={(e) => setApplyMessage(e.target.value)}
@@ -2881,8 +2953,8 @@ export default function App() {
               </div>
 
               <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
-                <div>• سيتم التحقق من منع التقديم المتكرر وتوفر المقاعد آلياً عبر السيرفر.</div>
-                <div>• ستظهر حالتك الحالية كـ <strong>قيد المراجعة (Pending)</strong> لحين الاعتماد.</div>
+                <div>• {t('apply_project.note_1')}</div>
+                <div>• {t('apply_project.note_2')}</div>
               </div>
 
               <button
@@ -2893,12 +2965,12 @@ export default function App() {
                 {isSubmittingApply ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    جاري إرسال الطلب للسيرفر...
+                    {t('apply_project.submitting')}
                   </>
                 ) : (
                   <>
                     <Send className="w-4 h-4" />
-                    إرسال الطلب وتأكيد الانضمام
+                    {t('apply_project.submit_btn')}
                   </>
                 )}
               </button>
@@ -2911,54 +2983,54 @@ export default function App() {
       {showApplicationsModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative">
-            <button onClick={() => setShowApplicationsModal(false)} className="absolute left-4 top-4 text-slate-400 hover:text-white cursor-pointer">
+            <button onClick={() => setShowApplicationsModal(false)} className="absolute end-4 top-4 text-slate-400 hover:text-white cursor-pointer">
               <X className="w-5 h-5" />
             </button>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-base font-bold text-white flex items-center gap-2">
                   <Users className="w-5 h-5 text-emerald-400" />
-                  إدارة طلبات الطلاب المسجلة في السيرفر
+                  {t('applications_management.title')}
                 </h2>
                 <p className="text-xs text-slate-400">
-                  يمكنك مراجعة رسائل المتقدمين والقبول أو الرفض مع تحديث فوري لعدد المقاعد المحجوزة.
+                  {t('applications_management.desc')}
                 </p>
               </div>
               <button
                 onClick={fetchApplications}
                 className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 transition cursor-pointer"
               >
-                <RefreshCw className="w-3.5 h-3.5" /> تحديث
+                <RefreshCw className="w-3.5 h-3.5" /> {t('applications_management.refresh')}
               </button>
             </div>
 
             {isLoadingApplications ? (
               <div className="text-center py-8 text-xs text-slate-400 flex items-center justify-center gap-2">
                 <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
-                جاري جلب الطلبات من السيرفر...
+                {t('applications_management.loading')}
               </div>
             ) : applications.length === 0 ? (
               <div className="text-center py-8 text-xs text-slate-400 bg-slate-950/60 rounded-xl border border-slate-800">
-                لا توجد طلبات انضمام مسجلة حالياً.
+                {t('applications_management.empty')}
               </div>
             ) : (
-              <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+              <div className="space-y-3 max-h-[420px] overflow-y-auto pe-1">
                 {applications.map((app) => {
                   const targetProject = rawProjects.find((p) => p.id === app.project_id);
                   return (
                     <div key={app.id} className="p-4 bg-slate-800/60 border border-slate-700/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-white">طلب رقم #{app.id}</span>
+                          <span className="font-bold text-white">{t('applications_management.app_number', { id: app.id })}</span>
                           <span className="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded">
-                            مشروع #{app.project_id}: {targetProject ? targetProject.title : ''}
+                            {t('applications_management.project_ref', { id: app.project_id, title: targetProject ? targetProject.title : '' })}
                           </span>
                           <span className="text-[10px] text-slate-400 font-mono">
-                            طالب #{app.student_id}
+                            {t('applications_management.student_ref', { id: app.student_id })}
                           </span>
                         </div>
                         <p className="text-slate-300 text-xs leading-relaxed">
-                          {app.message || 'لا توجد رسالة مرفقة بالطلب.'}
+                          {app.message || t('applications_management.no_message')}
                         </p>
                       </div>
 
@@ -2970,7 +3042,7 @@ export default function App() {
                               ? 'bg-rose-950/60 text-rose-300 border-rose-800/60'
                               : 'bg-amber-950/60 text-amber-300 border-amber-800/60'
                         }`}>
-                          {app.status === 'accepted' ? '✓ معتمد ومقبول' : app.status === 'rejected' ? '✕ مرفوض' : 'قيد المراجعة'}
+                          {app.status === 'accepted' ? t('applications_management.status_accepted') : app.status === 'rejected' ? t('applications_management.status_rejected') : t('applications_management.status_pending')}
                         </span>
 
                         {(currentUser.role === 'company' || currentUser.role === 'supervisor') && (
@@ -2983,10 +3055,10 @@ export default function App() {
                                   ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
                                   : 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-sm'
                               }`}
-                              title="قبول الطلب وتسكين المقعد"
+                              title={t('applications_management.accept_btn')}
                             >
                               <Check className="w-3.5 h-3.5" />
-                              <span className="text-[10px] hidden sm:inline">قبول</span>
+                              <span className="text-[10px] hidden sm:inline">{t('applications_management.accept_btn')}</span>
                             </button>
 
                             <button
@@ -2997,10 +3069,10 @@ export default function App() {
                                   ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
                                   : 'bg-rose-600 hover:bg-rose-500 text-white cursor-pointer shadow-sm'
                               }`}
-                              title="رفض الطلب"
+                              title={t('applications_management.reject_btn')}
                             >
                               <X className="w-3.5 h-3.5" />
-                              <span className="text-[10px] hidden sm:inline">رفض</span>
+                              <span className="text-[10px] hidden sm:inline">{t('applications_management.reject_btn')}</span>
                             </button>
 
                             {targetProject && (
@@ -3010,7 +3082,7 @@ export default function App() {
                                   setShowApplicationsModal(false);
                                 }}
                                 className="p-1.5 rounded-lg text-xs font-bold bg-slate-700 hover:bg-blue-600 text-slate-200 hover:text-white transition cursor-pointer"
-                                title="فتح شات المشروع"
+                                title={t('applications_management.open_chat_title')}
                               >
                                 <MessageSquare className="w-3.5 h-3.5" />
                               </button>
