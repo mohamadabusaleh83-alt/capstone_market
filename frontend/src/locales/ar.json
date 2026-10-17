@@ -260,6 +260,22 @@
     "placeholder": "أضف مهارة جديدة...",
     "add_btn": "إضافة"
   },
+  "dashboard": {
+    "title": "لوحة الإحصائيات والمؤشرات التفاعلية",
+    "subtitle": "تحليل أداء المشاريع ونسب الإشغال والمهارات المطلوبة مباشرة من قاعدة البيانات",
+    "stat_total_projects": "إجمالي المشاريع",
+    "stat_approved_projects": "المشاريع المعتمدة",
+    "stat_seats_occupancy": "المقاعد المشغولة",
+    "stat_pending_apps": "الطلبات المعلقة",
+    "tech_distribution_title": "توزيع المشاريع حسب التقنيات والمسارات",
+    "tech_distribution_desc": "أكثر التقنيات والمهارات طلباً في المشاريع المطروحة حالياً",
+    "occupancy_rate_title": "نسبة إشغال المقاعد الكلية",
+    "occupancy_rate_desc": "إجمالي استيعاب الفرق والطلاب المسجلين بالمنصة",
+    "reserved_seats": "مقاعد محجوزة",
+    "available_seats": "مقاعد شاغرة",
+    "total_capacity": "السعة الكلية",
+    "role_overview": "نظرة عامة على صلاحيات الحساب"
+  },
   "toasts": {
     "lang_switched": "تم تغيير لغة الواجهة إلى العربية بنجاح",
     "login_success": "تم تسجيل الدخول بنجاح! أهلاً بك {{name}}",

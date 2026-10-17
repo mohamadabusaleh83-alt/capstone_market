@@ -5,13 +5,15 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { ACADEMIC_MAJORS } from '../api/client';
 import ProjectCard from '../components/ProjectCard';
+import ProjectCardSkeleton from '../components/ProjectCardSkeleton';
 import {
   Search,
   Sparkles,
   Star,
   Layers,
   PlusCircle,
-  RefreshCw
+  RefreshCw,
+  FolderSearch
 } from 'lucide-react';
 
 export default function ProjectsPage() {
@@ -22,7 +24,8 @@ export default function ProjectsPage() {
     isLoadingProjects,
     favorites,
     setIsCreateModalOpen,
-    translateMajor
+    translateMajor,
+    isRtl
   } = useApp();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -32,7 +35,7 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('الكل');
 
-  // Keep URL query param synced
+  // مزامنة استعلام العنوان
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab');
     if (tabFromUrl && tabFromUrl !== activeTab) {
@@ -47,7 +50,7 @@ export default function ProjectsPage() {
 
   const categories = ['الكل', ...ACADEMIC_MAJORS];
 
-  // تصفية المشاريع للبحث والتصنيف بمرونة عالية
+  // تصفية المشاريع للبحث والتصنيف
   const filteredProjects = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     const queryTerms = query ? query.split(/\s+/).filter(Boolean) : [];
@@ -91,18 +94,18 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* رأس الصفحة مع التبويبات وزر إضافة مشروع */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-        <div className="flex items-center gap-2 overflow-x-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/90 backdrop-blur-md border border-slate-800 p-4 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
           <button
             type="button"
             onClick={() => handleTabChange('match')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 whitespace-nowrap ${
               activeTab === 'match'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-blue-400/40'
+                : 'bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <Sparkles className="w-4 h-4 text-amber-400" />
+            <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
             <span>{t('nav.smart_match')}</span>
             <span className="text-[10px] bg-blue-500/20 px-1.5 py-0.2 rounded border border-blue-400/30">AI</span>
           </button>
@@ -110,10 +113,10 @@ export default function ProjectsPage() {
           <button
             type="button"
             onClick={() => handleTabChange('browse')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 whitespace-nowrap ${
               activeTab === 'browse'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-blue-400/40'
+                : 'bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
             <Layers className="w-4 h-4 text-blue-400" />
@@ -123,10 +126,10 @@ export default function ProjectsPage() {
           <button
             type="button"
             onClick={() => handleTabChange('favorites')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 whitespace-nowrap ${
               activeTab === 'favorites'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-blue-400/40'
+                : 'bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
             <Star className="w-4 h-4 text-amber-400" />
@@ -143,7 +146,7 @@ export default function ProjectsPage() {
           <button
             type="button"
             onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg shadow-blue-600/20 transition cursor-pointer shrink-0"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 transition-all duration-200 cursor-pointer shrink-0 active:scale-95"
           >
             <PlusCircle className="w-4 h-4" />
             <span>{t('create_project.btn_add')}</span>
@@ -152,7 +155,7 @@ export default function ProjectsPage() {
       </div>
 
       {/* شريط البحث وتصفية التخصصات */}
-      <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3">
+      <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 p-4 rounded-2xl space-y-3.5 shadow-sm">
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute start-3.5 top-3" />
           <input
@@ -160,7 +163,7 @@ export default function ProjectsPage() {
             placeholder={t('projects.search_placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl ps-10 pe-4 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+            className="w-full bg-slate-800/90 border border-slate-700/80 rounded-xl ps-10 pe-4 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all duration-200"
           />
         </div>
 
@@ -170,9 +173,9 @@ export default function ProjectsPage() {
               type="button"
               key={idx}
               onClick={() => setSelectedCategory(cat)}
-              className={`text-xs px-3 py-1.5 rounded-xl font-medium transition cursor-pointer whitespace-nowrap ${
+              className={`text-xs px-3.5 py-1.5 rounded-xl font-medium transition-all duration-150 cursor-pointer whitespace-nowrap active:scale-95 ${
                 selectedCategory === cat
-                  ? 'bg-blue-600 text-white shadow-sm'
+                  ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-400/40'
                   : 'bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -182,29 +185,41 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      {isLoadingProjects && (
-        <div className="text-center py-8 text-xs text-slate-400 flex items-center justify-center gap-2">
-          <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
-          {t('projects.loading')}
+      {/* شبكة المشاريع مع شاشات Skeleton وميضية وحالات الفراغ الجذابة */}
+      {isLoadingProjects ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <ProjectCardSkeleton key={n} />
+          ))}
         </div>
-      )}
+      ) : filteredProjects.length === 0 ? (
+        <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800/90 rounded-3xl p-8 sm:p-14 text-center space-y-5 shadow-xl relative overflow-hidden">
+          {/* خلفية جمالية خفيفة */}
+          <div className="absolute inset-0 bg-radial from-blue-500/5 via-transparent to-transparent pointer-events-none" />
 
-      {/* شبكة المشاريع */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filteredProjects.length === 0 ? (
-          <div className="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-12 text-center space-y-4 my-2 shadow-inner">
-            <div className="w-14 h-14 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center mx-auto text-slate-400 shadow-md">
-              <Search className="w-7 h-7 text-blue-400" />
+          <div className="relative">
+            <div className="w-16 h-16 rounded-2xl bg-slate-800/90 border border-slate-700/80 flex items-center justify-center mx-auto text-blue-400 shadow-xl shadow-blue-950/40">
+              {activeTab === 'favorites' ? (
+                <Star className="w-8 h-8 text-amber-400" />
+              ) : (
+                <FolderSearch className="w-8 h-8 text-blue-400" />
+              )}
             </div>
-            <div className="space-y-1.5">
-              <h3 className="text-base font-bold text-white">{t('projects.no_results_title')}</h3>
-              <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-                {activeTab === 'favorites'
-                  ? t('projects.no_favorites_desc')
-                  : t('projects.no_results_desc')}
-              </p>
-            </div>
-            {(searchQuery || selectedCategory !== 'الكل' || activeTab === 'favorites') && (
+          </div>
+
+          <div className="space-y-2 max-w-md mx-auto">
+            <h3 className="text-lg font-bold text-white tracking-tight">
+              {activeTab === 'favorites' ? (isRtl ? 'قائمة المفضلة فارغة حالياً' : 'No Favorite Projects Yet') : t('projects.no_results_title')}
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              {activeTab === 'favorites'
+                ? t('projects.no_favorites_desc')
+                : t('projects.no_results_desc')}
+            </p>
+          </div>
+
+          {(searchQuery || selectedCategory !== 'الكل' || activeTab === 'favorites') && (
+            <div className="pt-2">
               <button
                 type="button"
                 onClick={() => {
@@ -212,19 +227,21 @@ export default function ProjectsPage() {
                   setSelectedCategory('الكل');
                   if (activeTab === 'favorites') handleTabChange('browse');
                 }}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-md shadow-blue-500/20"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                {t('projects.clear_filters')}
+                <span>{t('projects.clear_filters')}</span>
               </button>
-            )}
-          </div>
-        ) : (
-          filteredProjects.map((project) => (
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredProjects.map((project) => (
             <ProjectCard key={project.id} project={project} />
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

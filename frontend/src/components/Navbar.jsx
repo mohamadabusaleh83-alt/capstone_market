@@ -8,7 +8,6 @@ import {
   GraduationCap,
   Bell,
   RefreshCw,
-  CheckCircle2,
   UserCheck,
   LogOut
 } from 'lucide-react';
@@ -86,21 +85,21 @@ export default function Navbar() {
             <div
               className={`absolute ${
                 isRtl ? 'left-0' : 'right-0'
-              } mt-2 w-80 sm:w-96 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl z-50 overflow-hidden`}
+              } mt-2 w-80 sm:w-96 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150`}
               dir={isRtl ? 'rtl' : 'ltr'}
             >
-              <div className="p-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+              <div className="p-3.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Bell className="w-4 h-4 text-blue-400" />
                   <span className="text-xs font-bold text-white">{t('notifications.title')}</span>
-                  <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded-full font-mono">
+                  <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono">
                     {notifications.length}
                   </span>
                 </div>
                 {unreadCount > 0 && (
                   <button
                     onClick={handleMarkAllNotificationsRead}
-                    className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold cursor-pointer transition"
+                    className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold cursor-pointer transition active:scale-95"
                   >
                     {t('notifications.mark_all_read')}
                   </button>
@@ -109,14 +108,19 @@ export default function Navbar() {
 
               <div className="max-h-80 overflow-y-auto divide-y divide-slate-800/60">
                 {isLoadingNotifications && notifications.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-400">
-                    <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2 text-blue-400" />
-                    {t('notifications.loading')}
+                  <div className="py-10 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
+                    <RefreshCw className="w-5 h-5 animate-spin text-blue-400" />
+                    <span>{t('notifications.loading')}</span>
                   </div>
                 ) : notifications.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-400">
-                    <CheckCircle2 className="w-6 h-6 mx-auto mb-2 text-slate-600" />
-                    {t('notifications.empty')}
+                  <div className="py-10 px-4 text-center text-xs text-slate-400 flex flex-col items-center justify-center space-y-2">
+                    <div className="w-10 h-10 rounded-xl bg-slate-800/80 flex items-center justify-center text-slate-600">
+                      <Bell className="w-5 h-5" />
+                    </div>
+                    <span className="font-medium text-slate-300">{t('notifications.empty')}</span>
+                    <span className="text-[10px] text-slate-500">
+                      {isRtl ? 'ستظهر الإشعارات الفورية هنا عند تلقي أي تحديث' : 'Real-time alerts will appear here'}
+                    </span>
                   </div>
                 ) : (
                   notifications.map((n) => (

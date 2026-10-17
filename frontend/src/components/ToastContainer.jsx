@@ -32,7 +32,7 @@ export default function ToastContainer() {
           </div>
           <button
             onClick={() => removeToast(toast.id)}
-            className="text-slate-400 hover:text-white p-0.5 rounded cursor-pointer shrink-0"
+            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer shrink-0 active:scale-90"
             aria-label={t('common.close')}
           >
             <X className="w-3.5 h-3.5" />

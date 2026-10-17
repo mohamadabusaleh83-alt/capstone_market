@@ -260,6 +260,22 @@
     "placeholder": "Add a new skill...",
     "add_btn": "Add"
   },
+  "dashboard": {
+    "title": "Interactive Dashboard & Metrics",
+    "subtitle": "Real-time project analytics, seat occupancy rates, and required skills",
+    "stat_total_projects": "Total Projects",
+    "stat_approved_projects": "Approved Projects",
+    "stat_seats_occupancy": "Occupied Seats",
+    "stat_pending_apps": "Pending Applications",
+    "tech_distribution_title": "Project Distribution by Technologies",
+    "tech_distribution_desc": "Most in-demand technologies and skills across listed projects",
+    "occupancy_rate_title": "Overall Seat Occupancy Rate",
+    "occupancy_rate_desc": "Total team capacity and student enrollment across the platform",
+    "reserved_seats": "Reserved Seats",
+    "available_seats": "Available Seats",
+    "total_capacity": "Total Capacity",
+    "role_overview": "Role Overview"
+  },
   "toasts": {
     "lang_switched": "Interface language switched to English successfully",
     "login_success": "Successfully logged in! Welcome {{name}}",
