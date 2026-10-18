@@ -11,7 +11,10 @@
     "delete": "Delete",
     "edit": "Edit",
     "confirm": "Confirm",
-    "all": "All"
+    "all": "All",
+    "switch_theme": "Toggle Theme",
+    "switch_light": "Switch to Light Mode",
+    "switch_dark": "Switch to Dark Mode"
   },
   "roles": {
     "student": "Graduate Student",
@@ -31,6 +34,7 @@
   "nav": {
     "platform_title": "Capstone Market",
     "platform_version": "Capstone Market v1.1",
+    "back_home": "Back to Home",
     "dashboard_title": "Dashboard & Navigation",
     "reports_hub": "Reports & Milestones Hub",
     "tuesday": "Tuesday",

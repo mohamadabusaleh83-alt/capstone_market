@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import ThemeToggle from '../components/ThemeToggle';
 import {
   ShieldCheck,
-  GraduationCap,
   AlertCircle,
   CheckCircle2,
   Mail,
@@ -47,9 +47,9 @@ export default function LoginPage() {
       setAuthEmail('company@capstone.ps');
       setAuthPassword('pass1234');
     } else {
-      setAuthFullName(isRtl ? 'د. إياد الأحمد' : 'Dr. Eyad Al-Ahmad');
-      setAuthEmail('supervisor@capstone.ps');
-      setAuthPassword('pass1234');
+      setAuthFullName(isRtl ? 'د. أسامة أمين مرعي' : 'Dr. Osama Amin Marie');
+      setAuthEmail('omarie@qou.edu');
+      setAuthPassword('Doctor@2025');
     }
   };
 
@@ -75,59 +75,64 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between font-sans transition-colors duration-200" dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Banner */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-xs py-2.5 px-4 sm:px-6 border-b border-amber-500/20 flex justify-between items-center shadow-md">
-        <div className="flex items-center gap-2 text-amber-300 font-semibold truncate">
-          <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+      <div className="bg-white dark:bg-gradient-to-r dark:from-blue-900 dark:via-indigo-950 dark:to-slate-900 text-xs py-2.5 px-4 sm:px-6 border-b border-slate-200 dark:border-amber-500/20 flex justify-between items-center shadow-sm">
+        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-300 font-semibold truncate">
+          <ShieldCheck className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
           <span className="truncate">{t('auth.banner_title')}</span>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <span className="text-slate-400 text-[11px] hidden md:inline">
+        <div className="flex items-center gap-2.5 shrink-0">
+          <span className="text-slate-500 dark:text-slate-400 text-[11px] hidden md:inline">
             {t('auth.banner_subtitle')}
           </span>
+          <ThemeToggle />
           <LanguageSwitcher />
         </div>
       </div>
 
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
+        <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl dark:shadow-2xl space-y-6">
           <div className="text-center space-y-2">
-            <div className="inline-flex p-3 bg-blue-600/10 rounded-2xl border border-blue-500/20 text-blue-400 mb-1">
-              <GraduationCap className="w-8 h-8" />
-            </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">
+            <Link
+              to="/"
+              title={t('nav.back_home')}
+              className="inline-flex p-3 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-cyan-500/30 rounded-2xl shadow-md shadow-cyan-500/10 dark:shadow-cyan-500/20 mb-1 cursor-pointer hover:scale-105 transition-transform duration-200"
+            >
+              <img src="/logo.svg" alt={t('nav.platform_title')} className="w-9 h-9 object-contain" />
+            </Link>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
               {authMode === 'login' ? t('auth.login_title') : t('auth.register_title')}
             </h1>
-            <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
               {authMode === 'login' ? t('auth.login_desc') : t('auth.register_desc')}
             </p>
           </div>
 
           {/* أزرار التجربة السريعة */}
-          <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2">
-            <span className="text-[11px] text-slate-400 font-medium block text-center">
+          <div className="p-3 bg-slate-50 dark:bg-slate-950/80 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block text-center">
               {t('auth.demo_title')}
             </span>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => fillDemoCredentials('student')}
-                className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-lg text-[11px] font-bold border border-emerald-900/40 transition cursor-pointer"
+                className="py-1.5 px-2 bg-emerald-50 dark:bg-slate-800 hover:bg-emerald-100 dark:hover:bg-slate-700 text-emerald-700 dark:text-emerald-300 rounded-lg text-[11px] font-bold border border-emerald-200 dark:border-emerald-900/40 transition cursor-pointer"
               >
                 {t('roles.student')}
               </button>
               <button
                 type="button"
                 onClick={() => fillDemoCredentials('supervisor')}
-                className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg text-[11px] font-bold border border-amber-900/40 transition cursor-pointer"
+                className="py-1.5 px-2 bg-amber-50 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-slate-700 text-amber-700 dark:text-amber-300 rounded-lg text-[11px] font-bold border border-amber-200 dark:border-amber-900/40 transition cursor-pointer"
               >
                 {t('roles.supervisor')}
               </button>
               <button
                 type="button"
                 onClick={() => fillDemoCredentials('company')}
-                className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-blue-300 rounded-lg text-[11px] font-bold border border-blue-900/40 transition cursor-pointer"
+                className="py-1.5 px-2 bg-blue-50 dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-slate-700 text-blue-700 dark:text-blue-300 rounded-lg text-[11px] font-bold border border-blue-200 dark:border-blue-900/40 transition cursor-pointer"
               >
                 {t('roles.company')}
               </button>
@@ -135,14 +140,14 @@ export default function LoginPage() {
           </div>
 
           {authError && (
-            <div className="p-3 bg-rose-950/60 border border-rose-800/80 rounded-xl text-rose-300 text-xs flex items-center gap-2">
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/80 rounded-xl text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{authError}</span>
             </div>
           )}
 
           {authSuccess && (
-            <div className="p-3 bg-emerald-950/60 border border-emerald-800/80 rounded-xl text-emerald-300 text-xs flex items-center gap-2">
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 rounded-xl text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>{authSuccess}</span>
             </div>
@@ -152,7 +157,7 @@ export default function LoginPage() {
             {authMode === 'register' && (
               <>
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1">{t('auth.full_name')}</label>
+                  <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-medium">{t('auth.full_name')}</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -160,17 +165,17 @@ export default function LoginPage() {
                       placeholder={t('auth.full_name_placeholder')}
                       value={authFullName}
                       onChange={(e) => setAuthFullName(e.target.value)}
-                      className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1">{t('auth.account_type')}</label>
+                  <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-medium">{t('auth.account_type')}</label>
                   <select
                     value={authRole}
                     onChange={(e) => setAuthRole(e.target.value)}
-                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500 cursor-pointer"
                   >
                     <option value="student">{t('auth.option_student')}</option>
                     <option value="company">{t('auth.option_company')}</option>
@@ -181,7 +186,7 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label className="text-xs text-slate-300 block mb-1">{t('auth.email')}</label>
+              <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-medium">{t('auth.email')}</label>
               <div className="relative">
                 <input
                   type="email"
@@ -189,7 +194,7 @@ export default function LoginPage() {
                   placeholder="name@capstone.ps"
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
-                  className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 text-left ps-3 pe-10"
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-left ps-3 pe-10"
                   dir="ltr"
                 />
                 <Mail className="w-4 h-4 text-slate-400 absolute end-3 top-3" />
@@ -197,7 +202,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="text-xs text-slate-300 block mb-1">{t('auth.password')}</label>
+              <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-medium">{t('auth.password')}</label>
               <div className="relative">
                 <input
                   type="password"
@@ -205,7 +210,7 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   value={authPassword}
                   onChange={(e) => setAuthPassword(e.target.value)}
-                  className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 text-left ps-3 pe-10"
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-left ps-3 pe-10"
                   dir="ltr"
                 />
                 <Lock className="w-4 h-4 text-slate-400 absolute end-3 top-3" />
@@ -215,7 +220,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoadingAuth}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl text-xs transition duration-200 shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3 rounded-xl text-xs transition duration-200 shadow-md shadow-cyan-500/20 hover:shadow-cyan-500/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
             >
               {isLoadingAuth ? (
                 <>
@@ -236,7 +241,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="text-center pt-2 border-t border-slate-800">
+          <div className="text-center pt-2 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
               onClick={() => {
@@ -244,7 +249,7 @@ export default function LoginPage() {
                 setAuthError('');
                 setAuthSuccess('');
               }}
-              className="text-xs text-blue-400 hover:text-blue-300 transition cursor-pointer"
+              className="text-xs text-cyan-600 dark:text-blue-400 hover:text-cyan-500 dark:hover:text-blue-300 font-semibold transition cursor-pointer"
             >
               {authMode === 'login'
                 ? t('auth.switch_to_register')
@@ -254,7 +259,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <div className="text-center py-4 text-[11px] text-slate-500 border-t border-slate-900">
+      <div className="text-center py-4 text-[11px] text-slate-500 border-t border-slate-200 dark:border-slate-900">
         {t('auth.footer')}
       </div>
     </div>

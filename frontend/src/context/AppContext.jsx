@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './AuthContext';
+import { useTheme } from './ThemeContext';
 import { API_URL, INITIAL_FALLBACK_PROJECTS, ACADEMIC_MAJORS } from '../api/client';
 
 const AppContext = createContext(null);
@@ -8,6 +9,7 @@ const AppContext = createContext(null);
 export function AppProvider({ children }) {
   const { t, i18n } = useTranslation();
   const { currentUser, apiFetch } = useAuth();
+  const { theme, isDark, toggleTheme, setTheme } = useTheme();
 
   // ==========================================
   // حالات اللغة والاتجاه (Language & Direction)
@@ -724,7 +726,11 @@ export function AppProvider({ children }) {
         translateMajor,
         translateDifficulty,
         getRoleLabel,
-        translateErrorMessage
+        translateErrorMessage,
+        theme,
+        isDark,
+        toggleTheme,
+        setTheme
       }}
     >
       {children}

@@ -29,7 +29,7 @@ export default function LanguageSwitcher({ onLanguageChange, className = '' }) {
     <button
       type="button"
       onClick={toggleLanguage}
-      className={`flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 hover:text-white border border-slate-700/90 hover:border-blue-500/60 shadow-sm text-xs font-bold transition-all duration-200 cursor-pointer select-none ${className}`}
+      className={`flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-100 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700/90 hover:border-cyan-500/60 shadow-sm text-xs font-bold transition-all duration-200 cursor-pointer select-none ${className}`}
       title={currentLang === 'ar' ? 'Switch to English' : 'التحويل إلى اللغة العربية'}
       aria-label={currentLang === 'ar' ? 'Switch to English' : 'التحويل إلى اللغة العربية'}
     >

@@ -11,7 +11,10 @@
     "delete": "حذف",
     "edit": "تعديل",
     "confirm": "تأكيد",
-    "all": "الكل"
+    "all": "الكل",
+    "switch_theme": "تبديل المظهر",
+    "switch_light": "التبديل إلى الوضع النهاري",
+    "switch_dark": "التبديل إلى الوضع الليلي"
   },
   "roles": {
     "student": "طالب خريج",
@@ -31,6 +34,7 @@
   "nav": {
     "platform_title": "سوق مشاريع التخرج",
     "platform_version": "Capstone Market v1.1",
+    "back_home": "العودة إلى الصفحة الرئيسية",
     "dashboard_title": "لوحة التحكم والتنقل",
     "reports_hub": "تسليم ومتابعة التقارير",
     "tuesday": "الثلاثاء",

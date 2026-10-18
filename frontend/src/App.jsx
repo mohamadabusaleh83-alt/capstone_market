@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { AppProvider } from './context/AppContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -16,9 +17,10 @@ import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppProvider>
+    <ThemeProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <AppProvider>
           <Routes>
             {/* صفحة تسجيل الدخول والتسجيل */}
             <Route path="/login" element={<LoginPage />} />
@@ -74,5 +76,6 @@ export default function App() {
         </AppProvider>
       </AuthProvider>
     </BrowserRouter>
+  </ThemeProvider>
   );
 }
