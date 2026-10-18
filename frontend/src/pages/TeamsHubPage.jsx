@@ -111,8 +111,8 @@ export default function TeamsHubPage() {
                         <span
                           className={`text-[11px] px-2 py-0.5 rounded-full font-medium border ${
                             st.isFree
-                              ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/60'
-                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30'
                           }`}
                         >
                           {st.projectTitle}
@@ -250,7 +250,7 @@ export default function TeamsHubPage() {
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${
                     student.isFree
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800/60'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30'
                       : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
                   }`}
                 >
@@ -259,7 +259,7 @@ export default function TeamsHubPage() {
               </div>
 
               <div className="mb-3">
-                <span className="text-[10px] bg-cyan-50 text-cyan-700 border border-cyan-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800/40 px-2 py-0.5 rounded inline-block">
+                <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded inline-block">
                   {translateMajor(student.major)}
                 </span>
               </div>

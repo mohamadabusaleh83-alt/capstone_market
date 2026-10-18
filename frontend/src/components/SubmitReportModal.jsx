@@ -28,7 +28,7 @@ export default function SubmitReportModal() {
           <X className="w-5 h-5" />
         </button>
         <h2 className="text-base font-bold mb-1 text-slate-900 dark:text-white">{t('reports.modal_title')}</h2>
-        <p className="text-xs text-cyan-600 dark:text-blue-400 font-medium mb-4">{submitReportModal.title}</p>
+        <p className="text-xs text-cyan-600 dark:text-cyan-400 font-medium mb-4">{submitReportModal.title}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

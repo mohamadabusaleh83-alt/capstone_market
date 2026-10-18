@@ -65,7 +65,7 @@ export default function ChatModal() {
         {/* رأس الشات العصري */}
         <div className="p-4 bg-slate-50 dark:bg-slate-950/90 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between backdrop-blur-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 dark:bg-blue-600/30 border border-cyan-500/20 dark:border-blue-500/30 flex items-center justify-center text-cyan-600 dark:text-blue-400 shadow-sm">
+            <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 dark:bg-slate-800 border border-cyan-500/20 dark:border-slate-700 flex items-center justify-center text-cyan-600 dark:text-cyan-400 shadow-sm">
               <MessageSquare className="w-5 h-5" />
             </div>
             <div>
@@ -95,7 +95,7 @@ export default function ChatModal() {
               className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/80 rounded-xl transition cursor-pointer active:scale-90"
               aria-label={t('chat.refresh')}
             >
-              <RefreshCw className={`w-4 h-4 ${isFetchingChat ? 'animate-spin text-cyan-600 dark:text-blue-400' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isFetchingChat ? 'animate-spin text-cyan-600 dark:text-cyan-400' : ''}`} />
             </button>
             <button
               type="button"
@@ -112,15 +112,15 @@ export default function ChatModal() {
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 bg-slate-50/50 dark:bg-slate-950/40">
           {isFetchingChat && chatMessages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 gap-3 text-xs">
-              <div className="p-3 rounded-2xl bg-cyan-500/10 dark:bg-blue-500/10 border border-cyan-500/20 dark:border-blue-500/20">
-                <RefreshCw className="w-6 h-6 animate-spin text-cyan-600 dark:text-blue-400" />
+              <div className="p-3 rounded-2xl bg-cyan-500/10 dark:bg-slate-800 border border-cyan-500/20 dark:border-slate-700">
+                <RefreshCw className="w-6 h-6 animate-spin text-cyan-600 dark:text-cyan-400" />
               </div>
               <span>{t('chat.loading')}</span>
             </div>
           ) : chatMessages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 gap-2.5 text-xs text-center p-6">
               <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 flex items-center justify-center text-slate-400 shadow-sm">
-                <MessageSquare className="w-7 h-7 text-cyan-600 dark:text-blue-400" />
+                <MessageSquare className="w-7 h-7 text-cyan-600 dark:text-cyan-400" />
               </div>
               <p className="font-bold text-slate-800 dark:text-slate-200 text-sm mt-1">{t('chat.empty_title')}</p>
               <span className="text-[11px] text-slate-500 max-w-xs">{t('chat.empty_desc')}</span>
@@ -154,10 +154,10 @@ export default function ChatModal() {
                     <span
                       className={`text-[9px] px-1.5 py-0.2 rounded border font-medium ${
                         msg.sender_role === 'supervisor'
-                          ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/70 dark:text-amber-300 dark:border-amber-800'
+                          ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30'
                           : msg.sender_role === 'company'
-                            ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-800'
-                            : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/70 dark:text-blue-300 dark:border-blue-800'
+                            ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/30'
+                            : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/30'
                       }`}
                     >
                       {roleLabels[msg.sender_role] || msg.sender_role}

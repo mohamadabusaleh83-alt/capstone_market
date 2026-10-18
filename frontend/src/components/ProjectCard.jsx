@@ -147,7 +147,7 @@ export default function ProjectCard({ project }) {
         {/* معطيات الصعوبة وساعات العمل */}
         <div className="flex items-center gap-3 text-[11px] text-slate-600 dark:text-slate-300 mb-3 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800/60">
           <span className="flex items-center gap-1.5 font-medium">
-            <Layers className="w-3.5 h-3.5 text-cyan-600 dark:text-blue-400 shrink-0" />
+            <Layers className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400 shrink-0" />
             {translateDifficulty(project.difficulty)}
           </span>
           <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
@@ -161,7 +161,7 @@ export default function ProjectCard({ project }) {
         <div className="space-y-2 mb-4 bg-slate-50/80 dark:bg-slate-950/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800/80">
           <div className="flex justify-between items-center text-[10px]">
             <span className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-600 dark:text-blue-400" />
+              <Sparkles className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
               {t('projects.skills_analysis')}
             </span>
             <span className="text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-500/20">
@@ -174,7 +174,7 @@ export default function ProjectCard({ project }) {
               project.matchedSkills.map((skill, idx) => (
                 <span
                   key={`m-${idx}`}
-                  className="text-[10px] font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 px-2 py-0.5 rounded-md flex items-center gap-1 transition-all duration-150 hover:scale-105 cursor-default"
+                  className="text-[10px] font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 px-2 py-0.5 rounded-md flex items-center gap-1 transition-all duration-150 hover:scale-105 cursor-default"
                 >
                   <span className="text-[11px]">✓</span> {skill}
                 </span>
@@ -184,7 +184,7 @@ export default function ProjectCard({ project }) {
               project.missingSkills.map((skill, idx) => (
                 <span
                   key={`mis-${idx}`}
-                  className="text-[10px] font-medium bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50 hover:bg-rose-100 dark:hover:bg-rose-900/40 px-2 py-0.5 rounded-md flex items-center gap-1 transition-all duration-150 hover:scale-105 cursor-default"
+                  className="text-[10px] font-medium bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 hover:bg-rose-100 dark:hover:bg-rose-500/20 px-2 py-0.5 rounded-md flex items-center gap-1 transition-all duration-150 hover:scale-105 cursor-default"
                 >
                   <span className="text-[10px]">⚠️</span> {t('projects.missing_skill', { skill })}
                 </span>
@@ -205,9 +205,9 @@ export default function ProjectCard({ project }) {
             }}
             className={`flex-1 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all duration-200 flex items-center justify-center gap-1.5 active:scale-95 ${
               isAlreadyApplied
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800/60 cursor-not-allowed'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30 cursor-not-allowed'
                 : isRejected
-                  ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-400 dark:border-rose-900 cursor-not-allowed'
+                  ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/30 cursor-not-allowed'
                   : isFull
                     ? 'bg-slate-100 text-slate-400 border border-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700 cursor-not-allowed'
                     : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-cyan-500/20 hover:shadow-cyan-500/30 cursor-pointer'
@@ -228,7 +228,7 @@ export default function ProjectCard({ project }) {
             onClick={() => setShowApplicationsModal(true)}
             className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-slate-700 active:scale-95 shadow-sm"
           >
-            <Users className="w-3.5 h-3.5 text-cyan-600 dark:text-blue-400" />
+            <Users className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
             {t('projects.view_applications')}
           </button>
         )}
@@ -237,7 +237,7 @@ export default function ProjectCard({ project }) {
           type="button"
           onClick={() => setActiveChatProject(project)}
           title={t('projects.chat_tooltip')}
-          className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-cyan-600 dark:hover:bg-blue-600 text-slate-700 dark:text-slate-300 hover:text-white transition-all duration-200 cursor-pointer border border-slate-200 dark:border-slate-700 hover:border-cyan-500 dark:hover:border-blue-500 shadow-sm active:scale-90"
+          className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-cyan-600 dark:hover:bg-cyan-600 text-slate-700 dark:text-slate-300 hover:text-white transition-all duration-200 cursor-pointer border border-slate-200 dark:border-slate-700 hover:border-cyan-500 dark:hover:border-cyan-500 shadow-sm active:scale-90"
           aria-label={t('projects.chat_tooltip')}
         >
           <MessageSquare className="w-4 h-4" />

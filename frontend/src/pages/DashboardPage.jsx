@@ -108,15 +108,15 @@ export default function DashboardPage() {
   return (
     <div className="space-y-7 max-w-6xl mx-auto">
       {/* 1. ترويسة لوحة التحكم العصرية بتأثير الزجاج (Glassmorphic Header) */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-cyan-50/90 via-white/90 to-blue-50/90 dark:from-blue-950/80 dark:via-slate-900/90 dark:to-indigo-950/80 backdrop-blur-xl border border-slate-200 dark:border-blue-800/40 p-6 sm:p-7 rounded-3xl shadow-sm dark:shadow-xl">
-        <div className="absolute -top-24 -end-24 w-64 h-64 bg-cyan-500/10 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -start-24 w-64 h-64 bg-blue-500/10 dark:bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden bg-gradient-to-r from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-900/95 dark:to-slate-900 backdrop-blur-xl border border-slate-200 dark:border-slate-800 p-6 sm:p-7 rounded-3xl shadow-sm dark:shadow-xl">
+        <div className="absolute -top-24 -end-24 w-64 h-64 bg-cyan-500/5 dark:bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -start-24 w-64 h-64 bg-blue-500/5 dark:bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/10 dark:bg-blue-500/20 text-cyan-700 dark:text-blue-300 border border-cyan-400/30 dark:border-blue-400/30 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-cyan-500 dark:text-blue-400" />
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                 {t('dashboard.role_overview')}: {currentUser.title}
               </span>
             </div>
@@ -149,7 +149,7 @@ export default function DashboardPage() {
               className="bg-white hover:bg-slate-50 dark:bg-slate-800/80 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 cursor-pointer shadow-sm active:scale-95"
               title={t('company.refresh_list')}
             >
-              <RefreshCw className="w-3.5 h-3.5 text-cyan-600 dark:text-blue-400" />
+              <RefreshCw className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
               <span className="hidden sm:inline">{t('company.refresh_list')}</span>
             </button>
           </div>
@@ -162,13 +162,13 @@ export default function DashboardPage() {
         <div className="relative overflow-hidden bg-white dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700/80 p-5 rounded-2xl shadow-sm dark:shadow-lg transition-all duration-300 group hover:-translate-y-0.5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('dashboard.stat_total_projects')}</span>
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 dark:bg-blue-500/10 border border-cyan-500/20 dark:border-blue-500/20 flex items-center justify-center text-cyan-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 dark:bg-slate-800 border border-cyan-500/20 dark:border-slate-700 flex items-center justify-center text-cyan-600 dark:text-cyan-400 group-hover:scale-110 transition-transform">
               <Briefcase className="w-5 h-5" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-black text-slate-900 dark:text-white">{totalProjects}</span>
-            <span className="text-xs font-bold text-cyan-700 dark:text-blue-400 bg-cyan-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-full border border-cyan-200 dark:border-blue-500/20">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
               {isRtl ? 'مشروع مسجل' : 'Projects'}
             </span>
           </div>
@@ -245,7 +245,7 @@ export default function DashboardPage() {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Layers className="w-5 h-5 text-cyan-600 dark:text-blue-400" />
+                <Layers className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
                 {t('dashboard.tech_distribution_title')}
               </h3>
               <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
@@ -266,7 +266,7 @@ export default function DashboardPage() {
                   <div key={idx} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-200">
-                        <span className="w-2 h-2 rounded-full bg-cyan-500 dark:bg-blue-400" />
+                        <span className="w-2 h-2 rounded-full bg-cyan-500 dark:bg-cyan-400" />
                         <span>{item.name}</span>
                       </div>
                       <div className="flex items-center gap-2 text-[11px] font-mono text-slate-500 dark:text-slate-400">
@@ -359,7 +359,7 @@ export default function DashboardPage() {
 
               <div className="p-2.5 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800/80">
                 <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">{t('dashboard.available_seats')}</span>
-                <span className="text-sm font-black text-cyan-600 dark:text-blue-400">{totalAvailableSeats}</span>
+                <span className="text-sm font-black text-cyan-600 dark:text-cyan-400">{totalAvailableSeats}</span>
               </div>
 
               <div className="p-2.5 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800/80">
@@ -380,13 +380,13 @@ export default function DashboardPage() {
         <div className="space-y-4 pt-2">
           <div className="flex justify-between items-center">
             <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
-              <Store className="w-5 h-5 text-cyan-600 dark:text-blue-400" />
+              <Store className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
               <span>{t('company.my_projects_title', { count: myCompanyProjects.length })}</span>
             </h3>
             <button
               type="button"
               onClick={fetchProjects}
-              className="text-xs text-cyan-600 dark:text-blue-400 hover:text-cyan-500 dark:hover:text-blue-300 flex items-center gap-1 transition cursor-pointer"
+              className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 dark:hover:text-cyan-300 flex items-center gap-1 transition cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5" /> {t('company.refresh_list')}
             </button>
@@ -420,7 +420,7 @@ export default function DashboardPage() {
                   >
                     <div>
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-[11px] bg-cyan-50 dark:bg-blue-500/10 text-cyan-700 dark:text-blue-400 border border-cyan-200 dark:border-blue-500/20 px-2.5 py-0.5 rounded-md">
+                        <span className="text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-2.5 py-0.5 rounded-md">
                           {translateMajor(p.category)}
                         </span>
                         <span
@@ -465,7 +465,7 @@ export default function DashboardPage() {
                         onClick={() => setShowApplicationsModal(true)}
                         className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer active:scale-95"
                       >
-                        <Users className="w-3.5 h-3.5 text-cyan-600 dark:text-blue-400" />
+                        <Users className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                         {t('company.applicants_requests', {
                           count: projectApps.length
                         })}
@@ -474,9 +474,9 @@ export default function DashboardPage() {
                       <button
                         type="button"
                         onClick={() => setActiveChatProject(p)}
-                        className="bg-cyan-50 dark:bg-blue-600/20 hover:bg-cyan-100 dark:hover:bg-blue-600/30 border border-cyan-200 dark:border-blue-500/30 text-cyan-700 dark:text-blue-300 text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+                        className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer active:scale-95"
                       >
-                        <MessageSquare className="w-3.5 h-3.5 text-cyan-600 dark:text-blue-400" />
+                        <MessageSquare className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                         {t('company.project_chat')}
                       </button>
                     </div>
@@ -514,16 +514,16 @@ export default function DashboardPage() {
 
             <Link
               to="/reports"
-              className="p-5 bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 hover:border-cyan-400 dark:hover:border-blue-500/50 rounded-2xl transition-all duration-200 group shadow-sm hover:-translate-y-0.5"
+              className="p-5 bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 hover:border-cyan-400 dark:hover:border-cyan-500/50 rounded-2xl transition-all duration-200 group shadow-sm hover:-translate-y-0.5"
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-slate-500 dark:text-slate-400">{isRtl ? 'مراحل التقارير' : 'Report Milestones'}</span>
-                <Clock className="w-5 h-5 text-cyan-600 dark:text-blue-400" />
+                <Clock className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
               </div>
-              <div className="text-2xl font-black text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-blue-400 transition">
+              <div className="text-2xl font-black text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition">
                 {reportsTimeline.length} {isRtl ? 'مراحل' : 'Phases'}
               </div>
-              <span className="text-[11px] text-cyan-600 dark:text-blue-400 font-bold mt-2 inline-flex items-center gap-1">
+              <span className="text-[11px] text-cyan-600 dark:text-cyan-400 font-bold mt-2 inline-flex items-center gap-1">
                 {isRtl ? 'متابعة تقييم الطلبة' : 'Student Submissions'} <ArrowUpRight className="w-3.5 h-3.5" />
               </span>
             </Link>
@@ -558,7 +558,7 @@ export default function DashboardPage() {
             <div className="p-5 bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-bold text-slate-900 dark:text-white text-sm">{isRtl ? 'طلبات الانضمام المقدمة' : 'Submitted Applications'}</h4>
-                <span className="text-xs bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full text-cyan-700 dark:text-blue-400 font-bold">
+                <span className="text-xs bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full text-cyan-700 dark:text-cyan-400 font-bold">
                   {myApplications.length}
                 </span>
               </div>
@@ -607,7 +607,7 @@ export default function DashboardPage() {
               <div className="pt-4 mt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
                 <Link
                   to="/reports"
-                  className="text-xs text-cyan-600 dark:text-blue-400 hover:text-cyan-500 dark:hover:text-blue-300 flex items-center gap-1 font-bold transition"
+                  className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 dark:hover:text-cyan-300 flex items-center gap-1 font-bold transition"
                 >
                   <span>{isRtl ? 'استعراض كافة التسليمات' : 'View Submissions'}</span>
                   <ArrowUpRight className="w-3.5 h-3.5" />

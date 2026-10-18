@@ -47,7 +47,7 @@ export default function CreateProjectModal() {
           <X className="w-5 h-5" />
         </button>
         <h2 className="text-base font-bold mb-2 text-slate-900 dark:text-white flex items-center gap-2">
-          <PlusCircle className="w-5 h-5 text-cyan-600 dark:text-blue-400" />
+          <PlusCircle className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
           {t('create_project.modal_title')}
         </h2>
         <p className="text-xs text-slate-600 dark:text-slate-400 mb-4">

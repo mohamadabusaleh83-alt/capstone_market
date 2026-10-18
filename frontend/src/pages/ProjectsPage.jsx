@@ -119,7 +119,7 @@ export default function ProjectsPage() {
                 : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
             }`}
           >
-            <Layers className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+            <Layers className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
             <span>{t('nav.browse_all')}</span>
           </button>
 
@@ -198,11 +198,11 @@ export default function ProjectsPage() {
           <div className="absolute inset-0 bg-radial from-cyan-500/5 via-transparent to-transparent pointer-events-none" />
 
           <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 flex items-center justify-center mx-auto text-cyan-600 dark:text-blue-400 shadow-md">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 flex items-center justify-center mx-auto text-cyan-600 dark:text-cyan-400 shadow-md">
               {activeTab === 'favorites' ? (
                 <Star className="w-8 h-8 text-amber-500 dark:text-amber-400" />
               ) : (
-                <FolderSearch className="w-8 h-8 text-cyan-600 dark:text-blue-400" />
+                <FolderSearch className="w-8 h-8 text-cyan-600 dark:text-cyan-400" />
               )}
             </div>
           </div>

@@ -31,20 +31,20 @@ export default function StudentCvPage() {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <FileText className="w-5 h-5 text-cyan-600 dark:text-blue-400" />
+            <FileText className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
             {t('student_cv.title')}
           </h2>
           <button
             type="button"
             onClick={() => setShowSkillsModal(true)}
-            className="text-xs text-cyan-600 dark:text-blue-400 hover:text-cyan-500 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer transition font-medium"
+            className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 dark:hover:text-cyan-300 flex items-center gap-1 cursor-pointer transition font-medium"
           >
             <Award className="w-4 h-4" /> {t('student_cv.edit_skills')}
           </button>
         </div>
 
         {cvUpdateMessage && (
-          <div className="mb-4 p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-xl text-xs flex items-center gap-2">
+          <div className="mb-4 p-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-400 rounded-xl text-xs flex items-center gap-2">
             <CheckCircle className="w-4 h-4" />
             {cvUpdateMessage}
           </div>
@@ -145,7 +145,7 @@ export default function StudentCvPage() {
               {userSkills.map((sk, idx) => (
                 <span
                   key={idx}
-                  className="bg-cyan-50 dark:bg-slate-800 text-cyan-800 dark:text-blue-300 border border-cyan-200 dark:border-blue-900/50 text-xs px-2.5 py-1 rounded-lg"
+                  className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs px-2.5 py-1 rounded-lg"
                 >
                   {sk}
                 </span>

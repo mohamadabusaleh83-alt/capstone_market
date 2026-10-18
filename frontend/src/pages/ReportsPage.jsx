@@ -23,10 +23,10 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="bg-gradient-to-r from-cyan-50/90 via-white/90 to-blue-50/90 dark:from-blue-950 dark:via-slate-900 dark:to-slate-900 border border-slate-200 dark:border-blue-800/60 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm dark:shadow-md">
+      <div className="bg-gradient-to-r from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm dark:shadow-md">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30 border">
+            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30 border">
               {t('reports.hub_badge')}
             </span>
             <span className="text-xs text-slate-500 dark:text-slate-400">{t('reports.semester')}</span>
@@ -66,7 +66,7 @@ export default function ReportsPage() {
       {/* خط الزمن ومراحل التسليم */}
       <div className="space-y-4">
         <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-cyan-600 dark:text-blue-400" />
+          <Calendar className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
           {t('reports.timeline_title')}
         </h3>
 
@@ -88,8 +88,8 @@ export default function ReportsPage() {
                     <span
                       className={`p-2 rounded-xl text-xs font-bold flex items-center gap-1.5 border ${
                         isSubmitted
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800'
-                          : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-800'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30'
+                          : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30'
                       }`}
                     >
                       {isSubmitted ? (
@@ -119,7 +119,7 @@ export default function ReportsPage() {
                         href={rep.submissionLink}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-cyan-600 dark:text-blue-400 hover:text-cyan-500 dark:hover:text-blue-300 flex items-center gap-1 font-mono truncate"
+                        className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 dark:hover:text-cyan-300 flex items-center gap-1 font-mono truncate"
                       >
                         <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                         {rep.submissionLink}

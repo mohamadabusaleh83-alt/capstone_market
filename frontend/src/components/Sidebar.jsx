@@ -88,11 +88,11 @@ export default function Sidebar() {
             </div>
           </Link>
 
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 rounded-xl mb-4 shadow-sm">
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl mb-4 shadow-sm">
             <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">{t('nav.active_account')}</span>
             <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 truncate">
               {currentUser.role === 'company' ? (
-                <Store className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
+                <Store className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400 shrink-0" />
               ) : currentUser.role === 'supervisor' ? (
                 <ShieldCheck className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
               ) : (
@@ -187,7 +187,7 @@ export default function Sidebar() {
                 className={navLinkClass}
               >
                 <div className="flex items-center gap-2.5">
-                  <Briefcase className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                  <Briefcase className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                   {t('nav.company_projects')}
                 </div>
               </NavLink>
@@ -222,7 +222,7 @@ export default function Sidebar() {
                 className={navLinkClass}
               >
                 <div className="flex items-center gap-2.5">
-                  <FileText className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                  <FileText className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                   {t('nav.student_cv')}
                 </div>
               </NavLink>
@@ -256,7 +256,7 @@ export default function Sidebar() {
             }
           >
             <div className="flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4 text-cyan-600 dark:text-blue-400" />
+              <Sparkles className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
               {t('nav.smart_match')}
             </div>
             <span className="text-[10px] bg-blue-500/15 dark:bg-blue-500/20 border border-blue-400/30 px-1.5 py-0.5 rounded text-blue-600 dark:text-blue-200 font-semibold">
@@ -302,7 +302,7 @@ export default function Sidebar() {
           </NavLink>
         </div>
 
-        <div className="pt-4 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 space-y-1">
+        <div className="pt-4 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
           <div>
             {t('nav.connection_status')} <span className="text-emerald-500 dark:text-emerald-400 font-semibold">{t('nav.connected_server')}</span>
           </div>

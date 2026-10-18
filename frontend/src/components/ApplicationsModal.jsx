@@ -40,7 +40,7 @@ export default function ApplicationsModal() {
           <button
             type="button"
             onClick={fetchApplications}
-            className="text-xs text-cyan-600 dark:text-blue-400 hover:text-cyan-500 dark:hover:text-blue-300 flex items-center gap-1 transition cursor-pointer font-medium"
+            className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 dark:hover:text-cyan-300 flex items-center gap-1 transition cursor-pointer font-medium"
           >
             <RefreshCw className="w-3.5 h-3.5" /> {t('applications_management.refresh')}
           </button>
@@ -48,7 +48,7 @@ export default function ApplicationsModal() {
 
         {isLoadingApplications ? (
           <div className="text-center py-8 text-xs text-slate-400 flex items-center justify-center gap-2">
-            <RefreshCw className="w-4 h-4 animate-spin text-cyan-500 dark:text-blue-400" />
+            <RefreshCw className="w-4 h-4 animate-spin text-cyan-500 dark:text-cyan-400" />
             {t('applications_management.loading')}
           </div>
         ) : applications.length === 0 ? (
@@ -144,7 +144,7 @@ export default function ApplicationsModal() {
                               setActiveChatProject(targetProject);
                               setShowApplicationsModal(false);
                             }}
-                            className="p-1.5 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-700 hover:bg-cyan-600 dark:hover:bg-blue-600 text-slate-700 dark:text-slate-200 hover:text-white transition cursor-pointer"
+                            className="p-1.5 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-700 hover:bg-cyan-600 dark:hover:bg-cyan-600 text-slate-700 dark:text-slate-200 hover:text-white transition cursor-pointer"
                             title={t('applications_management.open_chat_title')}
                           >
                             <MessageSquare className="w-3.5 h-3.5" />

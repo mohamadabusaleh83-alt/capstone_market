@@ -7,7 +7,7 @@ export default function NotFoundPage() {
 
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-6 space-y-4">
-      <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-cyan-600 dark:text-blue-400 shadow-sm dark:shadow-xl">
+      <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-cyan-600 dark:text-cyan-400 shadow-sm dark:shadow-xl">
         <FileQuestion className="w-8 h-8" />
       </div>
       <h1 className="text-2xl font-bold text-slate-900 dark:text-white">404 - {isRtl ? 'الصفحة غير موجودة' : 'Page Not Found'}</h1>
