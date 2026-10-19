@@ -1,4 +1,4 @@
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
@@ -13,12 +13,23 @@ import {
   BarChart3,
   CheckCircle2,
   ShieldCheck,
-  GraduationCap
+  GraduationCap,
+  Bell,
+  User,
+  Settings,
+  Bookmark,
+  FileSpreadsheet,
+  Building2,
+  Activity,
+  LogOut,
+  Sparkles,
+  FileText
 } from 'lucide-react';
 
 export default function Sidebar() {
   const { t } = useTranslation();
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
   const {
     isRtl,
     isSidebarOpen,
@@ -26,7 +37,7 @@ export default function Sidebar() {
     rawProjects,
     applications,
     setIsCreateModalOpen,
-    setShowApplicationsModal,
+    unreadNotificationsCount,
     getRoleLabel
   } = useApp();
 
@@ -40,16 +51,23 @@ export default function Sidebar() {
     setIsSidebarOpen(false);
   };
 
+  const handleLogout = () => {
+    closeSidebarOnMobile();
+    logout();
+    navigate('/login', { replace: true });
+  };
+
+  // العنصر النشط: تمييز بخلفية كحلية فاتحة مع خط جانبي وإضاءة تركوازية (#28C8C0)
   const navLinkClass = ({ isActive }) =>
-    `w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer ${
+    `w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs transition-all duration-200 cursor-pointer ${
       isActive
-        ? 'bg-gradient-to-r from-[#2499F2] to-[#1D7BC3] text-white shadow-md shadow-[#2499F2]/25 font-bold'
-        : 'text-slate-600 dark:text-slate-300 hover:bg-[#F4F8FC] dark:hover:bg-[#152550] hover:text-[#101E42] dark:hover:text-white'
+        ? 'bg-[#152550] border-s-4 border-[#28C8C0] text-white font-extrabold shadow-md shadow-[#28C8C0]/15'
+        : 'text-slate-600 dark:text-slate-300 hover:bg-[#F4F8FC] dark:hover:bg-[#152550]/70 hover:text-[#101E42] dark:hover:text-white font-medium'
     }`;
 
   return (
     <>
-      {/* خلفية معتمة على الموبايل تبدأ من top-16 وزاوية z-20 لتكون أسفل الهيدر تماماً */}
+      {/* خلفية معتمة على الموبايل */}
       {isSidebarOpen && (
         <div
           onClick={closeSidebarOnMobile}
@@ -67,7 +85,7 @@ export default function Sidebar() {
         `}
       >
         <div className="space-y-3">
-          {/* الشعار واسم المنصة في القائمة الجانبية مع التوجيه للرئيسية */}
+          {/* الشعار واسم المنصة في القائمة الجانبية */}
           <Link
             to="/"
             onClick={closeSidebarOnMobile}
@@ -75,20 +93,20 @@ export default function Sidebar() {
             className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 dark:bg-[#152550]/60 hover:bg-slate-100 dark:hover:bg-[#152550] border border-slate-200/80 dark:border-[#2499F2]/20 cursor-pointer hover:scale-102 transition-all duration-200 select-none group mb-2"
           >
             <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#0B152E] border border-slate-200 dark:border-[#2499F2]/30 flex items-center justify-center shadow-md shadow-[#2499F2]/10 dark:shadow-[#2499F2]/20 overflow-hidden shrink-0 group-hover:border-[#2499F2]/60 transition-colors">
-              <img src="/logo.svg" alt={t('nav.platform_title')} className="w-6 h-6 object-contain" />
+              <img src="/logo.svg" alt="Capstone Market" className="w-6 h-6 object-contain" />
             </div>
             <div className="min-w-0">
               <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white tracking-wide block leading-tight truncate group-hover:text-[#2499F2] dark:group-hover:text-[#28C8C0] transition-colors">
-                {t('nav.platform_title')}
+                Capstone Market
               </span>
               <span className="text-[10px] text-[#2499F2] dark:text-[#28C8C0] font-mono block truncate">
-                {t('nav.platform_version')}
+                v1.1 Full Suite
               </span>
             </div>
           </Link>
 
           {/* بطاقة الحساب النشط */}
-          <div className="p-3 bg-slate-50 dark:bg-[#152550] border border-slate-200/80 dark:border-[#2499F2]/20 rounded-xl mb-4 shadow-sm">
+          <div className="p-3 bg-slate-50 dark:bg-[#152550] border border-slate-200/80 dark:border-[#2499F2]/20 rounded-xl mb-3 shadow-sm">
             <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">{t('nav.active_account')}</span>
             <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 truncate">
               {currentUser.role === 'company' ? (
@@ -105,35 +123,25 @@ export default function Sidebar() {
             </span>
           </div>
 
-          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-400 uppercase px-2 tracking-wider">
+          <p className="text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase px-2 tracking-wider">
             {t('nav.dashboard_title')}
           </p>
 
-          {/* 1. القائمة الجانبية المخصصة لدور الطالب (student) */}
+          {/* 1. مسارات دور الطالب (Student) */}
           {currentUser.role === 'student' && (
-            <div className="space-y-1.5">
-              {/* الرئيسية (Dashboard) */}
-              <NavLink
-                to="/dashboard"
-                onClick={closeSidebarOnMobile}
-                className={navLinkClass}
-              >
+            <div className="space-y-1">
+              <NavLink to="/dashboard" onClick={closeSidebarOnMobile} className={navLinkClass}>
                 <div className="flex items-center gap-2.5">
                   <LayoutDashboard className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0]" />
                   <span>{t('sidebar.dashboard', 'الرئيسية')}</span>
                 </div>
               </NavLink>
 
-              {/* مشروعي / إضافة مشروع (My Projects) */}
               <div className="relative flex items-center">
-                <NavLink
-                  to="/dashboard#my-project"
-                  onClick={closeSidebarOnMobile}
-                  className={navLinkClass}
-                >
+                <NavLink to="/my-projects" onClick={closeSidebarOnMobile} className={navLinkClass}>
                   <div className="flex items-center gap-2.5">
                     <Briefcase className="w-4 h-4 text-[#28C8C0] dark:text-[#77DCC1]" />
-                    <span>{t('sidebar.student_my_project', 'مشروعي / إضافة مشروع')}</span>
+                    <span>{isRtl ? 'مشروعي ومتابعة التخرج' : 'My Project & Progress'}</span>
                   </div>
                   <button
                     type="button"
@@ -144,25 +152,14 @@ export default function Sidebar() {
                       closeSidebarOnMobile();
                     }}
                     title={isRtl ? 'إضافة / اقتراح مشروع تخرج' : 'Add / Propose Project'}
-                    className="w-5 h-5 rounded-md bg-[#2499F2]/15 text-[#2499F2] dark:text-[#77DCC1] hover:bg-[#2499F2] hover:text-white flex items-center justify-center transition-colors"
+                    className="w-5 h-5 rounded-md bg-[#2499F2]/20 text-[#2499F2] dark:text-[#77DCC1] hover:bg-[#2499F2] hover:text-white flex items-center justify-center transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" />
                   </button>
                 </NavLink>
               </div>
 
-              {/* استكشف المشاريع (Explore Projects) */}
-              <NavLink
-                to="/?tab=browse"
-                onClick={closeSidebarOnMobile}
-                className={({ isActive }) =>
-                  `w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer ${
-                    isActive && (window.location.search.includes('tab=browse') || (!window.location.search && window.location.pathname === '/'))
-                      ? 'bg-gradient-to-r from-[#2499F2] to-[#1D7BC3] text-white shadow-md shadow-[#2499F2]/25 font-bold'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-[#F4F8FC] dark:hover:bg-[#152550] hover:text-[#101E42] dark:hover:text-white'
-                  }`
-                }
-              >
+              <NavLink to="/projects" onClick={closeSidebarOnMobile} className={navLinkClass}>
                 <div className="flex items-center gap-2.5">
                   <Compass className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0]" />
                   <span>{t('sidebar.student_explore', 'استكشف المشاريع')}</span>
@@ -172,127 +169,104 @@ export default function Sidebar() {
                 </span>
               </NavLink>
 
-              {/* طلبات التعاون (Collaboration Requests) */}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowApplicationsModal(true);
-                  closeSidebarOnMobile();
-                }}
-                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium bg-slate-100 dark:bg-[#152550] hover:bg-slate-200 dark:hover:bg-[#182b5c] text-slate-700 dark:text-slate-200 transition cursor-pointer border border-slate-200/80 dark:border-[#2499F2]/20 shadow-sm"
-              >
+              <NavLink to="/collaboration-requests" onClick={closeSidebarOnMobile} className={navLinkClass}>
                 <div className="flex items-center gap-2.5">
                   <Users className="w-4 h-4 text-[#28C8C0] dark:text-[#77DCC1]" />
-                  <span>{t('sidebar.student_collaboration', 'طلبات التعاون')}</span>
+                  <span>{isRtl ? 'طلبات التعاون والشراكات' : 'Collaboration Requests'}</span>
                 </div>
                 <span className="bg-[#2499F2] text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm">
-                  {myApplicationsCount > 0 ? myApplicationsCount : 3}
+                  {myApplicationsCount > 0 ? myApplicationsCount : 2}
                 </span>
-              </button>
+              </NavLink>
+
+              <NavLink to="/opportunities" onClick={closeSidebarOnMobile} className={navLinkClass}>
+                <div className="flex items-center gap-2.5">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <span>{isRtl ? 'فرص الشركات والرعاية' : 'Company Opportunities'}</span>
+                </div>
+                <span className="text-[10px] bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold px-1.5 py-0.5 rounded">
+                  {isRtl ? 'جديد' : 'New'}
+                </span>
+              </NavLink>
             </div>
           )}
 
-          {/* 2. القائمة الجانبية المخصصة لدور الشركة (company) */}
+          {/* 2. مسارات دور الشركة (Company) */}
           {currentUser.role === 'company' && (
-            <div className="space-y-1.5">
-              {/* الرئيسية (Dashboard) */}
-              <NavLink
-                to="/dashboard"
-                onClick={closeSidebarOnMobile}
-                className={navLinkClass}
-              >
+            <div className="space-y-1">
+              <NavLink to="/dashboard" onClick={closeSidebarOnMobile} className={navLinkClass}>
                 <div className="flex items-center gap-2.5">
                   <LayoutDashboard className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0]" />
                   <span>{t('sidebar.dashboard', 'الرئيسية')}</span>
                 </div>
               </NavLink>
 
-              {/* استكشاف المشاريع وسوق التخرج (Explore & Market) */}
-              <NavLink
-                to="/?tab=browse"
-                onClick={closeSidebarOnMobile}
-                className={({ isActive }) =>
-                  `w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer ${
-                    isActive && (window.location.search.includes('tab=browse') || (!window.location.search && window.location.pathname === '/'))
-                      ? 'bg-gradient-to-r from-[#2499F2] to-[#1D7BC3] text-white shadow-md shadow-[#2499F2]/25 font-bold'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-[#F4F8FC] dark:hover:bg-[#152550] hover:text-[#101E42] dark:hover:text-white'
-                  }`
-                }
-              >
+              <NavLink to="/projects" onClick={closeSidebarOnMobile} className={navLinkClass}>
                 <div className="flex items-center gap-2.5">
                   <Store className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0]" />
-                  <span>{t('sidebar.company_explore_market', 'استكشاف المشاريع وسوق التخرج')}</span>
+                  <span>{isRtl ? 'استكشاف المشاريع وسوق التخرج' : 'Explore Capstones'}</span>
                 </div>
                 <span className="text-[10px] bg-[#2499F2]/10 dark:bg-[#2499F2]/20 border border-[#2499F2]/30 px-1.5 py-0.5 rounded text-[#2499F2] dark:text-[#77DCC1] font-semibold">
                   {rawProjects.length}
                 </span>
               </NavLink>
 
-              {/* طلبات التعاون المرسلة (Sent Requests) */}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowApplicationsModal(true);
-                  closeSidebarOnMobile();
-                }}
-                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium bg-slate-100 dark:bg-[#152550] hover:bg-slate-200 dark:hover:bg-[#182b5c] text-slate-700 dark:text-slate-200 transition cursor-pointer border border-slate-200/80 dark:border-[#2499F2]/20 shadow-sm"
-              >
+              <NavLink to="/saved-projects" onClick={closeSidebarOnMobile} className={navLinkClass}>
+                <div className="flex items-center gap-2.5">
+                  <Bookmark className="w-4 h-4 text-[#28C8C0] dark:text-[#77DCC1]" />
+                  <span>{isRtl ? 'المشاريع المحفوظة' : 'Saved Projects'}</span>
+                </div>
+              </NavLink>
+
+              <NavLink to="/company/opportunities" onClick={closeSidebarOnMobile} className={navLinkClass}>
+                <div className="flex items-center gap-2.5">
+                  <Briefcase className="w-4 h-4 text-[#2499F2]" />
+                  <span>{isRtl ? 'فرص التعاون المنشورة' : 'Posted Opportunities'}</span>
+                </div>
+              </NavLink>
+
+              <NavLink to="/company/partnerships" onClick={closeSidebarOnMobile} className={navLinkClass}>
+                <div className="flex items-center gap-2.5">
+                  <Users className="w-4 h-4 text-emerald-500" />
+                  <span>{isRtl ? 'الشراكات والفرق المتعاونة' : 'Active Partnerships'}</span>
+                </div>
+              </NavLink>
+
+              <NavLink to="/collaboration-requests" onClick={closeSidebarOnMobile} className={navLinkClass}>
                 <div className="flex items-center gap-2.5">
                   <Send className="w-4 h-4 text-[#28C8C0] dark:text-[#77DCC1]" />
-                  <span>{t('sidebar.company_sent_requests', 'طلبات التعاون المرسلة')}</span>
+                  <span>{isRtl ? 'طلبات التعاون المرسلة' : 'Sent Requests'}</span>
                 </div>
-                {pendingCount > 0 ? (
+                {pendingCount > 0 && (
                   <span className="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm">
                     {pendingCount}
                   </span>
-                ) : (
-                  <span className="bg-[#2499F2]/20 text-[#2499F2] dark:text-[#77DCC1] text-[10px] px-2 py-0.5 rounded-full font-bold">
-                    {applications.length}
-                  </span>
                 )}
-              </button>
+              </NavLink>
 
-              {/* تحليلات السوق والمهارات (Market Insights) */}
-              <NavLink
-                to="/dashboard#market-insights"
-                onClick={closeSidebarOnMobile}
-                className={navLinkClass}
-              >
+              <NavLink to="/dashboard#market-insights" onClick={closeSidebarOnMobile} className={navLinkClass}>
                 <div className="flex items-center gap-2.5">
                   <BarChart3 className="w-4 h-4 text-[#77DCC1]" />
                   <span>{t('sidebar.company_market_insights', 'تحليلات السوق والمهارات')}</span>
                 </div>
-                <span className="text-[10px] bg-emerald-500/15 text-emerald-600 dark:text-[#77DCC1] px-1.5 py-0.5 rounded font-mono font-bold">
-                  Live
-                </span>
               </NavLink>
             </div>
           )}
 
-          {/* 3. القائمة الجانبية المخصصة لدور المشرف الأكاديمي (supervisor) */}
+          {/* 3. مسارات دور المشرف الأكاديمي والإدارة (Supervisor & Management) */}
           {currentUser.role === 'supervisor' && (
-            <div className="space-y-1.5">
-              {/* الرئيسية (Dashboard) */}
-              <NavLink
-                to="/dashboard"
-                onClick={closeSidebarOnMobile}
-                className={navLinkClass}
-              >
+            <div className="space-y-1">
+              <NavLink to="/dashboard" onClick={closeSidebarOnMobile} className={navLinkClass}>
                 <div className="flex items-center gap-2.5">
                   <LayoutDashboard className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0]" />
                   <span>{t('sidebar.dashboard', 'الرئيسية')}</span>
                 </div>
               </NavLink>
 
-              {/* مراجعة واعتماد المشاريع (Project Review) */}
-              <NavLink
-                to="/approvals"
-                onClick={closeSidebarOnMobile}
-                className={navLinkClass}
-              >
+              <NavLink to="/supervisor/reviews" onClick={closeSidebarOnMobile} className={navLinkClass}>
                 <div className="flex items-center gap-2.5">
                   <CheckCircle2 className="w-4 h-4 text-[#28C8C0] dark:text-[#77DCC1]" />
-                  <span>{t('sidebar.supervisor_project_review', 'مراجعة واعتماد المشاريع')}</span>
+                  <span>{isRtl ? 'مراجعة واعتماد المشاريع' : 'Project Approvals'}</span>
                 </div>
                 {pendingProjectsCount > 0 && (
                   <span className="text-[10px] bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full font-bold shadow-sm">
@@ -301,34 +275,107 @@ export default function Sidebar() {
                 )}
               </NavLink>
 
-              {/* المشاريع الإشرافية والفرق (Supervised Teams) */}
-              <NavLink
-                to="/teams"
-                onClick={closeSidebarOnMobile}
-                className={navLinkClass}
-              >
+              <NavLink to="/manage/projects" onClick={closeSidebarOnMobile} className={navLinkClass}>
                 <div className="flex items-center gap-2.5">
-                  <ShieldCheck className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-                  <span>{t('sidebar.supervisor_teams', 'المشاريع الإشرافية والفرق')}</span>
+                  <FileSpreadsheet className="w-4 h-4 text-[#2499F2]" />
+                  <span>{isRtl ? 'إدارة وفهرسة المشاريع' : 'Manage Projects'}</span>
                 </div>
-                <span className="text-[10px] bg-amber-500/20 text-amber-600 dark:text-amber-300 px-1.5 py-0.5 rounded font-bold">
-                  {isRtl ? 'شُعبة 1' : 'Sec 1'}
-                </span>
+              </NavLink>
+
+              <NavLink to="/manage/students" onClick={closeSidebarOnMobile} className={navLinkClass}>
+                <div className="flex items-center gap-2.5">
+                  <GraduationCap className="w-4 h-4 text-[#28C8C0]" />
+                  <span>{isRtl ? 'إدارة ومتابعة الطلاب' : 'Manage Students'}</span>
+                </div>
+              </NavLink>
+
+              <NavLink to="/manage/companies" onClick={closeSidebarOnMobile} className={navLinkClass}>
+                <div className="flex items-center gap-2.5">
+                  <Building2 className="w-4 h-4 text-amber-500" />
+                  <span>{isRtl ? 'إدارة الشركات المعتمدة' : 'Accredited Companies'}</span>
+                </div>
+              </NavLink>
+
+              <NavLink to="/manage/collaborations" onClick={closeSidebarOnMobile} className={navLinkClass}>
+                <div className="flex items-center gap-2.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                  <span>{isRtl ? 'الإشراف على التعاون' : 'Supervise Collaborations'}</span>
+                </div>
+              </NavLink>
+
+              <NavLink to="/teams" onClick={closeSidebarOnMobile} className={navLinkClass}>
+                <div className="flex items-center gap-2.5">
+                  <Users className="w-4 h-4 text-[#2499F2]" />
+                  <span>{isRtl ? 'المشاريع الإشرافية والفرق' : 'Supervised Teams'}</span>
+                </div>
+              </NavLink>
+
+              <NavLink to="/supervisor/reports" onClick={closeSidebarOnMobile} className={navLinkClass}>
+                <div className="flex items-center gap-2.5">
+                  <FileText className="w-4 h-4 text-[#28C8C0]" />
+                  <span>{isRtl ? 'التقارير والتحليلات' : 'Reports & Analytics'}</span>
+                </div>
+              </NavLink>
+
+              <NavLink to="/manage/logs" onClick={closeSidebarOnMobile} className={navLinkClass}>
+                <div className="flex items-center gap-2.5">
+                  <Activity className="w-4 h-4 text-rose-500" />
+                  <span>{isRtl ? 'سجل العمليات والنشاطات' : 'Activity Audit Log'}</span>
+                </div>
               </NavLink>
             </div>
           )}
+
+          {/* المسارات المشتركة (مركز الإشعارات، الملف الشخصي، الإعدادات) */}
+          <div className="pt-2 border-t border-slate-200 dark:border-white/10 space-y-1">
+            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase px-2 tracking-wider mb-1">
+              {isRtl ? 'حسابي وإعداداتي' : 'Account & Tools'}
+            </p>
+
+            <NavLink to="/notifications" onClick={closeSidebarOnMobile} className={navLinkClass}>
+              <div className="flex items-center gap-2.5">
+                <Bell className="w-4 h-4 text-[#2499F2]" />
+                <span>{isRtl ? 'مركز الإشعارات' : 'Notifications'}</span>
+              </div>
+              {unreadNotificationsCount > 0 && (
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+              )}
+            </NavLink>
+
+            <NavLink to="/profile" onClick={closeSidebarOnMobile} className={navLinkClass}>
+              <div className="flex items-center gap-2.5">
+                <User className="w-4 h-4 text-[#28C8C0]" />
+                <span>{isRtl ? 'الملف الشخصي' : 'Profile'}</span>
+              </div>
+            </NavLink>
+
+            <NavLink to="/settings" onClick={closeSidebarOnMobile} className={navLinkClass}>
+              <div className="flex items-center gap-2.5">
+                <Settings className="w-4 h-4 text-slate-400" />
+                <span>{isRtl ? 'إعدادات الحساب' : 'Settings'}</span>
+              </div>
+            </NavLink>
+          </div>
         </div>
 
-        {/* مؤشر حالة الاتصال بالسيرفر في أسفل القائمة */}
-        <div className="pt-4 border-t border-slate-200/80 dark:border-[#2499F2]/20 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
-          <div className="flex items-center justify-between">
+        {/* الجزء السفلي: حالة الاتصال وزر تسجيل الخروج الصريح */}
+        <div className="pt-3 border-t border-slate-200/80 dark:border-[#2499F2]/20 space-y-2 mt-4">
+          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 px-1">
             <span>{t('nav.connection_status')}</span>
             <span className="text-[#28C8C0] dark:text-[#77DCC1] font-semibold">{t('nav.connected_server')}</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span>{t('nav.projects_on_server')}</span>
-            <span className="text-slate-900 dark:text-white font-mono font-bold">{rawProjects.length}</span>
-          </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:text-white hover:bg-rose-600/90 dark:hover:bg-rose-600/80 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 transition cursor-pointer active:scale-95 shadow-sm"
+          >
+            <div className="flex items-center gap-2">
+              <LogOut className="w-4 h-4" />
+              <span>{isRtl ? 'تسجيل الخروج' : 'Sign Out'}</span>
+            </div>
+            <span className="text-[10px] font-mono opacity-70">Exit</span>
+          </button>
         </div>
       </aside>
     </>
