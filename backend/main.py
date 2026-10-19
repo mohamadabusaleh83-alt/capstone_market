@@ -281,7 +281,7 @@ def get_users(
 def create_project(
     project: schemas.ProjectCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role(["partner", "company", "business", "supervisor"]))
+    current_user: models.User = Depends(require_role(["partner", "company", "business", "supervisor", "student"]))
 ):
     """طرح مشروع جديد بواسطة الشريك الصناعي أو المشرف، وتسجيل current_user.id كمالك للمشروع"""
     user_role = (current_user.role or "").lower()
