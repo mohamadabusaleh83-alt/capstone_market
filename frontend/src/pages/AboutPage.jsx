@@ -264,45 +264,46 @@ export default function AboutPage() {
           </div>
 
           {/* محتوى بيانات المطور الأساسية */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex items-start sm:items-center gap-4 sm:gap-5">
-              {/* صورة رمزية تفاعلية للمطور مع إطار نيون متوهج */}
-              <div className="relative shrink-0">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-[#101E42] to-[#152550] border-2 border-[#28C8C0] ring-4 ring-[#28C8C0]/20 flex items-center justify-center text-white font-mono font-black text-xl sm:text-2xl shadow-lg shadow-[#28C8C0]/30 select-none">
-                  MAS
-                </div>
-                <div
-                  className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#28C8C0] border-2 border-[#0B152E] flex items-center justify-center shadow-sm"
-                  title="Verified Developer"
-                >
-                  <Check className="w-3 h-3 text-[#0B152E] stroke-[3]" />
-                </div>
-              </div>
-
-              {/* الاسم والدور البرمجي */}
-              <div className="space-y-1">
-                <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-wide flex items-center gap-2">
-                  <span>محمد أبو صالح</span>
-                  <span className="text-slate-300 text-sm sm:text-lg font-medium font-sans">
-                    (Mohamad Abu Saleh)
-                  </span>
-                </h3>
-
-                <p className="text-xs sm:text-sm md:text-base font-semibold text-[#28C8C0] flex items-center gap-1.5">
-                  <Terminal className="w-4 h-4 text-[#77DCC1] shrink-0" />
-                  <span>هندسة وتطوير واجهات ونظم المنصة (Full-Stack / Frontend Developer)</span>
-                </p>
-
-                <p className="text-xs text-slate-300 max-w-xl pt-1 leading-relaxed">
-                  {isRtl
-                    ? 'مسؤول عن التصميم المعماري، تطوير واجهات المستخدم التفاعلية، تكامل نظم البيانات والخدمات السحابية، وضمان تجربة استخدام سلسة وعالية الأداء لمنصة كابستون ماركت.'
-                    : 'Responsible for end-to-end frontend and platform engineering, UI/UX design architecture, cloud integration, and delivering a resilient, high-performance experience for Capstone Market.'}
-                </p>
+          <div className="flex flex-col items-center text-center max-w-2xl mx-auto space-y-4">
+            {/* الصورة الشخصية للمطور مع إطار نيون متوهج وتأثير بصري أنيق */}
+            <div className="relative mx-auto mb-1">
+              <img
+                src="/developer.jpg"
+                alt="محمد أبو صالح - مطور وهندسة المنصة"
+                className="w-28 h-28 sm:w-32 sm:h-32 rounded-full mx-auto object-cover object-top border-2 border-[#28C8C0] ring-4 ring-[#28C8C0]/20 shadow-xl transition-transform duration-300 hover:scale-105"
+                loading="eager"
+              />
+              <div
+                className="absolute bottom-1 right-1 sm:bottom-1.5 sm:right-1.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#28C8C0] border-2 border-[#0B152E] flex items-center justify-center shadow-md"
+                title="Verified Full-Stack Developer"
+              >
+                <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0B152E] stroke-[3]" />
               </div>
             </div>
 
-            {/* الأزرار التفاعلية: رابط لينكدإن والبريد الإلكتروني */}
-            <div className="w-full md:w-auto flex flex-col sm:flex-row md:flex-col gap-3 shrink-0">
+            {/* الاسم والدور البرمجي */}
+            <div className="space-y-2">
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-wide flex items-center justify-center gap-2 flex-wrap">
+                <span>محمد أبو صالح</span>
+                <span className="text-slate-300 text-sm sm:text-lg font-medium font-sans">
+                  (Mohamad Abu Saleh)
+                </span>
+              </h3>
+
+              <p className="text-xs sm:text-sm md:text-base font-semibold text-[#28C8C0] inline-flex items-center justify-center gap-1.5 flex-wrap">
+                <Terminal className="w-4 h-4 text-[#77DCC1] shrink-0" />
+                <span>هندسة وتطوير واجهات ونظم المنصة (Full-Stack / Frontend Developer)</span>
+              </p>
+
+              <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto pt-1 leading-relaxed">
+                {isRtl
+                  ? 'مسؤول عن التصميم المعماري، تطوير واجهات المستخدم التفاعلية، تكامل نظم البيانات والخدمات السحابية، وضمان تجربة استخدام سلسة وعالية الأداء لمنصة كابستون ماركت.'
+                  : 'Responsible for end-to-end frontend and platform engineering, UI/UX design architecture, cloud integration, and delivering a resilient, high-performance experience for Capstone Market.'}
+              </p>
+            </div>
+
+            {/* الأزرار التفاعلية: رابط لينكدإن والبريد الإلكتروني أسفل الصورة */}
+            <div className="w-full flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
               {/* زر LinkedIn الرسمي البارز */}
               <a
                 href={linkedinUrl}
@@ -319,10 +320,10 @@ export default function AboutPage() {
               </a>
 
               {/* زر البريد الإلكتروني للتواصل والنسخ */}
-              <div className="flex items-center gap-1.5 bg-[#0B152E]/90 border border-[#2499F2]/30 rounded-2xl p-1.5 shadow-sm">
+              <div className="w-full sm:w-auto flex items-center justify-between gap-1.5 bg-[#0B152E]/90 border border-[#2499F2]/30 rounded-2xl p-1.5 shadow-sm">
                 <a
                   href={`mailto:${developerEmail}`}
-                  className="flex-1 flex items-center gap-2 px-3 py-2 text-xs font-mono text-slate-200 hover:text-[#28C8C0] transition-colors truncate"
+                  className="flex-1 flex items-center gap-2 px-3.5 py-2 text-xs font-mono text-slate-200 hover:text-[#28C8C0] transition-colors truncate"
                   title={isRtl ? 'إرسال بريد إلكتروني للمطور' : 'Send email to developer'}
                 >
                   <Mail className="w-3.5 h-3.5 text-[#2499F2] shrink-0" />
@@ -332,7 +333,7 @@ export default function AboutPage() {
                 <button
                   type="button"
                   onClick={handleCopyEmail}
-                  className="p-2 rounded-xl bg-[#152550] hover:bg-[#2499F2] text-slate-300 hover:text-white transition-all cursor-pointer shrink-0"
+                  className="p-2.5 rounded-xl bg-[#152550] hover:bg-[#2499F2] text-slate-300 hover:text-white transition-all cursor-pointer shrink-0"
                   title={isRtl ? 'نسخ البريد الإلكتروني' : 'Copy email'}
                   aria-label="Copy email"
                 >
