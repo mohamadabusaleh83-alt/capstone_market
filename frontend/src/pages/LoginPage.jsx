@@ -554,6 +554,13 @@ export default function LoginPage() {
       <footer className="text-center py-4 px-4 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200/80 dark:border-white/5 bg-white/40 dark:bg-[#0B152E]/40 backdrop-blur-sm z-20 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
         <span>{t('auth.footer')}</span>
         <span className="hidden sm:inline opacity-40">|</span>
+        <Link
+          to="/about"
+          className="font-bold text-[#2499F2] hover:text-[#1B87D9] dark:text-[#28C8C0] dark:hover:text-[#77DCC1] transition-colors"
+        >
+          {t('nav.about', 'عن المنصة')}
+        </Link>
+        <span className="hidden sm:inline opacity-40">|</span>
         <a
           href="https://www.linkedin.com/in/mohamad-abu-saleh-598255350"
           target="_blank"

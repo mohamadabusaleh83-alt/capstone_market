@@ -24,6 +24,7 @@ import {
   LogOut,
   Sparkles,
   FileText,
+  Info,
   X
 } from 'lucide-react';
 
@@ -365,6 +366,13 @@ export default function Sidebar() {
               <div className="flex items-center gap-2.5">
                 <Settings className="w-4 h-4 text-slate-400" />
                 <span>{isRtl ? 'إعدادات الحساب' : 'Settings'}</span>
+              </div>
+            </NavLink>
+
+            <NavLink to="/about" onClick={closeSidebarOnMobile} className={navLinkClass}>
+              <div className="flex items-center gap-2.5">
+                <Info className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0]" />
+                <span>{t('nav.about', isRtl ? 'عن المنصة' : 'About Platform')}</span>
               </div>
             </NavLink>
           </div>

@@ -57,7 +57,8 @@
     "active_account": "Active Account (GET /me):",
     "logout": "Sign Out",
     "logout_tooltip": "Sign out and return to login screen",
-    "sidebar_toggle": "Toggle Sidebar"
+    "sidebar_toggle": "Toggle Sidebar",
+    "about": "About Platform"
   },
   "sidebar": {
     "dashboard": "Dashboard",

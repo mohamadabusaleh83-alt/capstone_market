@@ -15,6 +15,7 @@ import MainLayout from './layouts/MainLayout';
 import LoginPage from './pages/LoginPage';
 import ProjectsPage from './pages/ProjectsPage';
 import DashboardPage from './pages/DashboardPage';
+import AboutPage from './pages/AboutPage';
 import SupervisorApprovalPage from './pages/SupervisorApprovalPage';
 import ReportsPage from './pages/ReportsPage';
 import TeamsHubPage from './pages/TeamsHubPage';
@@ -46,6 +47,11 @@ export default function App() {
             <Routes>
               {/* صفحة تسجيل الدخول الموحد */}
               <Route path="/login" element={<LoginPage />} />
+
+              {/* صفحة عن المنصة متاحة داخل الهيكل الأساسي (MainLayout) */}
+              <Route element={<MainLayout />}>
+                <Route path="/about" element={<AboutPage />} />
+              </Route>
 
               {/* المسارات المحمية داخل الهيكل الأساسي (MainLayout) */}
               <Route

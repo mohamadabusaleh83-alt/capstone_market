@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -27,10 +27,17 @@ export default function MainLayout() {
 
           {/* تذييل المنصة العام وتوثيق المطور */}
           <footer className="mt-8 pt-4 border-t border-slate-200 dark:border-[#2499F2]/20 text-xs text-slate-500 dark:text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-start">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
               <span className="font-semibold text-slate-700 dark:text-slate-200">
                 سوق مشاريع التخرج - Capstone Market &copy; {new Date().getFullYear()}
               </span>
+              <span className="hidden sm:inline text-slate-400">|</span>
+              <Link
+                to="/about"
+                className="font-bold text-[#2499F2] hover:text-[#1B87D9] dark:text-[#28C8C0] dark:hover:text-[#77DCC1] transition-colors inline-flex items-center gap-1"
+              >
+                {isRtl ? 'عن المنصة' : 'About Platform'}
+              </Link>
               <span className="hidden sm:inline text-slate-400">|</span>
               <span>جميع الحقوق محفوظة</span>
             </div>

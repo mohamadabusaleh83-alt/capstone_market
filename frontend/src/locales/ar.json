@@ -57,7 +57,8 @@
     "active_account": "الحساب النشط (GET /me):",
     "logout": "تسجيل الخروج",
     "logout_tooltip": "تسجيل الخروج والعودة لشاشة الدخول",
-    "sidebar_toggle": "القائمة الجانبية"
+    "sidebar_toggle": "القائمة الجانبية",
+    "about": "عن المنصة"
   },
   "sidebar": {
     "dashboard": "الرئيسية",
