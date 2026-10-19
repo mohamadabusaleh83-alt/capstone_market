@@ -158,7 +158,7 @@ export default function AboutPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* البطاقة 1: استكشاف الابتكارات */}
-          <div className="group relative bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/25 rounded-3xl p-6 sm:p-7 shadow-sm hover:shadow-xl dark:hover:shadow-[0_10px_30px_-5px_rgba(40,200,192,0.2)] hover:border-[#28C8C0] dark:hover:border-[#28C8C0]/60 transition-all duration-300 flex flex-col justify-between">
+          <div className="group relative bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/25 rounded-3xl p-6 sm:p-7 shadow-sm hover:shadow-xl dark:hover:shadow-[0_10px_30px_-5px_rgba(40,200,192,0.2)] hover:border-[#28C8C0] dark:hover:border-[#28C8C0]/60 transition-all duration-300 flex flex-col justify-between">
             <div className="space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-[#28C8C0]/15 dark:bg-[#28C8C0]/20 border border-[#28C8C0]/30 flex items-center justify-center text-[#28C8C0] shadow-md shadow-[#28C8C0]/15 group-hover:scale-110 transition-transform duration-300">
                 <Lightbulb className="w-6 h-6" />
@@ -171,7 +171,7 @@ export default function AboutPage() {
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 group-hover:text-[#28C8C0] transition-colors">
                   {isRtl ? 'استكشاف الابتكارات' : 'Explore Innovations'}
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
                   {isRtl
                     ? 'نافذة موحدة لاستعراض المشاريع النوعية وحلول التخرج.'
                     : 'A unified portal to showcase qualitative capstone projects and graduation solutions.'}
@@ -179,14 +179,14 @@ export default function AboutPage() {
               </div>
             </div>
 
-            <div className="pt-4 mt-4 border-t border-slate-100 dark:border-white/5 flex items-center gap-1.5 text-[11px] text-[#2499F2] dark:text-[#77DCC1] font-semibold">
+            <div className="pt-4 mt-4 border-t border-slate-200 dark:border-white/5 flex items-center gap-1.5 text-[11px] text-[#2499F2] dark:text-[#77DCC1] font-semibold">
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>{isRtl ? 'مشاريع مصنفة وموثقة' : 'Verified & Categorized Projects'}</span>
             </div>
           </div>
 
           {/* البطاقة 2: فرص التعاون */}
-          <div className="group relative bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/25 rounded-3xl p-6 sm:p-7 shadow-sm hover:shadow-xl dark:hover:shadow-[0_10px_30px_-5px_rgba(36,153,242,0.2)] hover:border-[#2499F2] dark:hover:border-[#2499F2]/60 transition-all duration-300 flex flex-col justify-between">
+          <div className="group relative bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/25 rounded-3xl p-6 sm:p-7 shadow-sm hover:shadow-xl dark:hover:shadow-[0_10px_30px_-5px_rgba(36,153,242,0.2)] hover:border-[#2499F2] dark:hover:border-[#2499F2]/60 transition-all duration-300 flex flex-col justify-between">
             <div className="space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-[#2499F2]/15 dark:bg-[#2499F2]/20 border border-[#2499F2]/30 flex items-center justify-center text-[#2499F2] shadow-md shadow-[#2499F2]/15 group-hover:scale-110 transition-transform duration-300">
                 <Users className="w-6 h-6" />
@@ -199,7 +199,7 @@ export default function AboutPage() {
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 group-hover:text-[#2499F2] transition-colors">
                   {isRtl ? 'فرص التعاون' : 'Collaboration Opportunities'}
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
                   {isRtl
                     ? 'تمكين الشركات من استقطاب الكفاءات وتقديم العروض والرعاية.'
                     : 'Empowering companies to scout top talents, present partnership offers, and sponsor projects.'}
@@ -207,14 +207,14 @@ export default function AboutPage() {
               </div>
             </div>
 
-            <div className="pt-4 mt-4 border-t border-slate-100 dark:border-white/5 flex items-center gap-1.5 text-[11px] text-[#2499F2] dark:text-[#77DCC1] font-semibold">
+            <div className="pt-4 mt-4 border-t border-slate-200 dark:border-white/5 flex items-center gap-1.5 text-[11px] text-[#2499F2] dark:text-[#77DCC1] font-semibold">
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>{isRtl ? 'تواصل مباشر مع أصحاب العمل' : 'Direct Employer Engagement'}</span>
             </div>
           </div>
 
           {/* البطاقة 3: كفاءة الإدارة والمتابعة */}
-          <div className="group relative bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/25 rounded-3xl p-6 sm:p-7 shadow-sm hover:shadow-xl dark:hover:shadow-[0_10px_30px_-5px_rgba(119,220,193,0.2)] hover:border-[#77DCC1] dark:hover:border-[#77DCC1]/60 transition-all duration-300 flex flex-col justify-between">
+          <div className="group relative bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/25 rounded-3xl p-6 sm:p-7 shadow-sm hover:shadow-xl dark:hover:shadow-[0_10px_30px_-5px_rgba(119,220,193,0.2)] hover:border-[#77DCC1] dark:hover:border-[#77DCC1]/60 transition-all duration-300 flex flex-col justify-between">
             <div className="space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-[#77DCC1]/15 dark:bg-[#77DCC1]/20 border border-[#77DCC1]/30 flex items-center justify-center text-[#77DCC1] shadow-md shadow-[#77DCC1]/15 group-hover:scale-110 transition-transform duration-300">
                 <ShieldCheck className="w-6 h-6" />
@@ -227,7 +227,7 @@ export default function AboutPage() {
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 group-hover:text-[#77DCC1] transition-colors">
                   {isRtl ? 'كفاءة الإدارة والمتابعة' : 'Management & Tracking'}
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
                   {isRtl
                     ? 'أدوات رقمية متقدمة لتنظيم التقديم والاعتماد.'
                     : 'Advanced digital tools to organize proposal submissions, reviews, and accreditations.'}
@@ -235,7 +235,7 @@ export default function AboutPage() {
               </div>
             </div>
 
-            <div className="pt-4 mt-4 border-t border-slate-100 dark:border-white/5 flex items-center gap-1.5 text-[11px] text-[#2499F2] dark:text-[#77DCC1] font-semibold">
+            <div className="pt-4 mt-4 border-t border-slate-200 dark:border-white/5 flex items-center gap-1.5 text-[11px] text-[#2499F2] dark:text-[#77DCC1] font-semibold">
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>{isRtl ? 'لوحات تحكم وسجلات معتمدة' : 'Verified Dashboards & Audits'}</span>
             </div>

@@ -64,7 +64,7 @@ export default function Sidebar() {
     `w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs transition-all duration-200 cursor-pointer ${
       isActive
         ? 'bg-[#152550] border-s-4 border-[#28C8C0] text-white font-extrabold shadow-md shadow-[#28C8C0]/15'
-        : 'text-slate-600 dark:text-slate-300 hover:bg-[#F4F8FC] dark:hover:bg-[#152550]/70 hover:text-[#101E42] dark:hover:text-white font-medium'
+        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#152550]/70 hover:text-slate-950 dark:hover:text-white font-semibold'
     }`;
 
   return (
@@ -77,17 +77,17 @@ export default function Sidebar() {
         />
       )}
 
-      {/* القائمة الجانبية: متوافقة تماماً مع Navy الفخم (#101E42) وتباين ناعم للحدود و RTL/LTR */}
+      {/* القائمة الجانبية: تبدأ من الأعلى مباشرة (justify-start) مع حشوة طبيعية (pt-4 pb-4 px-3) */}
       <aside
         className={`
-          fixed top-0 bottom-0 ${isRtl ? 'right-0 border-l' : 'left-0 border-r'} z-50 w-72 md:w-64 bg-white dark:bg-[#101E42] border-slate-200 dark:border-[#2499F2]/20 p-4 
-          overflow-y-auto flex flex-col justify-between transition-all duration-300 ease-in-out shadow-2xl
-          md:static md:top-auto md:bottom-auto md:h-auto md:z-auto
+          fixed top-0 bottom-0 ${isRtl ? 'right-0 border-l' : 'left-0 border-r'} z-50 w-72 md:w-64 bg-white dark:bg-[#101E42] border-slate-300/80 dark:border-[#2499F2]/20 pt-4 pb-4 px-3 
+          overflow-y-auto flex flex-col justify-start transition-all duration-300 ease-in-out shadow-2xl
+          md:static md:top-auto md:bottom-auto md:min-h-full md:z-auto
           ${isSidebarOpen ? 'translate-x-0' : isRtl ? 'translate-x-full md:translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
         <div className="space-y-3">
-          {/* الشعار واسم المنصة وزر الإغلاق على الموبايل */}
+          {/* ترويسة رئيسية واحدة للشعار واسم المنصة */}
           <div className="flex items-center justify-between gap-2 mb-2">
             <Link
               to="/"
@@ -99,11 +99,11 @@ export default function Sidebar() {
                 <img src="/logo.svg" alt="Capstone Market" className="w-6 h-6 object-contain" />
               </div>
               <div className="min-w-0">
-                <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white tracking-wide block leading-tight truncate group-hover:text-[#2499F2] dark:group-hover:text-[#28C8C0] transition-colors">
-                  Capstone Market
+                <span className="font-black text-xs sm:text-sm text-slate-900 dark:text-white tracking-wide block leading-tight truncate group-hover:text-[#2499F2] dark:group-hover:text-[#28C8C0] transition-colors">
+                  سوق مشاريع التخرج
                 </span>
-                <span className="text-[10px] text-[#2499F2] dark:text-[#28C8C0] font-mono block truncate">
-                  v1.1 Full Suite
+                <span className="text-[10px] text-[#2499F2] dark:text-[#28C8C0] font-sans font-semibold block truncate">
+                  Capstone Market
                 </span>
               </div>
             </Link>
@@ -118,22 +118,25 @@ export default function Sidebar() {
             </button>
           </div>
 
-          {/* بطاقة الحساب النشط */}
-          <div className="p-3 bg-slate-50 dark:bg-[#152550] border border-slate-200/80 dark:border-[#2499F2]/20 rounded-xl mb-3 shadow-sm">
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">{t('nav.active_account')}</span>
-            <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 truncate">
+          {/* بطاقة الحساب النشط الشخصية الموجزة والمرتبة */}
+          <div className="p-2.5 sm:p-3 bg-slate-50 dark:bg-[#152550] border border-slate-200/80 dark:border-[#2499F2]/20 rounded-xl mb-3 shadow-sm flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/30 flex items-center justify-center shrink-0 shadow-xs">
               {currentUser.role === 'company' ? (
-                <Store className="w-3.5 h-3.5 text-[#2499F2] dark:text-[#28C8C0] shrink-0" />
+                <Store className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0]" />
               ) : currentUser.role === 'supervisor' ? (
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
+                <ShieldCheck className="w-4 h-4 text-amber-500 dark:text-amber-400" />
               ) : (
-                <GraduationCap className="w-3.5 h-3.5 text-[#28C8C0] dark:text-[#77DCC1] shrink-0" />
+                <GraduationCap className="w-4 h-4 text-[#28C8C0] dark:text-[#77DCC1]" />
               )}
-              {currentUser.name}
-            </p>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-1">
-              {getRoleLabel(currentUser.role)}
-            </span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-slate-900 dark:text-white truncate leading-tight">
+                {currentUser.name}
+              </p>
+              <span className="text-[10px] text-[#2499F2] dark:text-[#28C8C0] font-semibold block truncate mt-0.5">
+                {getRoleLabel(currentUser.role)}
+              </span>
+            </div>
           </div>
 
           <p className="text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase px-2 tracking-wider">
@@ -338,64 +341,64 @@ export default function Sidebar() {
               </NavLink>
             </div>
           )}
-
-          {/* المسارات المشتركة (مركز الإشعارات، الملف الشخصي، الإعدادات) */}
-          <div className="pt-2 border-t border-slate-200 dark:border-white/10 space-y-1">
-            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase px-2 tracking-wider mb-1">
-              {isRtl ? 'حسابي وإعداداتي' : 'Account & Tools'}
-            </p>
-
-            <NavLink to="/notifications" onClick={closeSidebarOnMobile} className={navLinkClass}>
-              <div className="flex items-center gap-2.5">
-                <Bell className="w-4 h-4 text-[#2499F2]" />
-                <span>{isRtl ? 'مركز الإشعارات' : 'Notifications'}</span>
-              </div>
-              {unreadNotificationsCount > 0 && (
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-              )}
-            </NavLink>
-
-            <NavLink to="/profile" onClick={closeSidebarOnMobile} className={navLinkClass}>
-              <div className="flex items-center gap-2.5">
-                <User className="w-4 h-4 text-[#28C8C0]" />
-                <span>{isRtl ? 'الملف الشخصي' : 'Profile'}</span>
-              </div>
-            </NavLink>
-
-            <NavLink to="/settings" onClick={closeSidebarOnMobile} className={navLinkClass}>
-              <div className="flex items-center gap-2.5">
-                <Settings className="w-4 h-4 text-slate-400" />
-                <span>{isRtl ? 'إعدادات الحساب' : 'Settings'}</span>
-              </div>
-            </NavLink>
-
-            <NavLink to="/about" onClick={closeSidebarOnMobile} className={navLinkClass}>
-              <div className="flex items-center gap-2.5">
-                <Info className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0]" />
-                <span>{t('nav.about', isRtl ? 'عن المنصة' : 'About Platform')}</span>
-              </div>
-            </NavLink>
-          </div>
         </div>
 
-        {/* الجزء السفلي: حالة الاتصال وزر تسجيل الخروج الصريح */}
-        <div className="pt-3 border-t border-slate-200/80 dark:border-[#2499F2]/20 space-y-2 mt-4">
-          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 px-1">
-            <span>{t('nav.connection_status')}</span>
-            <span className="text-[#28C8C0] dark:text-[#77DCC1] font-semibold">{t('nav.connected_server')}</span>
-          </div>
+        {/* روابط أسفل القائمة: إعدادات الحساب، عن المنصة، وزر تسجيل الخروج مثبتة في الأسفل عبر mt-auto */}
+        <div className="mt-auto pt-3 border-t border-slate-300/80 dark:border-[#2499F2]/20 space-y-1">
+          <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase px-2 tracking-wider mb-1">
+            {isRtl ? 'حسابي وإعداداتي' : 'Account & Tools'}
+          </p>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:text-white hover:bg-rose-600/90 dark:hover:bg-rose-600/80 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 transition cursor-pointer active:scale-95 shadow-sm"
-          >
-            <div className="flex items-center gap-2">
-              <LogOut className="w-4 h-4" />
-              <span>{isRtl ? 'تسجيل الخروج' : 'Sign Out'}</span>
+          <NavLink to="/notifications" onClick={closeSidebarOnMobile} className={navLinkClass}>
+            <div className="flex items-center gap-2.5">
+              <Bell className="w-4 h-4 text-[#2499F2]" />
+              <span>{isRtl ? 'مركز الإشعارات' : 'Notifications'}</span>
             </div>
-            <span className="text-[10px] font-mono opacity-70">Exit</span>
-          </button>
+            {unreadNotificationsCount > 0 && (
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+            )}
+          </NavLink>
+
+          <NavLink to="/profile" onClick={closeSidebarOnMobile} className={navLinkClass}>
+            <div className="flex items-center gap-2.5">
+              <User className="w-4 h-4 text-[#28C8C0]" />
+              <span>{isRtl ? 'الملف الشخصي' : 'Profile'}</span>
+            </div>
+          </NavLink>
+
+          <NavLink to="/settings" onClick={closeSidebarOnMobile} className={navLinkClass}>
+            <div className="flex items-center gap-2.5">
+              <Settings className="w-4 h-4 text-slate-400" />
+              <span>{isRtl ? 'إعدادات الحساب' : 'Settings'}</span>
+            </div>
+          </NavLink>
+
+          <NavLink to="/about" onClick={closeSidebarOnMobile} className={navLinkClass}>
+            <div className="flex items-center gap-2.5">
+              <Info className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0]" />
+              <span>{t('nav.about', isRtl ? 'عن المنصة' : 'About Platform')}</span>
+            </div>
+          </NavLink>
+
+          {/* حالة الاتصال وزر تسجيل الخروج */}
+          <div className="pt-2 border-t border-slate-200/80 dark:border-white/10 space-y-2 mt-2">
+            <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400 px-1 font-medium">
+              <span>{t('nav.connection_status')}</span>
+              <span className="text-emerald-700 dark:text-[#77DCC1] font-bold">{t('nav.connected_server')}</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:text-white hover:bg-rose-600/90 dark:hover:bg-rose-600/80 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 transition cursor-pointer active:scale-95 shadow-sm"
+            >
+              <div className="flex items-center gap-2">
+                <LogOut className="w-4 h-4" />
+                <span>{isRtl ? 'تسجيل الخروج' : 'Sign Out'}</span>
+              </div>
+              <span className="text-[10px] font-mono opacity-70">Exit</span>
+            </button>
+          </div>
         </div>
       </aside>
     </>

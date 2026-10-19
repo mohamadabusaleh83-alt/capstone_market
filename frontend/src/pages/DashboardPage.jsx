@@ -147,20 +147,13 @@ export default function DashboardPage() {
   return (
     <div className="space-y-7 max-w-6xl mx-auto">
       {/* 1. ترويسة لوحة التحكم العصرية المخصصة حسب دور المستخدم */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-white via-[#F4F8FC] to-white dark:from-[#101E42] dark:via-[#152550] dark:to-[#101E42] backdrop-blur-xl border border-slate-200/90 dark:border-[#2499F2]/25 p-6 sm:p-7 rounded-3xl shadow-sm dark:shadow-[0_4px_25px_-5px_rgba(16,30,66,0.6)]">
+      <div className="relative overflow-hidden bg-gradient-to-r from-white via-slate-50 to-white dark:from-[#101E42] dark:via-[#152550] dark:to-[#101E42] backdrop-blur-xl border border-slate-300/80 dark:border-[#2499F2]/25 p-6 sm:p-7 rounded-3xl shadow-sm dark:shadow-[0_4px_25px_-5px_rgba(16,30,66,0.6)]">
         <div className="absolute -top-24 -end-24 w-64 h-64 bg-[#28C8C0]/10 dark:bg-[#28C8C0]/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -start-24 w-64 h-64 bg-[#2499F2]/10 dark:bg-[#2499F2]/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-[#152550] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-[#2499F2]/30 flex items-center gap-1.5 shadow-sm">
-                <Sparkles className="w-3.5 h-3.5 text-[#2499F2] dark:text-[#28C8C0]" />
-                {t('dashboard.role_overview')}: {currentUser.role === 'supervisor' ? (isRtl ? 'المشرف الأكاديمي المعتمد' : 'Official Academic Supervisor') : currentUser.title}
-              </span>
-            </div>
-
-            {/* رسالة الترحيب المخصصة حسب الدور وفق المتطلبات */}
+            {/* رسالة الترحيب المباشرة والنظيفة وفق المتطلبات */}
             <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
               {currentUser.role === 'company' && <Store className="w-6 h-6 text-[#2499F2] dark:text-[#28C8C0]" />}
               {currentUser.role === 'supervisor' && <ShieldCheck className="w-6 h-6 text-amber-500 dark:text-amber-400" />}
@@ -168,14 +161,14 @@ export default function DashboardPage() {
               
               <span>
                 {currentUser.role === 'supervisor'
-                  ? (isRtl ? 'مرحباً بك، د. أسامة أمين مرعي 👋' : 'Welcome back, Dr. Osama Amin Marie 👋')
+                  ? (isRtl ? `مرحباً بك، ${currentUser.name || 'د. أسامة أمين مرعي'} 👋` : `Welcome back, ${currentUser.name || 'Dr. Osama Amin Marie'} 👋`)
                   : currentUser.role === 'company'
                     ? (isRtl ? `مرحباً بكم، ${currentUser.name || 'شركة النور للحلول البرمجية'} 👋` : `Welcome, ${currentUser.name || 'Al-Noor Software Solutions'} 👋`)
-                    : (isRtl ? `مرحباً بك، ${currentUser.name || 'أحمد منصور'} 👋` : `Welcome back, ${currentUser.name || 'Ahmed Mansour'} 👋`)}
+                    : (isRtl ? `مرحباً بك، ${currentUser.name || 'mohamad'} 👋` : `Welcome back, ${currentUser.name || 'mohamad'} 👋`)}
               </span>
             </h1>
 
-            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1.5 max-w-2xl leading-relaxed">
+            <p className="text-xs text-slate-700 dark:text-slate-300 mt-1.5 max-w-2xl leading-relaxed">
               {currentUser.role === 'supervisor'
                 ? (isRtl ? 'لوحة الإشراف الأكاديمي الشاملة لمراجعة واعتماد المشاريع، تقييم التقارير الأسبوعية، ومتابعة شُعب التخرج.' : 'Comprehensive academic supervision dashboard for project review, weekly report evaluations, and graduation sections.')
                 : currentUser.role === 'company'
@@ -220,7 +213,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={fetchProjects}
-              className="bg-white hover:bg-slate-50 dark:bg-[#152550] dark:hover:bg-[#182b5c] border border-slate-200 dark:border-[#2499F2]/30 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 cursor-pointer shadow-sm active:scale-95"
+              className="bg-white hover:bg-slate-50 dark:bg-[#152550] dark:hover:bg-[#182b5c] border border-slate-300/80 dark:border-[#2499F2]/30 text-slate-800 dark:text-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 cursor-pointer shadow-sm active:scale-95"
               title={t('company.refresh_list')}
             >
               <RefreshCw className="w-3.5 h-3.5 text-[#2499F2] dark:text-[#28C8C0]" />
@@ -236,9 +229,9 @@ export default function DashboardPage() {
       {currentUser.role === 'student' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* 1. مشروعي */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-[#2499F2]/40 dark:hover:border-[#2499F2]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
+          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-[#2499F2]/40 dark:hover:border-[#2499F2]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-400">
                 {isRtl ? 'مشروعي' : 'My Project'}
               </span>
               <div className="w-10 h-10 rounded-xl bg-[#2499F2]/10 border border-[#2499F2]/20 flex items-center justify-center text-[#2499F2] group-hover:scale-110 transition-transform">
@@ -250,20 +243,20 @@ export default function DashboardPage() {
                 <span className="text-2xl font-black text-slate-900 dark:text-white">
                   {isRtl ? '1 مشروع' : '1 Project'}
                 </span>
-                <span className="text-xs font-bold text-[#2499F2] bg-[#2499F2]/10 px-2 py-0.5 rounded-full border border-[#2499F2]/20">
+                <span className="text-xs font-bold text-[#1875bb] dark:text-[#28C8C0] bg-blue-50 dark:bg-[#2499F2]/10 px-2 py-0.5 rounded-full border border-blue-200 dark:border-[#2499F2]/20">
                   {isRtl ? 'شُعبة 1' : 'Sec 1'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium truncate" title={studentAssignedProject?.title}>
+              <p className="text-[11px] text-slate-700 dark:text-slate-300 font-medium truncate" title={studentAssignedProject?.title}>
                 {studentAssignedProject?.title}
               </p>
             </div>
           </div>
 
           {/* 2. حالة المراجعة */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-[#28C8C0]/40 dark:hover:border-[#28C8C0]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
+          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-[#28C8C0]/40 dark:hover:border-[#28C8C0]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-400">
                 {isRtl ? 'حالة المراجعة' : 'Review Status'}
               </span>
               <div className="w-10 h-10 rounded-xl bg-[#28C8C0]/10 border border-[#28C8C0]/20 flex items-center justify-center text-[#28C8C0] group-hover:scale-110 transition-transform">
@@ -272,20 +265,20 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black text-emerald-600 dark:text-[#77DCC1]">
+                <span className="text-2xl font-black text-emerald-700 dark:text-[#77DCC1]">
                   {isRtl ? 'معتمد أكاديمياً' : 'Approved'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate font-medium">
                 {isRtl ? 'بإشراف: د. أسامة أمين مرعي' : 'Supervised: Dr. Osama Marie'}
               </p>
             </div>
           </div>
 
           {/* 3. طلبات الشركات */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-[#2499F2]/40 dark:hover:border-[#2499F2]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
+          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-[#2499F2]/40 dark:hover:border-[#2499F2]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-400">
                 {isRtl ? 'طلبات الشركات' : 'Company Requests'}
               </span>
               <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-[#2499F2] group-hover:scale-110 transition-transform">
@@ -297,20 +290,20 @@ export default function DashboardPage() {
                 <span className="text-3xl font-black text-slate-900 dark:text-white">
                   {myApplications.length > 0 ? myApplications.length : 3}
                 </span>
-                <span className="text-xs font-bold text-[#2499F2] bg-[#2499F2]/10 px-2 py-0.5 rounded-full border border-[#2499F2]/20">
+                <span className="text-xs font-bold text-[#1875bb] dark:text-[#28C8C0] bg-blue-50 dark:bg-[#2499F2]/10 px-2 py-0.5 rounded-full border border-blue-200 dark:border-[#2499F2]/20">
                   {isRtl ? 'فرص نشطة' : 'Active'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate font-medium">
                 {isRtl ? 'فرص تدريب وشراكة مستلمة' : 'Collaboration inquiries'}
               </p>
             </div>
           </div>
 
           {/* 4. المهارات */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-[#77DCC1]/40 dark:hover:border-[#77DCC1]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
+          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-[#77DCC1]/40 dark:hover:border-[#77DCC1]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-400">
                 {isRtl ? 'المهارات' : 'Skills'}
               </span>
               <div className="w-10 h-10 rounded-xl bg-[#77DCC1]/15 border border-[#77DCC1]/30 flex items-center justify-center text-[#28C8C0] dark:text-[#77DCC1] group-hover:scale-110 transition-transform">
@@ -322,11 +315,11 @@ export default function DashboardPage() {
                 <span className="text-3xl font-black text-slate-900 dark:text-white">
                   {userSkills.length}
                 </span>
-                <span className="text-xs font-bold text-emerald-700 dark:text-[#77DCC1] bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-[#28C8C0]/30">
+                <span className="text-xs font-bold text-emerald-900 dark:text-[#77DCC1] bg-emerald-100 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-[#28C8C0]/30">
                   {isRtl ? 'مطابقة ذكية' : 'Match Ready'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate font-medium">
                 {userSkills.slice(0, 3).join(' • ')}
               </p>
             </div>
@@ -338,9 +331,9 @@ export default function DashboardPage() {
       {currentUser.role === 'company' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* 1. المشاريع المستكشفة */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-[#2499F2]/40 dark:hover:border-[#2499F2]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
+          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-[#2499F2]/40 dark:hover:border-[#2499F2]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-400">
                 {isRtl ? 'المشاريع المستكشفة' : 'Explored Projects'}
               </span>
               <div className="w-10 h-10 rounded-xl bg-[#2499F2]/10 border border-[#2499F2]/20 flex items-center justify-center text-[#2499F2] group-hover:scale-110 transition-transform">
@@ -349,19 +342,19 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900 dark:text-white">{totalProjects}</span>
-              <span className="text-xs font-bold text-[#2499F2] bg-[#2499F2]/10 px-2 py-0.5 rounded-full border border-[#2499F2]/20">
+              <span className="text-xs font-bold text-[#1875bb] dark:text-[#28C8C0] bg-blue-50 dark:bg-[#2499F2]/10 px-2 py-0.5 rounded-full border border-blue-200 dark:border-[#2499F2]/20">
                 {approvedProjects} {isRtl ? 'معتمد' : 'Approved'}
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 truncate">
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2 truncate font-medium">
               {isRtl ? 'مشاريع خريجين في سوق التخرج' : 'Graduation projects in market'}
             </p>
           </div>
 
           {/* 2. المحفوظة */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-amber-400 dark:hover:border-amber-500/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
+          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-amber-400 dark:hover:border-amber-500/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-400">
                 {isRtl ? 'المشاريع المحفوظة' : 'Saved Projects'}
               </span>
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
@@ -370,19 +363,19 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900 dark:text-white">{favorites.length}</span>
-              <span className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-500/20">
+              <span className="text-xs font-bold text-amber-900 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-500/20">
                 {isRtl ? 'مفضلة للرعاية' : 'Watchlist'}
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 truncate">
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2 truncate font-medium">
               {isRtl ? 'مشاريع محفوظة للتواصل والتوظيف' : 'Bookmarked for follow-up'}
             </p>
           </div>
 
           {/* 3. الطلبات المرسلة */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-[#28C8C0]/40 dark:hover:border-[#28C8C0]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
+          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-[#28C8C0]/40 dark:hover:border-[#28C8C0]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-400">
                 {isRtl ? 'الطلبات المرسلة' : 'Sent Requests'}
               </span>
               <div className="w-10 h-10 rounded-xl bg-[#28C8C0]/10 border border-[#28C8C0]/20 flex items-center justify-center text-[#28C8C0] group-hover:scale-110 transition-transform">
@@ -391,19 +384,19 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900 dark:text-white">{applications.length}</span>
-              <span className="text-xs font-bold text-emerald-700 dark:text-[#77DCC1] bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-[#28C8C0]/30">
+              <span className="text-xs font-bold text-emerald-900 dark:text-[#77DCC1] bg-emerald-100 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-[#28C8C0]/30">
                 {pendingApplicationsCount} {isRtl ? 'قيد الرد' : 'Pending'}
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 truncate">
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2 truncate font-medium">
               {isRtl ? 'طلبات تعاون مع فرق التخرج' : 'Collaboration requests sent'}
             </p>
           </div>
 
           {/* 4. التقنيات الشائعة */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-[#77DCC1]/40 dark:hover:border-[#77DCC1]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
+          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-[#77DCC1]/40 dark:hover:border-[#77DCC1]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-400">
                 {isRtl ? 'التقنيات الشائعة' : 'Trending Technologies'}
               </span>
               <div className="w-10 h-10 rounded-xl bg-[#77DCC1]/15 border border-[#77DCC1]/30 flex items-center justify-center text-[#28C8C0] dark:text-[#77DCC1] group-hover:scale-110 transition-transform">
@@ -412,11 +405,11 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900 dark:text-white">{techDistribution.length > 0 ? techDistribution.length : 5}</span>
-              <span className="text-xs font-bold text-[#2499F2] bg-[#2499F2]/10 px-2 py-0.5 rounded-full border border-[#2499F2]/20">
+              <span className="text-xs font-bold text-[#1875bb] dark:text-[#28C8C0] bg-blue-50 dark:bg-[#2499F2]/10 px-2 py-0.5 rounded-full border border-blue-200 dark:border-[#2499F2]/20">
                 {isRtl ? 'طلب مرتفع' : 'Top Tech'}
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 truncate">
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2 truncate font-medium">
               {techDistribution.slice(0, 2).map((t) => t.name).join(' & ') || 'Python & React'}
             </p>
           </div>
@@ -427,9 +420,9 @@ export default function DashboardPage() {
       {currentUser.role === 'supervisor' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* 1. المشاريع بانتظار المراجعة */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-amber-400 dark:hover:border-amber-500/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
+          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-amber-400 dark:hover:border-amber-500/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-400">
                 {isRtl ? 'المشاريع بانتظار المراجعة' : 'Projects Pending Review'}
               </span>
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
@@ -438,19 +431,19 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900 dark:text-white">{pendingProjects}</span>
-              <span className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-500/20">
+              <span className="text-xs font-bold text-amber-900 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-500/20">
                 {isRtl ? 'إجراء عاجل' : 'Action Required'}
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 truncate">
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2 truncate font-medium">
               {isRtl ? 'مشاريع شركات تتطلب التدقيق والاعتماد' : 'Awaiting academic review'}
             </p>
           </div>
 
           {/* 2. المشاريع المعتمدة */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-[#28C8C0]/40 dark:hover:border-[#28C8C0]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
+          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-[#28C8C0]/40 dark:hover:border-[#28C8C0]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-400">
                 {isRtl ? 'المشاريع المعتمدة' : 'Approved Projects'}
               </span>
               <div className="w-10 h-10 rounded-xl bg-[#28C8C0]/10 border border-[#28C8C0]/20 flex items-center justify-center text-[#28C8C0] group-hover:scale-110 transition-transform">
@@ -459,19 +452,19 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900 dark:text-white">{approvedProjects}</span>
-              <span className="text-xs font-bold text-emerald-700 dark:text-[#77DCC1] bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-[#28C8C0]/30">
+              <span className="text-xs font-bold text-emerald-900 dark:text-[#77DCC1] bg-emerald-100 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-[#28C8C0]/30">
                 {totalProjects > 0 ? Math.round((approvedProjects / totalProjects) * 100) : 100}%
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 truncate">
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2 truncate font-medium">
               {isRtl ? 'مشاريع جاهزة للتنفيذ واستقبال الطلاب' : 'Active capstone projects'}
             </p>
           </div>
 
           {/* 3. الطلاب */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-[#2499F2]/40 dark:hover:border-[#2499F2]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
+          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-[#2499F2]/40 dark:hover:border-[#2499F2]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-400">
                 {isRtl ? 'الطلاب' : 'Students'}
               </span>
               <div className="w-10 h-10 rounded-xl bg-[#2499F2]/10 border border-[#2499F2]/20 flex items-center justify-center text-[#2499F2] group-hover:scale-110 transition-transform">
@@ -480,19 +473,19 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900 dark:text-white">{studentsList.length}</span>
-              <span className="text-xs font-bold text-[#2499F2] bg-[#2499F2]/10 px-2 py-0.5 rounded-full border border-[#2499F2]/20">
+              <span className="text-xs font-bold text-[#1875bb] dark:text-[#28C8C0] bg-blue-50 dark:bg-[#2499F2]/10 px-2 py-0.5 rounded-full border border-blue-200 dark:border-[#2499F2]/20">
                 {studentsList.filter((s) => s.isFree).length} {isRtl ? 'أحرار' : 'Free'}
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 truncate">
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2 truncate font-medium">
               {isRtl ? 'مسجلون في شُعبة مشاريع التخرج 1' : 'Enrolled in capstone section'}
             </p>
           </div>
 
           {/* 4. نسبة المقاعد الشاغرة */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-[#77DCC1]/40 dark:hover:border-[#77DCC1]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
+          <div className="relative overflow-hidden bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-[#77DCC1]/40 dark:hover:border-[#77DCC1]/40 p-5 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] transition-all duration-300 group hover:-translate-y-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-400">
                 {isRtl ? 'نسبة المقاعد الشاغرة' : 'Vacant Seats Rate'}
               </span>
               <div className="w-10 h-10 rounded-xl bg-[#77DCC1]/15 border border-[#77DCC1]/30 flex items-center justify-center text-[#28C8C0] dark:text-[#77DCC1] group-hover:scale-110 transition-transform">
@@ -501,7 +494,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900 dark:text-white">{vacantPercentage}%</span>
-              <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-[#152550] px-2 py-0.5 rounded-full border border-slate-200 dark:border-[#2499F2]/20">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-[#152550] px-2 py-0.5 rounded-full border border-slate-300/80 dark:border-[#2499F2]/20">
                 {totalAvailableSeats} {isRtl ? 'شاغر' : 'open'}
               </span>
             </div>
@@ -517,14 +510,14 @@ export default function DashboardPage() {
 
       {/* 3. قسم مشروعي التفصيلي للطالب (Student Project Detail & Quick Actions) */}
       {currentUser.role === 'student' && studentAssignedProject && (
-        <div id="my-project" className="bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 rounded-3xl p-6 shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-white/5">
+        <div id="my-project" className="bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 rounded-3xl p-6 shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-white/5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[#2499F2]/10 border border-[#2499F2]/20 flex items-center justify-center text-[#2499F2]">
                 <Briefcase className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-bold">
                   {isRtl ? 'مشروع التخرج المعتمد' : 'Assigned Capstone Project'}
                 </span>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">
@@ -534,14 +527,14 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-[#77DCC1] border border-emerald-200 dark:border-[#28C8C0]/30 px-3 py-1 rounded-full font-bold flex items-center gap-1.5">
+              <span className="text-xs bg-emerald-100 dark:bg-emerald-500/10 text-emerald-900 dark:text-[#77DCC1] border border-emerald-300 dark:border-[#28C8C0]/30 px-3 py-1 rounded-full font-bold flex items-center gap-1.5">
                 <Check className="w-3.5 h-3.5" />
                 {isRtl ? 'معتمد أكاديمياً' : 'Approved'}
               </span>
               <button
                 type="button"
                 onClick={() => setActiveChatProject(studentAssignedProject)}
-                className="inline-flex items-center gap-1.5 text-xs bg-[#2499F2]/10 hover:bg-[#2499F2]/20 text-[#2499F2] px-3 py-1.5 rounded-xl font-bold transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-xs bg-blue-50 hover:bg-blue-100 dark:bg-[#2499F2]/10 dark:hover:bg-[#2499F2]/20 text-[#1875bb] dark:text-[#2499F2] px-3 py-1.5 rounded-xl font-bold transition cursor-pointer border border-blue-200 dark:border-transparent"
               >
                 <MessageSquare className="w-3.5 h-3.5" />
                 <span>{isRtl ? 'شات المشروع' : 'Chat'}</span>
@@ -549,30 +542,30 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+          <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
             {studentAssignedProject.description}
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-            <div className="p-3 bg-[#F4F8FC] dark:bg-[#152550]/60 rounded-xl border border-slate-200/80 dark:border-[#2499F2]/20 text-xs">
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-1">{isRtl ? 'المشرف الأكاديمي' : 'Supervisor'}</span>
+            <div className="p-3 bg-slate-50 dark:bg-[#152550]/60 rounded-xl border border-slate-300/80 dark:border-[#2499F2]/20 text-xs">
+              <span className="text-[10px] text-slate-600 dark:text-slate-400 block mb-1 font-semibold">{isRtl ? 'المشرف الأكاديمي' : 'Supervisor'}</span>
               <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-amber-500" />
                 {studentAssignedProject.supervisor || 'د. أسامة أمين مرعي'}
               </span>
             </div>
 
-            <div className="p-3 bg-[#F4F8FC] dark:bg-[#152550]/60 rounded-xl border border-slate-200/80 dark:border-[#2499F2]/20 text-xs">
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-1">{isRtl ? 'المقاعد المشغولة' : 'Team Capacity'}</span>
+            <div className="p-3 bg-slate-50 dark:bg-[#152550]/60 rounded-xl border border-slate-300/80 dark:border-[#2499F2]/20 text-xs">
+              <span className="text-[10px] text-slate-600 dark:text-slate-400 block mb-1 font-semibold">{isRtl ? 'المقاعد المشغولة' : 'Team Capacity'}</span>
               <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                 <Users className="w-4 h-4 text-[#2499F2]" />
                 {studentAssignedProject.currentMembers || 3} / {studentAssignedProject.maxMembers || 4} {isRtl ? 'أعضاء' : 'Members'}
               </span>
             </div>
 
-            <div className="p-3 bg-[#F4F8FC] dark:bg-[#152550]/60 rounded-xl border border-slate-200/80 dark:border-[#2499F2]/20 text-xs flex items-center justify-between">
+            <div className="p-3 bg-slate-50 dark:bg-[#152550]/60 rounded-xl border border-slate-300/80 dark:border-[#2499F2]/20 text-xs flex items-center justify-between">
               <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-1">{isRtl ? 'المهارات والتقنيات' : 'Required Skills'}</span>
+                <span className="text-[10px] text-slate-600 dark:text-slate-400 block mb-1 font-semibold">{isRtl ? 'المهارات والتقنيات' : 'Required Skills'}</span>
                 <span className="font-bold text-slate-900 dark:text-white">
                   {userSkills.length} {isRtl ? 'مهارات متطابقة' : 'Skills'}
                 </span>
@@ -592,41 +585,41 @@ export default function DashboardPage() {
       {/* 4. الرسوم البيانية التفاعلية: تحليلات السوق والمهارات (Market Insights) */}
       <div id="market-insights" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* الرسم 1: توزيع المشاريع حسب التقنيات والمسارات (Bar Chart) */}
-        <div className="lg:col-span-2 bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 rounded-3xl p-6 shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 rounded-3xl p-6 shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Layers className="w-5 h-5 text-[#2499F2] dark:text-[#28C8C0]" />
                 {t('dashboard.tech_distribution_title')}
               </h3>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+              <span className="text-[11px] text-slate-600 dark:text-slate-400 font-mono font-semibold">
                 {techDistribution.length} {isRtl ? 'تقنيات رئيسية' : 'Key Skills'}
               </span>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
+            <p className="text-xs text-slate-700 dark:text-slate-400 mb-6 leading-relaxed">
               {t('dashboard.tech_distribution_desc')}
             </p>
 
             <div className="space-y-4">
               {techDistribution.length === 0 ? (
-                <div className="py-12 text-center text-xs text-slate-400 dark:text-slate-500">
+                <div className="py-12 text-center text-xs text-slate-500 dark:text-slate-500">
                   {isRtl ? 'لا توجد بيانات كافية عن التقنيات حتى الآن.' : 'No technology metrics available yet.'}
                 </div>
               ) : (
                 techDistribution.map((item, idx) => (
                   <div key={idx} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-200">
+                      <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-slate-200">
                         <span className="w-2 h-2 rounded-full bg-[#2499F2] dark:bg-[#28C8C0]" />
                         <span>{item.name}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                      <div className="flex items-center gap-2 text-[11px] font-mono text-slate-600 dark:text-slate-400">
                         <span className="text-slate-900 dark:text-white font-bold">{item.count} {isRtl ? 'مشاريع' : 'projects'}</span>
-                        <span className="text-slate-400 dark:text-slate-400">({item.percent}%)</span>
+                        <span className="text-slate-500 dark:text-slate-400">({item.percent}%)</span>
                       </div>
                     </div>
                     {/* شريط الرسم البياني */}
-                    <div className="w-full bg-slate-100 dark:bg-[#152550] rounded-full h-3 overflow-hidden p-0.5 border border-slate-200/80 dark:border-[#2499F2]/20">
+                    <div className="w-full bg-slate-200 dark:bg-[#152550] rounded-full h-3 overflow-hidden p-0.5 border border-slate-300/80 dark:border-[#2499F2]/20">
                       <div
                         className={`h-full rounded-full bg-gradient-to-r ${item.gradient} transition-all duration-700 shadow-sm`}
                         style={{ width: `${Math.max(8, item.percent)}%` }}
@@ -638,22 +631,22 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="pt-5 mt-5 border-t border-slate-200/80 dark:border-white/5 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+          <div className="pt-5 mt-5 border-t border-slate-200 dark:border-white/5 flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400 font-medium">
             <span>{isRtl ? 'يتم التحديث تلقائياً مع كل مشروع جديد يضاف لقاعدة البيانات' : 'Automatically updated with projects in database'}</span>
-            <span className="text-emerald-600 dark:text-[#77DCC1] font-bold">Live API ✓</span>
+            <span className="text-emerald-700 dark:text-[#77DCC1] font-bold">Live API ✓</span>
           </div>
         </div>
 
         {/* الرسم 2: مؤشر إشغال المقاعد الكلي (Circular Radial Progress Doughnut) */}
-        <div className="bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 rounded-3xl p-6 shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] flex flex-col justify-between">
+        <div className="bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 rounded-3xl p-6 shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <PieChart className="w-5 h-5 text-emerald-600 dark:text-[#77DCC1]" />
+                <PieChart className="w-5 h-5 text-emerald-700 dark:text-[#77DCC1]" />
                 {t('dashboard.occupancy_rate_title')}
               </h3>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
+            <p className="text-xs text-slate-700 dark:text-slate-400 mb-4 leading-relaxed">
               {t('dashboard.occupancy_rate_desc')}
             </p>
 
@@ -695,7 +688,7 @@ export default function DashboardPage() {
               {/* النص المتموضع في قلب الدائرة */}
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                 <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{occupancyPercentage}%</span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                <span className="text-[10px] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">
                   {isRtl ? 'نسبة الإشغال' : 'Occupancy'}
                 </span>
               </div>
@@ -703,24 +696,24 @@ export default function DashboardPage() {
 
             {/* تفاصيل المقاعد الثلاثية */}
             <div className="grid grid-cols-3 gap-2 pt-2 text-center">
-              <div className="p-2.5 bg-slate-50 dark:bg-[#152550]/60 rounded-xl border border-slate-200/80 dark:border-[#2499F2]/20">
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">{t('dashboard.reserved_seats')}</span>
-                <span className="text-sm font-black text-emerald-600 dark:text-[#77DCC1]">{totalOccupiedSeats}</span>
+              <div className="p-2.5 bg-slate-50 dark:bg-[#152550]/60 rounded-xl border border-slate-300/80 dark:border-[#2499F2]/20">
+                <span className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5 font-semibold">{t('dashboard.reserved_seats')}</span>
+                <span className="text-sm font-black text-emerald-700 dark:text-[#77DCC1]">{totalOccupiedSeats}</span>
               </div>
 
-              <div className="p-2.5 bg-slate-50 dark:bg-[#152550]/60 rounded-xl border border-slate-200/80 dark:border-[#2499F2]/20">
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">{t('dashboard.available_seats')}</span>
-                <span className="text-sm font-black text-[#2499F2] dark:text-[#28C8C0]">{totalAvailableSeats}</span>
+              <div className="p-2.5 bg-slate-50 dark:bg-[#152550]/60 rounded-xl border border-slate-300/80 dark:border-[#2499F2]/20">
+                <span className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5 font-semibold">{t('dashboard.available_seats')}</span>
+                <span className="text-sm font-black text-[#1875bb] dark:text-[#28C8C0]">{totalAvailableSeats}</span>
               </div>
 
-              <div className="p-2.5 bg-slate-50 dark:bg-[#152550]/60 rounded-xl border border-slate-200/80 dark:border-[#2499F2]/20">
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">{t('dashboard.total_capacity')}</span>
-                <span className="text-sm font-black text-slate-800 dark:text-slate-200">{totalMaxSeats}</span>
+              <div className="p-2.5 bg-slate-50 dark:bg-[#152550]/60 rounded-xl border border-slate-300/80 dark:border-[#2499F2]/20">
+                <span className="text-[10px] text-slate-600 dark:text-slate-400 block mb-0.5 font-semibold">{t('dashboard.total_capacity')}</span>
+                <span className="text-sm font-black text-slate-900 dark:text-slate-200">{totalMaxSeats}</span>
               </div>
             </div>
           </div>
 
-          <div className="pt-4 mt-4 border-t border-slate-200/80 dark:border-white/5 text-center text-[11px] text-slate-500 dark:text-slate-400">
+          <div className="pt-4 mt-4 border-t border-slate-200 dark:border-white/5 text-center text-[11px] text-slate-600 dark:text-slate-400 font-medium">
             {isRtl ? `الشاغر المتاح للطلبة: ${totalAvailableSeats} مقعداً (${vacantPercentage}%)` : `${totalAvailableSeats} open seats remaining (${vacantPercentage}%)`}
           </div>
         </div>
@@ -746,9 +739,9 @@ export default function DashboardPage() {
           </div>
 
           {myCompanyProjects.length === 0 ? (
-            <div className="bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 rounded-2xl p-8 text-center space-y-3 shadow-sm">
+            <div className="bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 rounded-2xl p-8 text-center space-y-3 shadow-sm">
               <Briefcase className="w-8 h-8 text-slate-400 mx-auto" />
-              <p className="text-xs text-slate-500 dark:text-slate-400">{isRtl ? 'لم تقم شركتك بطرح أي مشاريع حتى الآن.' : 'No projects posted yet.'}</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">{isRtl ? 'لم تقم شركتك بطرح أي مشاريع حتى الآن.' : 'No projects posted yet.'}</p>
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(true)}
@@ -769,18 +762,18 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={p.id}
-                    className="bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-[#2499F2]/40 p-5 rounded-2xl flex flex-col justify-between transition-all duration-200 shadow-sm"
+                    className="bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-[#2499F2]/40 p-5 rounded-2xl flex flex-col justify-between transition-all duration-200 shadow-sm"
                   >
                     <div>
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-[11px] bg-slate-100 dark:bg-[#152550] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#2499F2]/20 px-2.5 py-0.5 rounded-md">
+                        <span className="text-[11px] bg-slate-100 dark:bg-[#152550] text-slate-800 dark:text-slate-300 border border-slate-300/80 dark:border-[#2499F2]/20 px-2.5 py-0.5 rounded-md font-semibold">
                           {translateMajor(p.category)}
                         </span>
                         <span
                           className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
                             p.status === 'approved'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-[#77DCC1] dark:border-[#28C8C0]/30'
-                              : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30'
+                              ? 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-500/10 dark:text-[#77DCC1] dark:border-[#28C8C0]/30'
+                              : 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30'
                           }`}
                         >
                           {p.status === 'approved'
@@ -789,18 +782,18 @@ export default function DashboardPage() {
                         </span>
                       </div>
                       <h4 className="font-bold text-base text-slate-900 dark:text-white mb-2">{p.title}</h4>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-3 mb-3">{p.description}</p>
+                      <p className="text-xs text-slate-700 dark:text-slate-300 line-clamp-3 mb-3 leading-relaxed">{p.description}</p>
 
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mb-2 flex items-center justify-between">
+                      <div className="text-xs text-slate-600 dark:text-slate-400 mb-2 flex items-center justify-between font-medium">
                         <span>{t('company.capacity')}</span>
-                        <strong className="text-slate-800 dark:text-white">
+                        <strong className="text-slate-900 dark:text-white font-bold">
                           {t('company.seats_reserved', {
                             current: curM,
                             max: maxM
                           })}
                         </strong>
                       </div>
-                      <div className="w-full bg-slate-100 dark:bg-[#152550] rounded-full h-2 overflow-hidden mb-4">
+                      <div className="w-full bg-slate-200 dark:bg-[#152550] rounded-full h-2 overflow-hidden mb-4">
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${
                             isProjectFull ? 'bg-rose-500' : 'bg-gradient-to-r from-[#2499F2] to-[#28C8C0]'
@@ -812,11 +805,11 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-200 dark:border-white/5 flex items-center justify-between gap-2">
+                    <div className="pt-3 border-t border-slate-300/80 dark:border-white/5 flex items-center justify-between gap-2">
                       <button
                         type="button"
                         onClick={() => setShowApplicationsModal(true)}
-                        className="bg-slate-100 hover:bg-slate-200 dark:bg-[#152550] dark:hover:bg-[#182b5c] text-slate-800 dark:text-white text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer active:scale-95 border border-slate-200/80 dark:border-[#2499F2]/20"
+                        className="bg-slate-100 hover:bg-slate-200 dark:bg-[#152550] dark:hover:bg-[#182b5c] text-slate-800 dark:text-white text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer active:scale-95 border border-slate-300/80 dark:border-[#2499F2]/20 font-bold"
                       >
                         <Users className="w-3.5 h-3.5 text-[#2499F2] dark:text-[#28C8C0]" />
                         {t('company.applicants_requests', {
@@ -827,7 +820,7 @@ export default function DashboardPage() {
                       <button
                         type="button"
                         onClick={() => setActiveChatProject(p)}
-                        className="bg-slate-100 dark:bg-[#152550] hover:bg-slate-200 dark:hover:bg-[#182b5c] border border-slate-200 dark:border-[#2499F2]/20 text-slate-700 dark:text-slate-200 text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+                        className="bg-slate-100 dark:bg-[#152550] hover:bg-slate-200 dark:hover:bg-[#182b5c] border border-slate-300/80 dark:border-[#2499F2]/20 text-slate-800 dark:text-slate-200 text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer active:scale-95 font-semibold"
                       >
                         <MessageSquare className="w-3.5 h-3.5 text-[#2499F2] dark:text-[#28C8C0]" />
                         {t('company.project_chat')}
@@ -849,7 +842,7 @@ export default function DashboardPage() {
               <ShieldCheck className="w-5 h-5 text-amber-500 dark:text-amber-400" />
               <span>{isRtl ? 'إجراءات ومتابعة المشرف الأكاديمي' : 'Supervisor Quick Actions'}</span>
             </h3>
-            <span className="text-xs text-slate-500 dark:text-slate-400">
+            <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">
               {isRtl ? 'إشراف د. أسامة أمين مرعي' : 'Dr. Osama Amin Marie'}
             </span>
           </div>
@@ -857,48 +850,48 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Link
               to="/approvals"
-              className="p-5 bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-amber-400 dark:hover:border-amber-500/50 rounded-2xl transition-all duration-200 group shadow-sm hover:-translate-y-1"
+              className="p-5 bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-amber-400 dark:hover:border-amber-500/50 rounded-2xl transition-all duration-200 group shadow-sm hover:-translate-y-1"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-500 dark:text-slate-400">{isRtl ? 'المشاريع بانتظار الاعتماد' : 'Pending Approvals'}</span>
+                <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">{isRtl ? 'المشاريع بانتظار الاعتماد' : 'Pending Approvals'}</span>
                 <CheckCircle2 className="w-5 h-5 text-amber-500 dark:text-amber-400" />
               </div>
               <div className="text-2xl font-black text-slate-900 dark:text-white group-hover:text-amber-500 dark:group-hover:text-amber-400 transition">
                 {pendingApprovalsCount}
               </div>
-              <span className="text-[11px] text-amber-600 dark:text-amber-400 font-bold mt-2 inline-flex items-center gap-1">
+              <span className="text-[11px] text-amber-700 dark:text-amber-400 font-bold mt-2 inline-flex items-center gap-1">
                 {isRtl ? 'مراجعة وتدقيق المشاريع' : 'Review Projects'} <ArrowUpRight className="w-3.5 h-3.5" />
               </span>
             </Link>
 
             <Link
               to="/reports"
-              className="p-5 bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-[#2499F2] dark:hover:border-[#2499F2]/50 rounded-2xl transition-all duration-200 group shadow-sm hover:-translate-y-1"
+              className="p-5 bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-[#2499F2] dark:hover:border-[#2499F2]/50 rounded-2xl transition-all duration-200 group shadow-sm hover:-translate-y-1"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-500 dark:text-slate-400">{isRtl ? 'مراحل التقارير' : 'Report Milestones'}</span>
+                <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">{isRtl ? 'مراحل التقارير' : 'Report Milestones'}</span>
                 <Clock className="w-5 h-5 text-[#2499F2] dark:text-[#28C8C0]" />
               </div>
               <div className="text-2xl font-black text-slate-900 dark:text-white group-hover:text-[#2499F2] dark:group-hover:text-[#28C8C0] transition">
                 {reportsTimeline.length} {isRtl ? 'مراحل' : 'Phases'}
               </div>
-              <span className="text-[11px] text-[#2499F2] dark:text-[#28C8C0] font-bold mt-2 inline-flex items-center gap-1">
+              <span className="text-[11px] text-[#1875bb] dark:text-[#28C8C0] font-bold mt-2 inline-flex items-center gap-1">
                 {isRtl ? 'متابعة تقييم الطلبة' : 'Student Submissions'} <ArrowUpRight className="w-3.5 h-3.5" />
               </span>
             </Link>
 
             <Link
               to="/teams"
-              className="p-5 bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 hover:border-emerald-400 dark:hover:border-[#28C8C0]/50 rounded-2xl transition-all duration-200 group shadow-sm hover:-translate-y-1"
+              className="p-5 bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-emerald-400 dark:hover:border-[#28C8C0]/50 rounded-2xl transition-all duration-200 group shadow-sm hover:-translate-y-1"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-500 dark:text-slate-400">{isRtl ? 'شعبة التخرج 1' : 'Graduation Section 1'}</span>
+                <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">{isRtl ? 'شعبة التخرج 1' : 'Graduation Section 1'}</span>
                 <Users className="w-5 h-5 text-emerald-600 dark:text-[#77DCC1]" />
               </div>
-              <div className="text-2xl font-black text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-[#77DCC1] transition">
+              <div className="text-2xl font-black text-slate-900 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-[#77DCC1] transition">
                 {studentsList.length} {isRtl ? 'طالباً مسجلاً' : 'Students'}
               </div>
-              <span className="text-[11px] text-emerald-600 dark:text-[#77DCC1] font-bold mt-2 inline-flex items-center gap-1">
+              <span className="text-[11px] text-emerald-800 dark:text-[#77DCC1] font-bold mt-2 inline-flex items-center gap-1">
                 {isRtl ? 'إدارة الملاحظات والتسكين' : 'Manage Students'} <ArrowUpRight className="w-3.5 h-3.5" />
               </span>
             </Link>
@@ -906,23 +899,23 @@ export default function DashboardPage() {
 
           {/* معاينة سريعة للمشاريع المعلقة للمشرف مع أزرار الاعتماد المباشر */}
           {pendingApprovalsCount > 0 && (
-            <div className="bg-white dark:bg-[#101E42] border border-amber-200 dark:border-amber-500/30 rounded-2xl p-5 shadow-sm space-y-3">
+            <div className="bg-white dark:bg-[#101E42] border border-amber-300 dark:border-amber-500/30 rounded-2xl p-5 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Clock className="w-4 h-4 text-amber-500" />
                   <span>{isRtl ? 'مشاريع بانتظار قرار الاعتماد الفوري' : 'Projects Pending Immediate Approval'}</span>
                 </h4>
-                <Link to="/approvals" className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold">
+                <Link to="/approvals" className="text-xs text-amber-700 dark:text-amber-400 hover:underline font-bold">
                   {isRtl ? 'عرض الكل' : 'View All'} ({pendingApprovalsCount})
                 </Link>
               </div>
 
               <div className="space-y-2">
                 {rawProjects.filter((p) => p.status === 'pending').slice(0, 3).map((p) => (
-                  <div key={p.id} className="p-3 bg-slate-50 dark:bg-[#152550]/70 rounded-xl flex items-center justify-between gap-3 text-xs border border-slate-200/80 dark:border-[#2499F2]/20">
+                  <div key={p.id} className="p-3 bg-slate-50 dark:bg-[#152550]/70 rounded-xl flex items-center justify-between gap-3 text-xs border border-slate-300/80 dark:border-[#2499F2]/20">
                     <div className="min-w-0">
                       <span className="font-bold text-slate-900 dark:text-white block truncate">{p.title}</span>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400">{translateMajor(p.category)}</span>
+                      <span className="text-[10px] text-slate-600 dark:text-slate-400 font-semibold">{translateMajor(p.category)}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button
@@ -958,17 +951,17 @@ export default function DashboardPage() {
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="p-5 bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 rounded-2xl shadow-sm">
+            <div className="p-5 bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 rounded-2xl shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-bold text-slate-900 dark:text-white text-sm">
                   {isRtl ? 'طلبات الانضمام والشراكة' : 'Submitted Applications'}
                 </h4>
-                <span className="text-xs bg-[#2499F2]/10 text-[#2499F2] px-2.5 py-0.5 rounded-full font-bold">
+                <span className="text-xs bg-blue-50 text-[#1875bb] dark:bg-[#2499F2]/10 dark:text-[#2499F2] px-2.5 py-0.5 rounded-full font-bold border border-blue-200 dark:border-transparent">
                   {myApplications.length}
                 </span>
               </div>
               {myApplications.length === 0 ? (
-                <div className="text-center py-6 text-xs text-slate-400 dark:text-slate-400">
+                <div className="text-center py-6 text-xs text-slate-500 dark:text-slate-400">
                   {isRtl ? 'لم تقدم طلبات انضمام بعد. تصفح المشاريع وقدم طلبك الآن!' : 'No applications submitted yet. Browse projects to apply!'}
                 </div>
               ) : (
@@ -976,18 +969,18 @@ export default function DashboardPage() {
                   {myApplications.map((app) => (
                     <div
                       key={app.id}
-                      className="p-3 bg-slate-50 dark:bg-[#152550]/60 rounded-xl flex items-center justify-between text-xs border border-slate-200/80 dark:border-[#2499F2]/20"
+                      className="p-3 bg-slate-50 dark:bg-[#152550]/60 rounded-xl flex items-center justify-between text-xs border border-slate-300/80 dark:border-[#2499F2]/20"
                     >
-                      <span className="text-slate-700 dark:text-slate-300 font-medium">
+                      <span className="text-slate-800 dark:text-slate-300 font-semibold">
                         {isRtl ? `طلب رقم #${app.id}` : `Application #${app.id}`}
                       </span>
                       <span
                         className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                           app.status === 'accepted'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-[#77DCC1] dark:border-[#28C8C0]/30'
+                            ? 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-500/10 dark:text-[#77DCC1] dark:border-[#28C8C0]/30'
                             : app.status === 'rejected'
-                              ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/30'
-                              : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30'
+                              ? 'bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/30'
+                              : 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30'
                         }`}
                       >
                         {app.status === 'accepted' ? (isRtl ? 'مقبول' : 'Accepted') : app.status === 'rejected' ? (isRtl ? 'مرفوض' : 'Rejected') : (isRtl ? 'قيد المراجعة' : 'Pending')}
@@ -998,7 +991,7 @@ export default function DashboardPage() {
               )}
             </div>
 
-            <div className="p-5 bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 rounded-2xl flex flex-col justify-between shadow-sm">
+            <div className="p-5 bg-white dark:bg-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/20 rounded-2xl flex flex-col justify-between shadow-sm">
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-bold text-slate-900 dark:text-white text-sm">
@@ -1006,14 +999,14 @@ export default function DashboardPage() {
                   </h4>
                   <Clock className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                 </div>
-                <p className="text-xs text-slate-800 dark:text-slate-200 font-bold leading-snug">
+                <p className="text-xs text-slate-900 dark:text-slate-200 font-bold leading-snug">
                   {reportsTimeline[0]?.title}
                 </p>
-                <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2 font-medium">
+                <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-2 font-semibold">
                   {isRtl ? `الموعد النهائي: ${reportsTimeline[0]?.deadlineDay} (${reportsTimeline[0]?.deadlineDate})` : `Deadline: ${reportsTimeline[0]?.deadlineDay} (${reportsTimeline[0]?.deadlineDate})`}
                 </p>
               </div>
-              <div className="pt-4 mt-3 border-t border-slate-200/80 dark:border-white/5 flex items-center justify-between">
+              <div className="pt-4 mt-3 border-t border-slate-200 dark:border-white/5 flex items-center justify-between">
                 <Link
                   to="/reports"
                   className="text-xs text-[#2499F2] dark:text-[#28C8C0] hover:underline flex items-center gap-1 font-bold transition"

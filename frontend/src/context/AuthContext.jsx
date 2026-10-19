@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { API_URL, apiFetch } from '../api/client';
 
@@ -59,24 +60,41 @@ export function AuthProvider({ children }) {
       localStorage.setItem('app_user_role', JSON.stringify(userObj));
     }
     setCurrentUser(userObj);
+    setIsLoadingAuth(false);
     setAuthError('');
     setAuthSuccess(`تم الدخول بنجاح كـ ${userObj.name}`);
     return userObj;
   }, []);
 
-  // التحقق من صحة التوكن وجلب بيانات /me عند تحميل التطبيق مع حماية جلسات التجربة
+  // مؤقت أمان تلقائي: يمنع بقاء isLoadingAuth معلقاً لأكثر من 1.5 ثانية
+  useEffect(() => {
+    let timer;
+    if (isLoadingAuth) {
+      timer = setTimeout(() => {
+        setIsLoadingAuth(false);
+      }, 1500);
+    }
+    return () => clearTimeout(timer);
+  }, [isLoadingAuth]);
+
+  // التحقق من صحة التوكن وجلب بيانات /me عند تحميل التطبيق مع حماية جلسات التجربة ومؤقت أمان
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (token) {
       if (token.startsWith('demo-token-')) {
-        // جلسة تجريبية معتمدة ومحمية - لا يتم إفراغها
+        setIsLoadingAuth(false);
         return;
       }
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
+
       fetch(`${API_URL}/me`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        signal: controller.signal
       })
         .then(async (res) => {
+          clearTimeout(timeoutId);
           if (res.ok) {
             const data = await res.json();
             const normalizedRole = (data.role === 'partner' || data.role === 'business') ? 'company' : data.role;
@@ -96,13 +114,18 @@ export function AuthProvider({ children }) {
               title: titleByRole[normalizedRole] || data.role
             };
 
-            setCurrentUser(userObj);
             localStorage.setItem('app_user_role', JSON.stringify(userObj));
+            setCurrentUser(userObj);
           } else if (res.status === 401) {
             logout();
           }
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => {
+          setIsLoadingAuth(false);
+        });
+    } else {
+      setIsLoadingAuth(false);
     }
   }, [logout]);
 
@@ -128,9 +151,12 @@ export function AuthProvider({ children }) {
       normalizedEmail.startsWith('partner') ||
       normalizedEmail.includes('alnoor');
 
-    // إذا كان حساب المشرف، نقوم بفحص السيرفر أولاً وإن لم يتطابق أو تعذر الاتصال نقبل الدخول فوراً
+    // إذا كان حساب المشرف، نقوم بفحص السيرفر أولاً بمؤقت سريع (1.5 ثانية) وإن تعذر نقبل الدخول فوراً
     if (isSupervisorMatch) {
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1500);
+
         const loginParams = new URLSearchParams();
         loginParams.append('username', email);
         loginParams.append('password', password);
@@ -138,17 +164,26 @@ export function AuthProvider({ children }) {
         const loginRes = await fetch(`${API_URL}/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: loginParams.toString()
+          body: loginParams.toString(),
+          signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         if (loginRes.ok) {
           const tokenData = await loginRes.json();
           const token = tokenData.access_token;
           localStorage.setItem('token', token);
 
+          const meController = new AbortController();
+          const meTimeoutId = setTimeout(() => meController.abort(), 1500);
+
           const meRes = await fetch(`${API_URL}/me`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': `Bearer ${token}` },
+            signal: meController.signal
           });
+
+          clearTimeout(meTimeoutId);
 
           if (meRes.ok) {
             const userData = await meRes.json();
@@ -171,6 +206,7 @@ export function AuthProvider({ children }) {
 
             localStorage.setItem('app_user_role', JSON.stringify(userObj));
             setCurrentUser(userObj);
+            setIsLoadingAuth(false);
             return userObj;
           }
         }
@@ -181,6 +217,9 @@ export function AuthProvider({ children }) {
     }
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+
       const loginParams = new URLSearchParams();
       loginParams.append('username', email);
       loginParams.append('password', password);
@@ -188,8 +227,11 @@ export function AuthProvider({ children }) {
       const loginRes = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: loginParams.toString()
+        body: loginParams.toString(),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!loginRes.ok) {
         if (isStudentMatch) return loginAsDemo('student');
@@ -203,9 +245,15 @@ export function AuthProvider({ children }) {
       const token = tokenData.access_token;
       localStorage.setItem('token', token);
 
+      const meController = new AbortController();
+      const meTimeoutId = setTimeout(() => meController.abort(), 1500);
+
       const meRes = await fetch(`${API_URL}/me`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        signal: meController.signal
       });
+
+      clearTimeout(meTimeoutId);
 
       if (!meRes.ok) {
         if (isStudentMatch) return loginAsDemo('student');
@@ -233,6 +281,7 @@ export function AuthProvider({ children }) {
 
       localStorage.setItem('app_user_role', JSON.stringify(userObj));
       setCurrentUser(userObj);
+      setIsLoadingAuth(false);
       return userObj;
     } catch (err) {
       if (isStudentMatch) return loginAsDemo('student');
@@ -299,7 +348,6 @@ export function AuthProvider({ children }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {

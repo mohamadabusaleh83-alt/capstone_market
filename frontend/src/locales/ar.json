@@ -33,7 +33,7 @@
   },
   "nav": {
     "platform_title": "سوق مشاريع التخرج",
-    "platform_version": "Capstone Market v1.1",
+    "platform_version": "Capstone Market",
     "back_home": "العودة إلى الصفحة الرئيسية",
     "dashboard_title": "لوحة التحكم والتنقل",
     "reports_hub": "تسليم ومتابعة التقارير",
@@ -54,7 +54,7 @@
     "connection_status": "حالة الاتصال:",
     "connected_server": "متصل بالخادم ✓",
     "projects_on_server": "المشاريع بالخادم:",
-    "active_account": "الحساب النشط (GET /me):",
+    "active_account": "الحساب النشط:",
     "logout": "تسجيل الخروج",
     "logout_tooltip": "تسجيل الخروج والعودة لشاشة الدخول",
     "sidebar_toggle": "القائمة الجانبية",

@@ -33,7 +33,7 @@
   },
   "nav": {
     "platform_title": "Capstone Market",
-    "platform_version": "Capstone Market v1.1",
+    "platform_version": "Capstone Market",
     "back_home": "Back to Home",
     "dashboard_title": "Dashboard & Navigation",
     "reports_hub": "Reports & Milestones Hub",
@@ -54,7 +54,7 @@
     "connection_status": "Connection Status:",
     "connected_server": "Connected to Server ✓",
     "projects_on_server": "Projects on Server:",
-    "active_account": "Active Account (GET /me):",
+    "active_account": "Active Account:",
     "logout": "Sign Out",
     "logout_tooltip": "Sign out and return to login screen",
     "sidebar_toggle": "Toggle Sidebar",

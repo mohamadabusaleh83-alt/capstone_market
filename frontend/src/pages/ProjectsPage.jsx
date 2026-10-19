@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { ACADEMIC_MAJORS } from '../api/client';
 import ProjectCard from '../components/ProjectCard';
@@ -18,7 +17,6 @@ import {
 
 export default function ProjectsPage() {
   const { t } = useTranslation();
-  const { currentUser } = useAuth();
   const {
     matchedProjects,
     isLoadingProjects,
@@ -94,7 +92,7 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* رأس الصفحة مع التبويبات وزر إضافة مشروع */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#101E42] backdrop-blur-md border border-slate-200 dark:border-[#2499F2]/20 p-4 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#101E42] backdrop-blur-md border border-slate-300/80 dark:border-[#2499F2]/20 p-4 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)]">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
           <button
             type="button"
@@ -102,7 +100,7 @@ export default function ProjectsPage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 whitespace-nowrap ${
               activeTab === 'match'
                 ? 'bg-gradient-to-r from-[#2499F2] to-[#1D7BC3] text-white shadow-md shadow-[#2499F2]/25'
-                : 'bg-slate-100 dark:bg-[#152550] text-slate-600 dark:text-slate-300 hover:text-[#101E42] dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#182b5c]'
+                : 'bg-slate-100 dark:bg-[#152550] text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#182b5c] font-semibold'
             }`}
           >
             <Sparkles className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0] animate-pulse" />
@@ -116,7 +114,7 @@ export default function ProjectsPage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 whitespace-nowrap ${
               activeTab === 'browse'
                 ? 'bg-gradient-to-r from-[#2499F2] to-[#1D7BC3] text-white shadow-md shadow-[#2499F2]/25'
-                : 'bg-slate-100 dark:bg-[#152550] text-slate-600 dark:text-slate-300 hover:text-[#101E42] dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#182b5c]'
+                : 'bg-slate-100 dark:bg-[#152550] text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#182b5c] font-semibold'
             }`}
           >
             <Layers className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0]" />
@@ -129,13 +127,13 @@ export default function ProjectsPage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 whitespace-nowrap ${
               activeTab === 'favorites'
                 ? 'bg-gradient-to-r from-[#2499F2] to-[#1D7BC3] text-white shadow-md shadow-[#2499F2]/25'
-                : 'bg-slate-100 dark:bg-[#152550] text-slate-600 dark:text-slate-300 hover:text-[#101E42] dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#182b5c]'
+                : 'bg-slate-100 dark:bg-[#152550] text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#182b5c] font-semibold'
             }`}
           >
             <Star className="w-4 h-4 text-amber-500 dark:text-amber-400" />
             <span>{t('nav.favorites')}</span>
             {favorites.length > 0 && (
-              <span className="text-[10px] bg-amber-500/20 text-amber-600 dark:text-amber-300 px-1.5 py-0.2 rounded-full font-bold">
+              <span className="text-[10px] bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.2 rounded-full font-bold">
                 {favorites.length}
               </span>
             )}
@@ -153,7 +151,7 @@ export default function ProjectsPage() {
       </div>
 
       {/* شريط البحث وتصفية التخصصات */}
-      <div className="bg-white dark:bg-[#101E42] backdrop-blur-md border border-slate-200 dark:border-[#2499F2]/20 p-4 rounded-2xl space-y-3.5 shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)]">
+      <div className="bg-white dark:bg-[#101E42] backdrop-blur-md border border-slate-300/80 dark:border-[#2499F2]/20 p-4 rounded-2xl space-y-3.5 shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)]">
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute start-3.5 top-3" />
           <input
@@ -161,7 +159,7 @@ export default function ProjectsPage() {
             placeholder={t('projects.search_placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-[#152550] border border-slate-300 dark:border-[#2499F2]/20 rounded-xl ps-10 pe-4 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2] focus:ring-1 focus:ring-[#2499F2] transition-all duration-200"
+            className="w-full bg-slate-50 dark:bg-[#152550] border border-slate-300 dark:border-[#2499F2]/20 rounded-xl ps-10 pe-4 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2] focus:ring-1 focus:ring-[#2499F2] transition-all duration-200 font-medium"
           />
         </div>
 
@@ -171,10 +169,10 @@ export default function ProjectsPage() {
               type="button"
               key={idx}
               onClick={() => setSelectedCategory(cat)}
-              className={`text-xs px-3.5 py-1.5 rounded-xl font-medium transition-all duration-150 cursor-pointer whitespace-nowrap active:scale-95 ${
+              className={`text-xs px-3.5 py-1.5 rounded-xl font-semibold transition-all duration-150 cursor-pointer whitespace-nowrap active:scale-95 ${
                 selectedCategory === cat
                   ? 'bg-gradient-to-r from-[#2499F2] to-[#1D7BC3] text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-[#152550] text-slate-600 dark:text-slate-300 hover:text-[#101E42] dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#182b5c]'
+                  : 'bg-slate-100 dark:bg-[#152550] text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#182b5c]'
               }`}
             >
               {cat === 'الكل' ? t('common.all') : translateMajor(cat)}
@@ -191,12 +189,12 @@ export default function ProjectsPage() {
           ))}
         </div>
       ) : filteredProjects.length === 0 ? (
-        <div className="bg-white dark:bg-[#101E42] backdrop-blur-md border border-slate-200 dark:border-[#2499F2]/20 rounded-3xl p-8 sm:p-14 text-center space-y-5 shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] relative overflow-hidden">
+        <div className="bg-white dark:bg-[#101E42] backdrop-blur-md border border-slate-300/80 dark:border-[#2499F2]/20 rounded-3xl p-8 sm:p-14 text-center space-y-5 shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] relative overflow-hidden">
           {/* خلفية جمالية خفيفة */}
           <div className="absolute inset-0 bg-radial from-[#2499F2]/5 via-transparent to-transparent pointer-events-none" />
 
           <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-[#152550] border border-slate-200 dark:border-[#2499F2]/20 flex items-center justify-center mx-auto text-[#2499F2] dark:text-[#28C8C0] shadow-md">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-[#152550] border border-slate-300/80 dark:border-[#2499F2]/20 flex items-center justify-center mx-auto text-[#2499F2] dark:text-[#28C8C0] shadow-md">
               {activeTab === 'favorites' ? (
                 <Star className="w-8 h-8 text-amber-500 dark:text-amber-400" />
               ) : (
@@ -209,7 +207,7 @@ export default function ProjectsPage() {
             <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
               {activeTab === 'favorites' ? (isRtl ? 'قائمة المفضلة فارغة حالياً' : 'No Favorite Projects Yet') : t('projects.no_results_title')}
             </h3>
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            <p className="text-xs text-slate-700 dark:text-slate-400 leading-relaxed font-medium">
               {activeTab === 'favorites'
                 ? t('projects.no_favorites_desc')
                 : t('projects.no_results_desc')}

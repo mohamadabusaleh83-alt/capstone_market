@@ -16,7 +16,7 @@ import LoginPage from './pages/LoginPage';
 import ProjectsPage from './pages/ProjectsPage';
 import DashboardPage from './pages/DashboardPage';
 import AboutPage from './pages/AboutPage';
-import SupervisorApprovalPage from './pages/SupervisorApprovalPage';
+import SupervisorPage from './pages/SupervisorPage';
 import ReportsPage from './pages/ReportsPage';
 import TeamsHubPage from './pages/TeamsHubPage';
 import StudentCvPage from './pages/StudentCvPage';
@@ -82,8 +82,10 @@ export default function App() {
                 <Route path="/company/partnerships" element={<CompanyPartnershipsPage />} />
 
                 {/* 4. مسارات دور المشرف الأكاديمي والإدارة (Supervisor & Management Routes) */}
-                <Route path="/approvals" element={<SupervisorApprovalPage />} />
-                <Route path="/supervisor/reviews" element={<SupervisorApprovalPage />} />
+                <Route path="/supervisor" element={<SupervisorPage />} />
+                <Route path="/supervisor/dashboard" element={<SupervisorPage />} />
+                <Route path="/approvals" element={<SupervisorPage />} />
+                <Route path="/supervisor/reviews" element={<SupervisorPage />} />
                 <Route path="/manage/projects" element={<ManageProjectsPage />} />
                 <Route path="/manage/students" element={<ManageStudentsPage />} />
                 <Route path="/manage/companies" element={<ManageCompaniesPage />} />

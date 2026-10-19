@@ -14,21 +14,21 @@ export default function MainLayout() {
   const { isRtl } = useApp();
 
   return (
-    <div className="min-h-screen bg-[#F4F8FC] text-slate-900 dark:bg-[#0B152E] dark:text-slate-100 flex flex-col font-sans transition-colors duration-200" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-[#0B152E] dark:text-slate-100 flex flex-col font-sans transition-colors duration-200" dir={isRtl ? 'rtl' : 'ltr'}>
       <Navbar />
 
       <div className="flex-1 flex relative overflow-hidden">
         <Sidebar />
 
-        <main className="flex-1 overflow-y-auto flex flex-col justify-between p-4 md:p-6 bg-[#F4F8FC]/90 dark:bg-[#0B152E]/90 transition-colors duration-200">
+        <main className="flex-1 overflow-y-auto flex flex-col justify-between p-4 md:p-6 bg-slate-100/90 dark:bg-[#0B152E]/90 transition-colors duration-200">
           <div className="flex-1">
             <Outlet />
           </div>
 
           {/* تذييل المنصة العام وتوثيق المطور */}
-          <footer className="mt-8 pt-4 border-t border-slate-200 dark:border-[#2499F2]/20 text-xs text-slate-500 dark:text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-start">
+          <footer className="mt-8 pt-4 border-t border-slate-300/80 dark:border-[#2499F2]/20 text-xs text-slate-600 dark:text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-start">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-              <span className="font-semibold text-slate-700 dark:text-slate-200">
+              <span className="font-bold text-slate-800 dark:text-slate-200">
                 سوق مشاريع التخرج - Capstone Market &copy; {new Date().getFullYear()}
               </span>
               <span className="hidden sm:inline text-slate-400">|</span>

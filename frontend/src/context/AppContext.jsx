@@ -241,13 +241,29 @@ export function AppProvider({ children }) {
     }
   ]);
 
+  // مؤقت أمان يمنع بقاء حالة تحميل المشاريع معلقة لأكثر من 1.5 ثانية
+  useEffect(() => {
+    let timer;
+    if (isLoadingProjects) {
+      timer = setTimeout(() => {
+        setIsLoadingProjects(false);
+        setRawProjects((prev) => (prev.length > 0 ? prev : INITIAL_FALLBACK_PROJECTS));
+      }, 1500);
+    }
+    return () => clearTimeout(timer);
+  }, [isLoadingProjects]);
+
   // ==========================================
   // دوال الاتصال بالباك إند وجلب البيانات
   // ==========================================
   const fetchProjects = useCallback(async () => {
     setIsLoadingProjects(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1500);
+
     try {
-      const res = await fetch(`${API_URL}/projects/`);
+      const res = await fetch(`${API_URL}/projects/`, { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
@@ -281,6 +297,7 @@ export function AppProvider({ children }) {
     } catch {
       setRawProjects(INITIAL_FALLBACK_PROJECTS);
     } finally {
+      clearTimeout(timeoutId);
       setIsLoadingProjects(false);
     }
   }, []);

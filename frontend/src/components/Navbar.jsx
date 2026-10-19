@@ -9,13 +9,12 @@ import {
   Menu,
   Bell,
   RefreshCw,
-  UserCheck,
-  LogOut
+  UserCheck
 } from 'lucide-react';
 
 export default function Navbar() {
   const { t } = useTranslation();
-  const { currentUser, logout } = useAuth();
+  const { currentUser } = useAuth();
   const {
     isRtl,
     isSidebarOpen,
@@ -32,7 +31,7 @@ export default function Navbar() {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <header className="h-16 bg-white/95 dark:bg-[#101E42]/95 backdrop-blur-md border-b border-slate-200 dark:border-[#2499F2]/20 sticky top-0 z-40 px-4 flex items-center justify-between shadow-sm dark:shadow-[0_4px_25px_-5px_rgba(16,30,66,0.6)] transition-colors duration-200">
+    <header className="h-16 bg-white/95 dark:bg-[#101E42]/95 backdrop-blur-md border-b border-slate-200/60 dark:border-white/5 sticky top-0 z-40 px-4 sm:px-6 flex items-center justify-between shadow-xs transition-colors duration-200">
       <div className="flex items-center gap-3">
         {currentUser && (
           <button
@@ -53,11 +52,11 @@ export default function Navbar() {
             <img src="/logo.svg" alt={t('nav.platform_title')} className="w-7 h-7 object-contain" />
           </div>
           <div>
-            <span className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-wide block leading-tight group-hover:text-[#2499F2] dark:group-hover:text-[#28C8C0] transition-colors">
+            <span className="font-black text-sm sm:text-base text-slate-900 dark:text-white tracking-wide block leading-tight group-hover:text-[#2499F2] dark:group-hover:text-[#28C8C0] transition-colors">
               {t('nav.platform_title')}
             </span>
-            <span className="text-[10px] text-[#2499F2] dark:text-[#28C8C0] font-mono hidden sm:inline-block">
-              {t('nav.platform_version')}
+            <span className="text-[10px] text-[#2499F2] dark:text-[#28C8C0] font-sans font-semibold hidden sm:inline-block">
+              Capstone Market
             </span>
           </div>
         </Link>
@@ -170,36 +169,17 @@ export default function Navbar() {
           </div>
         )}
 
+        {/* كبسولة بروفايل موحدة وأنيقة (أيقونة مستخدم صغيرة + الاسم + شارة الدور بلون تركوازي هادئ) */}
         {currentUser && (
-          <>
-            <span
-              className={`text-[11px] px-2.5 py-1 rounded-full font-bold border ${
-                currentUser.role === 'supervisor'
-                  ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30'
-                  : currentUser.role === 'company'
-                    ? 'bg-blue-50 dark:bg-[#2499F2]/10 text-[#2499F2] dark:text-[#2499F2] border-blue-200 dark:border-[#2499F2]/30'
-                    : 'bg-emerald-50 dark:bg-[#28C8C0]/10 text-emerald-700 dark:text-[#77DCC1] border-emerald-200 dark:border-[#28C8C0]/30'
-              }`}
-            >
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-[#152550] border border-slate-200 dark:border-[#2499F2]/20 px-3 py-1.5 rounded-full shadow-xs">
+            <UserCheck className="w-3.5 h-3.5 text-[#28C8C0] shrink-0" />
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate max-w-[110px] sm:max-w-[160px]">
+              {currentUser.name}
+            </span>
+            <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#28C8C0]/15 dark:bg-[#28C8C0]/20 text-[#101E42] dark:text-[#77DCC1] border border-[#28C8C0]/30 shrink-0">
               {getRoleLabel(currentUser.role)}
             </span>
-
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-[#152550] px-3 py-1.5 rounded-xl border border-slate-200 dark:border-[#2499F2]/20 shadow-sm">
-                <UserCheck className="w-4 h-4 text-[#28C8C0]" />
-                <span>{currentUser.name}</span>
-              </div>
-
-              <button
-                onClick={logout}
-                className="flex items-center gap-1.5 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-200 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-sm"
-                title={t('nav.logout_tooltip')}
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t('nav.logout')}</span>
-              </button>
-            </div>
-          </>
+          </div>
         )}
 
         {!currentUser && (

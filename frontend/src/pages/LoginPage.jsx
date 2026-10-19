@@ -49,6 +49,19 @@ export default function LoginPage() {
     return <Navigate to={from} replace />;
   }
 
+  // تسجيل الدخول التجريبي الفوري بنقرة واحدة بدون Race Condition
+  const handleQuickDemoLogin = (role) => {
+    const user = loginAsDemo(role);
+    if (user && typeof window !== 'undefined') {
+      localStorage.setItem('app_user_role', JSON.stringify(user));
+    }
+    // تحديث البيانات في الخلفية دون تعطيل الانتقال الفوري
+    if (fetchProjects) fetchProjects();
+    if (fetchApplications) fetchApplications();
+    const destination = role === 'supervisor' ? '/supervisor' : (from && from !== '/login' ? from : '/dashboard');
+    navigate(destination, { replace: true });
+  };
+
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -80,55 +93,74 @@ export default function LoginPage() {
 
     // مصادقة وتجاوز احتياطي ذكي للأدوار الثلاثة في حال تعذر اتصال السيرفر
     if (authMode === 'login' && isSupervisorMatch) {
+      let userObj;
       try {
-        await login(authEmail.trim(), authPassword);
+        userObj = await login(authEmail.trim(), authPassword);
       } catch {
-        loginAsDemo('supervisor');
+        userObj = loginAsDemo('supervisor');
       }
-      await fetchProjects();
-      await fetchApplications();
-      navigate('/dashboard', { replace: true });
+      if (userObj && typeof window !== 'undefined') {
+        localStorage.setItem('app_user_role', JSON.stringify(userObj));
+      }
+      // استدعاء البيانات في الخلفية دون تعطيل واجهة المستخدم
+      if (fetchProjects) fetchProjects();
+      if (fetchApplications) fetchApplications();
+      const destination = from && from !== '/login' ? from : '/supervisor';
+      navigate(destination, { replace: true });
       return;
     }
 
     if (authMode === 'login' && isStudentMatch) {
+      let userObj;
       try {
-        await login(authEmail.trim(), authPassword);
+        userObj = await login(authEmail.trim(), authPassword);
       } catch {
-        loginAsDemo('student');
+        userObj = loginAsDemo('student');
       }
-      await fetchProjects();
-      await fetchApplications();
-      navigate('/dashboard', { replace: true });
+      if (userObj && typeof window !== 'undefined') {
+        localStorage.setItem('app_user_role', JSON.stringify(userObj));
+      }
+      if (fetchProjects) fetchProjects();
+      if (fetchApplications) fetchApplications();
+      navigate(from && from !== '/login' ? from : '/dashboard', { replace: true });
       return;
     }
 
     if (authMode === 'login' && isCompanyMatch) {
+      let userObj;
       try {
-        await login(authEmail.trim(), authPassword);
+        userObj = await login(authEmail.trim(), authPassword);
       } catch {
-        loginAsDemo('company');
+        userObj = loginAsDemo('company');
       }
-      await fetchProjects();
-      await fetchApplications();
-      navigate('/dashboard', { replace: true });
+      if (userObj && typeof window !== 'undefined') {
+        localStorage.setItem('app_user_role', JSON.stringify(userObj));
+      }
+      if (fetchProjects) fetchProjects();
+      if (fetchApplications) fetchApplications();
+      navigate(from && from !== '/login' ? from : '/dashboard', { replace: true });
       return;
     }
 
     try {
+      let userObj;
       if (authMode === 'register') {
-        await register({
+        userObj = await register({
           fullName: authFullName.trim(),
           email: authEmail.trim(),
           password: authPassword,
           role: authRole === 'company' ? 'partner' : 'student'
         });
       } else {
-        await login(authEmail.trim(), authPassword);
+        userObj = await login(authEmail.trim(), authPassword);
       }
-      await fetchProjects();
-      await fetchApplications();
-      navigate(from, { replace: true });
+      if (userObj && typeof window !== 'undefined') {
+        localStorage.setItem('app_user_role', JSON.stringify(userObj));
+      }
+      if (fetchProjects) fetchProjects();
+      if (fetchApplications) fetchApplications();
+      const dest = from && from !== '/login' ? from : (userObj?.role === 'supervisor' ? '/supervisor' : '/dashboard');
+      navigate(dest, { replace: true });
     } catch {
       // Error is set within AuthContext
     }
@@ -529,6 +561,51 @@ export default function LoginPage() {
                   )}
                 </button>
               </form>
+
+              {/* قسم الدخول التجريبي الفوري بنقرة واحدة (1-Click Instant Demo Login) */}
+              {authMode === 'login' && (
+                <div className="pt-3 border-t border-slate-200 dark:border-white/10 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
+                    <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                      <Sparkles className="w-3.5 h-3.5 text-[#28C8C0]" />
+                      <span>{isRtl ? 'دخول تجريبي سريع ومباشر:' : 'Quick Demo Access:'}</span>
+                    </span>
+                    <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-mono font-bold">1-Click</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleQuickDemoLogin('supervisor')}
+                      className="p-2 sm:p-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[11px] font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                      title={isRtl ? 'دخول فوري بحساب المشرف الأكاديمي (د. أسامة مرعي)' : 'Supervisor Demo'}
+                    >
+                      <ShieldCheck className="w-4 h-4 text-amber-500" />
+                      <span className="truncate max-w-full">{isRtl ? 'مشرف أكاديمي' : 'Supervisor'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleQuickDemoLogin('student')}
+                      className="p-2 sm:p-2.5 rounded-xl bg-[#28C8C0]/10 hover:bg-[#28C8C0]/20 border border-[#28C8C0]/30 text-[#101E42] dark:text-[#77DCC1] text-[11px] font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                      title={isRtl ? 'دخول فوري بحساب الطالب (أحمد منصور)' : 'Student Demo'}
+                    >
+                      <GraduationCap className="w-4 h-4 text-[#28C8C0]" />
+                      <span className="truncate max-w-full">{isRtl ? 'طالب خريج' : 'Student'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleQuickDemoLogin('company')}
+                      className="p-2 sm:p-2.5 rounded-xl bg-[#2499F2]/10 hover:bg-[#2499F2]/20 border border-[#2499F2]/30 text-[#2499F2] text-[11px] font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                      title={isRtl ? 'دخول فوري بحساب الشركة (شركة النور)' : 'Company Demo'}
+                    >
+                      <Building2 className="w-4 h-4 text-[#2499F2]" />
+                      <span className="truncate max-w-full">{isRtl ? 'شركة شريكة' : 'Company'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* رابط فوري للتبديل بين تسجيل الدخول وإنشاء الحساب */}
               <div className="text-center pt-2 border-t border-slate-200 dark:border-slate-800">
