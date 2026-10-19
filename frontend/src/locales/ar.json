@@ -59,6 +59,17 @@
     "logout_tooltip": "تسجيل الخروج والعودة لشاشة الدخول",
     "sidebar_toggle": "القائمة الجانبية"
   },
+  "sidebar": {
+    "dashboard": "الرئيسية",
+    "student_my_project": "مشروعي / إضافة مشروع",
+    "student_explore": "استكشف المشاريع",
+    "student_collaboration": "طلبات التعاون",
+    "company_explore_market": "استكشاف المشاريع وسوق التخرج",
+    "company_sent_requests": "طلبات التعاون المرسلة",
+    "company_market_insights": "تحليلات السوق والمهارات",
+    "supervisor_project_review": "مراجعة واعتماد المشاريع",
+    "supervisor_teams": "المشاريع الإشرافية والفرق"
+  },
   "auth": {
     "banner_title": "بوابة منظومة مشاريع التخرج وربط سوق العمل (Capstone Market)",
     "banner_subtitle": "الدخول الموحد للطلبة والمشرفين والشركات",

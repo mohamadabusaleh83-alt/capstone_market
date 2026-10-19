@@ -28,16 +28,16 @@ export default function StudentCvPage() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm">
+      <div className="bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 p-6 rounded-2xl shadow-sm dark:shadow-[0_4px_25px_-5px_rgba(16,30,66,0.6)]">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <FileText className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+            <FileText className="w-5 h-5 text-[#2499F2] dark:text-[#28C8C0]" />
             {t('student_cv.title')}
           </h2>
           <button
             type="button"
             onClick={() => setShowSkillsModal(true)}
-            className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 dark:hover:text-cyan-300 flex items-center gap-1 cursor-pointer transition font-medium"
+            className="text-xs text-[#2499F2] dark:text-[#28C8C0] hover:underline flex items-center gap-1 cursor-pointer transition font-medium"
           >
             <Award className="w-4 h-4" /> {t('student_cv.edit_skills')}
           </button>
@@ -155,7 +155,7 @@ export default function StudentCvPage() {
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 py-2.5 rounded-xl font-bold text-xs text-white transition shadow-md shadow-cyan-500/20 active:scale-95 cursor-pointer"
+            className="w-full bg-gradient-to-r from-[#2499F2] to-[#28C8C0] hover:from-[#1D7BC3] hover:to-[#20aba3] py-2.5 rounded-xl font-bold text-xs text-white transition shadow-md shadow-[#2499F2]/25 active:scale-95 cursor-pointer"
           >
             {t('student_cv.save_cv')}
           </button>

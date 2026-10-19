@@ -32,7 +32,7 @@ export default function SupervisorApprovalPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="bg-gradient-to-r from-amber-50/80 via-white to-amber-50/80 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 border border-amber-200 dark:border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm dark:shadow-md">
+      <div className="bg-gradient-to-r from-white via-[#F4F8FC] to-white dark:from-[#101E42] dark:via-[#152550] dark:to-[#101E42] border border-slate-200 dark:border-[#2499F2]/25 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm dark:shadow-[0_4px_25px_-5px_rgba(16,30,66,0.6)]">
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30 border">
@@ -40,7 +40,7 @@ export default function SupervisorApprovalPage() {
             </span>
           </div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <CheckCircle2 className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
+            <CheckCircle2 className="w-6 h-6 text-[#28C8C0] dark:text-[#77DCC1]" />
             {t('supervisor.review_title')}
           </h2>
           <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 max-w-2xl leading-relaxed">
@@ -51,14 +51,14 @@ export default function SupervisorApprovalPage() {
         <button
           type="button"
           onClick={fetchProjects}
-          className="bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer border border-slate-200 dark:border-slate-700 shadow-sm active:scale-95"
+          className="bg-white hover:bg-slate-50 dark:bg-[#152550] dark:hover:bg-[#182b5c] text-slate-700 dark:text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer border border-slate-200 dark:border-[#2499F2]/20 shadow-sm active:scale-95"
         >
-          <RefreshCw className="w-4 h-4 text-cyan-600 dark:text-cyan-400" /> {t('supervisor.refresh_list')}
+          <RefreshCw className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0]" /> {t('supervisor.refresh_list')}
         </button>
       </div>
 
       {/* أزرار تصفية الحالة */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-[#101E42] p-3 rounded-2xl border border-slate-200 dark:border-[#2499F2]/20 shadow-sm">
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-500 dark:text-slate-400 font-bold me-2">
             {t('supervisor.filter_by_status')}
@@ -128,7 +128,7 @@ export default function SupervisorApprovalPage() {
           {filteredProjects.map((p) => (
             <div
               key={p.id}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition shadow-sm"
+              className="bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 p-5 rounded-2xl flex flex-col justify-between hover:border-[#2499F2]/40 transition shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)]"
             >
               <div>
                 <div className="flex justify-between items-start mb-3 gap-2">

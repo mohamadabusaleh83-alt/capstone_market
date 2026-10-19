@@ -23,7 +23,7 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="bg-gradient-to-r from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm dark:shadow-md">
+      <div className="bg-gradient-to-r from-white via-[#F4F8FC] to-white dark:from-[#101E42] dark:via-[#152550] dark:to-[#101E42] border border-slate-200 dark:border-[#2499F2]/25 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm dark:shadow-[0_4px_25px_-5px_rgba(16,30,66,0.6)]">
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30 border">
@@ -55,7 +55,7 @@ export default function ReportsPage() {
                 ) || rawProjects[0];
               setActiveChatProject(myProject);
             }}
-            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-md shadow-cyan-500/20 shrink-0 active:scale-95"
+            className="bg-gradient-to-r from-[#2499F2] to-[#28C8C0] hover:from-[#1D7BC3] hover:to-[#20aba3] text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-md shadow-[#2499F2]/25 shrink-0 active:scale-95"
           >
             <MessageSquare className="w-4 h-4" />
             {t('reports.open_chat')}
@@ -79,8 +79,8 @@ export default function ReportsPage() {
                 key={rep.id}
                 className={`p-5 rounded-2xl border transition-all duration-200 ${
                   isSubmitted
-                    ? 'bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-md'
-                    : 'bg-white/80 dark:bg-slate-900/60 border-amber-200 dark:border-amber-800/30'
+                    ? 'bg-white dark:bg-[#101E42] border-slate-200 dark:border-[#2499F2]/20 shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)]'
+                    : 'bg-white dark:bg-[#101E42] border-amber-200 dark:border-amber-500/30'
                 }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">

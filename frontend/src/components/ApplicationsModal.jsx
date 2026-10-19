@@ -21,7 +21,7 @@ export default function ApplicationsModal() {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/25 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative shadow-2xl animate-in fade-in zoom-in-95 duration-200">
         <button
           type="button"
           onClick={() => setShowApplicationsModal(false)}
@@ -32,7 +32,7 @@ export default function ApplicationsModal() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
+              <Users className="w-5 h-5 text-[#28C8C0] dark:text-[#77DCC1]" />
               {t('applications_management.title')}
             </h2>
             <p className="text-xs text-slate-600 dark:text-slate-400">{t('applications_management.desc')}</p>
@@ -40,7 +40,7 @@ export default function ApplicationsModal() {
           <button
             type="button"
             onClick={fetchApplications}
-            className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 dark:hover:text-cyan-300 flex items-center gap-1 transition cursor-pointer font-medium"
+            className="text-xs text-[#2499F2] dark:text-[#28C8C0] hover:underline flex items-center gap-1 transition cursor-pointer font-medium"
           >
             <RefreshCw className="w-3.5 h-3.5" /> {t('applications_management.refresh')}
           </button>
@@ -48,11 +48,11 @@ export default function ApplicationsModal() {
 
         {isLoadingApplications ? (
           <div className="text-center py-8 text-xs text-slate-400 flex items-center justify-center gap-2">
-            <RefreshCw className="w-4 h-4 animate-spin text-cyan-500 dark:text-cyan-400" />
+            <RefreshCw className="w-4 h-4 animate-spin text-[#2499F2] dark:text-[#28C8C0]" />
             {t('applications_management.loading')}
           </div>
         ) : applications.length === 0 ? (
-          <div className="text-center py-8 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className="text-center py-8 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-[#152550]/60 rounded-xl border border-slate-200 dark:border-[#2499F2]/20">
             {t('applications_management.empty')}
           </div>
         ) : (
@@ -62,7 +62,7 @@ export default function ApplicationsModal() {
               return (
                 <div
                   key={app.id}
-                  className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm"
+                  className="p-4 bg-slate-50 dark:bg-[#152550]/60 border border-slate-200 dark:border-[#2499F2]/20 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">

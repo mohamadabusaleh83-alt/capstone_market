@@ -50,14 +50,14 @@ export default function ProjectCard({ project }) {
         : 'text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700';
 
   return (
-    <div className="bg-white dark:bg-slate-900/90 hover:bg-slate-50/50 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700/80 rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-xl dark:hover:shadow-blue-950/20 group relative overflow-hidden shadow-sm dark:shadow-none">
+    <div className="bg-white dark:bg-[#101E42] hover:bg-slate-50/50 dark:hover:bg-[#13234D] border border-slate-200 dark:border-[#2499F2]/20 hover:border-[#2499F2]/40 dark:hover:border-[#2499F2]/40 rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-xl dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] group relative overflow-hidden shadow-sm">
       {/* خلفية جمالية خفيفة عند التحويم */}
-      <div className="absolute -top-12 -end-12 w-32 h-32 bg-cyan-500/5 dark:bg-blue-500/5 rounded-full blur-2xl group-hover:bg-cyan-500/10 dark:group-hover:bg-blue-500/10 transition-all duration-500 pointer-events-none" />
+      <div className="absolute -top-12 -end-12 w-32 h-32 bg-[#28C8C0]/5 dark:bg-[#2499F2]/10 rounded-full blur-2xl group-hover:bg-[#28C8C0]/10 dark:group-hover:bg-[#2499F2]/20 transition-all duration-500 pointer-events-none" />
 
       <div>
         {/* الترويسة: التخصص + شارة المطابقة الذكية المتوهجة + المفضلة */}
         <div className="flex items-center justify-between mb-3.5 gap-2">
-          <span className="text-[11px] font-medium bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700/70 truncate max-w-[170px]">
+          <span className="text-[11px] font-medium bg-slate-100 dark:bg-[#152550] text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-[#2499F2]/20 truncate max-w-[170px]">
             {translateMajor(project.category)}
           </span>
 
@@ -209,8 +209,8 @@ export default function ProjectCard({ project }) {
                 : isRejected
                   ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/30 cursor-not-allowed'
                   : isFull
-                    ? 'bg-slate-100 text-slate-400 border border-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-cyan-500/20 hover:shadow-cyan-500/30 cursor-pointer'
+                    ? 'bg-slate-100 text-slate-400 border border-slate-200 dark:bg-[#152550] dark:text-slate-500 dark:border-[#2499F2]/20 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-[#2499F2] to-[#28C8C0] hover:from-[#1D7BC3] hover:to-[#20aba3] text-white shadow-md shadow-[#2499F2]/20 hover:shadow-[#2499F2]/30 cursor-pointer'
             }`}
           >
             {isAlreadyApplied
@@ -226,9 +226,9 @@ export default function ProjectCard({ project }) {
           <button
             type="button"
             onClick={() => setShowApplicationsModal(true)}
-            className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-slate-700 active:scale-95 shadow-sm"
+            className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-[#152550] hover:bg-slate-200 dark:hover:bg-[#182b5c] text-slate-700 dark:text-slate-200 transition flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-[#2499F2]/20 active:scale-95 shadow-sm"
           >
-            <Users className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+            <Users className="w-3.5 h-3.5 text-[#2499F2] dark:text-[#28C8C0]" />
             {t('projects.view_applications')}
           </button>
         )}
@@ -237,7 +237,7 @@ export default function ProjectCard({ project }) {
           type="button"
           onClick={() => setActiveChatProject(project)}
           title={t('projects.chat_tooltip')}
-          className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-cyan-600 dark:hover:bg-cyan-600 text-slate-700 dark:text-slate-300 hover:text-white transition-all duration-200 cursor-pointer border border-slate-200 dark:border-slate-700 hover:border-cyan-500 dark:hover:border-cyan-500 shadow-sm active:scale-90"
+          className="p-2.5 rounded-xl bg-slate-100 dark:bg-[#152550] hover:bg-[#2499F2] dark:hover:bg-[#2499F2] text-slate-700 dark:text-slate-300 hover:text-white transition-all duration-200 cursor-pointer border border-slate-200 dark:border-[#2499F2]/20 hover:border-[#2499F2] dark:hover:border-[#2499F2] shadow-sm active:scale-90"
           aria-label={t('projects.chat_tooltip')}
         >
           <MessageSquare className="w-4 h-4" />

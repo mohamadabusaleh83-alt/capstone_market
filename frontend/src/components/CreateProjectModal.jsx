@@ -38,7 +38,7 @@ export default function CreateProjectModal() {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/25 rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative shadow-2xl animate-in fade-in zoom-in-95 duration-200">
         <button
           type="button"
           onClick={() => setIsCreateModalOpen(false)}
@@ -47,7 +47,7 @@ export default function CreateProjectModal() {
           <X className="w-5 h-5" />
         </button>
         <h2 className="text-base font-bold mb-2 text-slate-900 dark:text-white flex items-center gap-2">
-          <PlusCircle className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+          <PlusCircle className="w-5 h-5 text-[#2499F2] dark:text-[#28C8C0]" />
           {t('create_project.modal_title')}
         </h2>
         <p className="text-xs text-slate-600 dark:text-slate-400 mb-4">
@@ -65,7 +65,7 @@ export default function CreateProjectModal() {
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+              className="w-full bg-slate-50 dark:bg-[#152550] border border-slate-300 dark:border-[#2499F2]/20 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2] focus:ring-1 focus:ring-[#2499F2]"
             />
           </div>
 
@@ -79,7 +79,7 @@ export default function CreateProjectModal() {
               required
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+              className="w-full bg-slate-50 dark:bg-[#152550] border border-slate-300 dark:border-[#2499F2]/20 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2] focus:ring-1 focus:ring-[#2499F2]"
             />
           </div>
 
@@ -94,7 +94,7 @@ export default function CreateProjectModal() {
                 required
                 value={skills}
                 onChange={(e) => setSkills(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                className="w-full bg-slate-50 dark:bg-[#152550] border border-slate-300 dark:border-[#2499F2]/20 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2] focus:ring-1 focus:ring-[#2499F2]"
               />
             </div>
 
@@ -109,7 +109,7 @@ export default function CreateProjectModal() {
                 required
                 value={maxMembers}
                 onChange={(e) => setMaxMembers(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                className="w-full bg-slate-50 dark:bg-[#152550] border border-slate-300 dark:border-[#2499F2]/20 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#2499F2] focus:ring-1 focus:ring-[#2499F2]"
               />
             </div>
           </div>
@@ -117,7 +117,7 @@ export default function CreateProjectModal() {
           <button
             type="submit"
             disabled={isSubmittingProject}
-            className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 py-2.5 rounded-xl font-bold text-xs text-white transition cursor-pointer flex items-center justify-center gap-2 mt-2 shadow-md shadow-cyan-500/20 active:scale-95"
+            className="w-full bg-gradient-to-r from-[#2499F2] to-[#28C8C0] hover:from-[#1D7BC3] hover:to-[#20aba3] py-2.5 rounded-xl font-bold text-xs text-white transition cursor-pointer flex items-center justify-center gap-2 mt-2 shadow-md shadow-[#2499F2]/25 active:scale-95"
           >
             {isSubmittingProject ? (
               <>

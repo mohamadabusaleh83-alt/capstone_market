@@ -59,6 +59,17 @@
     "logout_tooltip": "Sign out and return to login screen",
     "sidebar_toggle": "Toggle Sidebar"
   },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "student_my_project": "My Projects",
+    "student_explore": "Explore Projects",
+    "student_collaboration": "Collaboration Requests",
+    "company_explore_market": "Explore & Market",
+    "company_sent_requests": "Sent Requests",
+    "company_market_insights": "Market Insights",
+    "supervisor_project_review": "Project Review",
+    "supervisor_teams": "Supervised Teams"
+  },
   "auth": {
     "banner_title": "Capstone Projects & Labor Market Gateway (Capstone Market)",
     "banner_subtitle": "Unified Portal for Students, Supervisors, and Partners",

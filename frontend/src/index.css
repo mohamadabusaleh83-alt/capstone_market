@@ -6,6 +6,11 @@
   :root {
     --font-arabic: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-english: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --primary-navy: #101E42;
+    --primary-blue: #2499F2;
+    --turquoise: #28C8C0;
+    --mint: #77DCC1;
+    --bg-light: #F4F8FC;
   }
 
   html[dir="rtl"], 
@@ -19,9 +24,20 @@
   [dir="ltr"] {
     font-family: var(--font-english);
   }
+
+  body {
+    background-color: #F4F8FC;
+    color: #101E42;
+  }
+
+  .dark body,
+  html.dark body {
+    background-color: #0B152E;
+    color: #F4F8FC;
+  }
 }
 
-/* Custom Scrollbars */
+/* Custom Scrollbars with brand blue & turquoise */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -32,18 +48,18 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.35);
+  background: rgba(36, 153, 242, 0.25);
   border-radius: 9999px;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(51, 65, 85, 0.6);
+  background: rgba(40, 200, 192, 0.3);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.6);
+  background: rgba(36, 153, 242, 0.5);
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(71, 85, 105, 0.8);
+  background: rgba(40, 200, 192, 0.6);
 }

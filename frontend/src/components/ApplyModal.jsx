@@ -37,7 +37,7 @@ export default function ApplyModal() {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/25 rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative shadow-2xl animate-in fade-in zoom-in-95 duration-200">
         <button
           type="button"
           onClick={() => setIsApplyModalOpen(false)}
@@ -61,7 +61,7 @@ export default function ApplyModal() {
               type="text"
               readOnly
               value={currentUser?.name || ''}
-              className="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-500 dark:text-slate-400 cursor-not-allowed"
+              className="w-full bg-slate-100 dark:bg-[#0B152E] border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs text-slate-500 dark:text-slate-400 cursor-not-allowed"
             />
           </div>
 
@@ -75,7 +75,7 @@ export default function ApplyModal() {
               required
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+              className="w-full bg-slate-50 dark:bg-[#0B152E] border border-slate-300 dark:border-white/15 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2] focus:ring-1 focus:ring-[#2499F2]"
             />
           </div>
 
@@ -88,11 +88,11 @@ export default function ApplyModal() {
               rows={3}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+              className="w-full bg-slate-50 dark:bg-[#0B152E] border border-slate-300 dark:border-white/15 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2] focus:ring-1 focus:ring-[#2499F2]"
             />
           </div>
 
-          <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+          <div className="p-3 bg-slate-50 dark:bg-[#0B152E]/60 rounded-xl border border-slate-200 dark:border-white/10 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
             <div>• {t('apply_project.note_1')}</div>
             <div>• {t('apply_project.note_2')}</div>
           </div>
@@ -100,7 +100,7 @@ export default function ApplyModal() {
           <button
             type="submit"
             disabled={isSubmittingApply}
-            className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 py-2.5 rounded-xl font-bold text-xs text-white transition cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-cyan-500/20 active:scale-95"
+            className="w-full bg-gradient-to-r from-[#2499F2] to-[#28C8C0] hover:opacity-95 py-2.5 rounded-xl font-bold text-xs text-white transition cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-[#2499F2]/20 active:scale-95"
           >
             {isSubmittingApply ? (
               <>

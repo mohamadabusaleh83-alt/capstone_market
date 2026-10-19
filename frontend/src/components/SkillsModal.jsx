@@ -19,7 +19,7 @@ export default function SkillsModal() {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/25 rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative shadow-2xl animate-in fade-in zoom-in-95 duration-200">
         <button
           type="button"
           onClick={() => setShowSkillsModal(false)}
@@ -38,12 +38,12 @@ export default function SkillsModal() {
             value={newSkillInput}
             onChange={(e) => setNewSkillInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAdd())}
-            className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500"
+            className="flex-1 bg-white dark:bg-[#152550] border border-slate-300 dark:border-[#2499F2]/20 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2]"
           />
           <button
             type="button"
             onClick={handleAdd}
-            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold cursor-pointer shadow-md shadow-cyan-500/20 active:scale-95 transition"
+            className="bg-gradient-to-r from-[#2499F2] to-[#28C8C0] hover:from-[#1D7BC3] hover:to-[#20aba3] text-white px-4 py-2 rounded-xl text-xs font-bold cursor-pointer shadow-md shadow-[#2499F2]/25 active:scale-95 transition"
           >
             {t('skills_modal.add_btn')}
           </button>

@@ -94,20 +94,20 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* رأس الصفحة مع التبويبات وزر إضافة مشروع */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#101E42] backdrop-blur-md border border-slate-200 dark:border-[#2499F2]/20 p-4 rounded-2xl shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)]">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
           <button
             type="button"
             onClick={() => handleTabChange('match')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 whitespace-nowrap ${
               activeTab === 'match'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-blue-400/40'
-                : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
+                ? 'bg-gradient-to-r from-[#2499F2] to-[#1D7BC3] text-white shadow-md shadow-[#2499F2]/25'
+                : 'bg-slate-100 dark:bg-[#152550] text-slate-600 dark:text-slate-300 hover:text-[#101E42] dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#182b5c]'
             }`}
           >
-            <Sparkles className="w-4 h-4 text-cyan-600 dark:text-amber-400 animate-pulse" />
+            <Sparkles className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0] animate-pulse" />
             <span>{t('nav.smart_match')}</span>
-            <span className="text-[10px] bg-blue-500/15 dark:bg-blue-500/20 px-1.5 py-0.2 rounded border border-blue-400/30 text-blue-600 dark:text-blue-200 font-semibold">AI</span>
+            <span className="text-[10px] bg-[#2499F2]/15 dark:bg-[#2499F2]/20 px-1.5 py-0.2 rounded border border-[#2499F2]/30 text-[#2499F2] dark:text-[#77DCC1] font-semibold">AI</span>
           </button>
 
           <button
@@ -115,11 +115,11 @@ export default function ProjectsPage() {
             onClick={() => handleTabChange('browse')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 whitespace-nowrap ${
               activeTab === 'browse'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-blue-400/40'
-                : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
+                ? 'bg-gradient-to-r from-[#2499F2] to-[#1D7BC3] text-white shadow-md shadow-[#2499F2]/25'
+                : 'bg-slate-100 dark:bg-[#152550] text-slate-600 dark:text-slate-300 hover:text-[#101E42] dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#182b5c]'
             }`}
           >
-            <Layers className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+            <Layers className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0]" />
             <span>{t('nav.browse_all')}</span>
           </button>
 
@@ -128,8 +128,8 @@ export default function ProjectsPage() {
             onClick={() => handleTabChange('favorites')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 whitespace-nowrap ${
               activeTab === 'favorites'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-blue-400/40'
-                : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
+                ? 'bg-gradient-to-r from-[#2499F2] to-[#1D7BC3] text-white shadow-md shadow-[#2499F2]/25'
+                : 'bg-slate-100 dark:bg-[#152550] text-slate-600 dark:text-slate-300 hover:text-[#101E42] dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#182b5c]'
             }`}
           >
             <Star className="w-4 h-4 text-amber-500 dark:text-amber-400" />
@@ -142,20 +142,18 @@ export default function ProjectsPage() {
           </button>
         </div>
 
-        {(currentUser?.role === 'company' || currentUser?.role === 'supervisor') && (
-          <button
-            type="button"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-cyan-500/20 hover:shadow-cyan-500/30 transition-all duration-200 cursor-pointer shrink-0 active:scale-95"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>{t('create_project.btn_add')}</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setIsCreateModalOpen(true)}
+          className="inline-flex items-center gap-2 bg-gradient-to-r from-[#2499F2] to-[#28C8C0] hover:from-[#1D7BC3] hover:to-[#20aba3] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-[#2499F2]/20 hover:shadow-[#2499F2]/30 transition-all duration-200 cursor-pointer shrink-0 active:scale-95"
+        >
+          <PlusCircle className="w-4 h-4" />
+          <span>{t('create_project.btn_add')}</span>
+        </button>
       </div>
 
       {/* شريط البحث وتصفية التخصصات */}
-      <div className="bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-2xl space-y-3.5 shadow-sm">
+      <div className="bg-white dark:bg-[#101E42] backdrop-blur-md border border-slate-200 dark:border-[#2499F2]/20 p-4 rounded-2xl space-y-3.5 shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)]">
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute start-3.5 top-3" />
           <input
@@ -163,7 +161,7 @@ export default function ProjectsPage() {
             placeholder={t('projects.search_placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700/80 rounded-xl ps-10 pe-4 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all duration-200"
+            className="w-full bg-slate-50 dark:bg-[#152550] border border-slate-300 dark:border-[#2499F2]/20 rounded-xl ps-10 pe-4 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2] focus:ring-1 focus:ring-[#2499F2] transition-all duration-200"
           />
         </div>
 
@@ -175,8 +173,8 @@ export default function ProjectsPage() {
               onClick={() => setSelectedCategory(cat)}
               className={`text-xs px-3.5 py-1.5 rounded-xl font-medium transition-all duration-150 cursor-pointer whitespace-nowrap active:scale-95 ${
                 selectedCategory === cat
-                  ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-400/40'
-                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
+                  ? 'bg-gradient-to-r from-[#2499F2] to-[#1D7BC3] text-white shadow-sm'
+                  : 'bg-slate-100 dark:bg-[#152550] text-slate-600 dark:text-slate-300 hover:text-[#101E42] dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#182b5c]'
               }`}
             >
               {cat === 'الكل' ? t('common.all') : translateMajor(cat)}
@@ -193,16 +191,16 @@ export default function ProjectsPage() {
           ))}
         </div>
       ) : filteredProjects.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800/90 rounded-3xl p-8 sm:p-14 text-center space-y-5 shadow-sm dark:shadow-xl relative overflow-hidden">
+        <div className="bg-white dark:bg-[#101E42] backdrop-blur-md border border-slate-200 dark:border-[#2499F2]/20 rounded-3xl p-8 sm:p-14 text-center space-y-5 shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)] relative overflow-hidden">
           {/* خلفية جمالية خفيفة */}
-          <div className="absolute inset-0 bg-radial from-cyan-500/5 via-transparent to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-radial from-[#2499F2]/5 via-transparent to-transparent pointer-events-none" />
 
           <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 flex items-center justify-center mx-auto text-cyan-600 dark:text-cyan-400 shadow-md">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-[#152550] border border-slate-200 dark:border-[#2499F2]/20 flex items-center justify-center mx-auto text-[#2499F2] dark:text-[#28C8C0] shadow-md">
               {activeTab === 'favorites' ? (
                 <Star className="w-8 h-8 text-amber-500 dark:text-amber-400" />
               ) : (
-                <FolderSearch className="w-8 h-8 text-cyan-600 dark:text-cyan-400" />
+                <FolderSearch className="w-8 h-8 text-[#2499F2] dark:text-[#28C8C0]" />
               )}
             </div>
           </div>
@@ -227,7 +225,7 @@ export default function ProjectsPage() {
                   setSelectedCategory('الكل');
                   if (activeTab === 'favorites') handleTabChange('browse');
                 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer shadow-md shadow-cyan-500/20 active:scale-95"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#2499F2] to-[#28C8C0] hover:from-[#1D7BC3] hover:to-[#20aba3] text-white text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer shadow-md shadow-[#2499F2]/20 active:scale-95"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>{t('projects.clear_filters')}</span>

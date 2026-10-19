@@ -87,25 +87,25 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200 relative overflow-hidden"
+      className="min-h-screen bg-[#F4F8FC] dark:bg-[#0B152E] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200 relative overflow-hidden"
       dir={isRtl ? 'rtl' : 'ltr'}
     >
       {/* الشريط العلوي للتحكم والمظهر */}
-      <header className="w-full bg-white/70 dark:bg-slate-900/60 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-8 py-3 flex items-center justify-between z-20">
+      <header className="w-full bg-white/80 dark:bg-[#101E42]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-[#2499F2]/20 px-4 sm:px-8 py-3 flex items-center justify-between z-20">
         <div className="flex items-center gap-3">
           <Link
             to="/"
             title={t('nav.back_home')}
             className="flex items-center gap-2.5 group cursor-pointer"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 flex items-center justify-center p-1.5 shadow-sm group-hover:scale-105 transition-transform">
+            <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-[#0B152E] border border-slate-200 dark:border-[#2499F2]/30 flex items-center justify-center p-1.5 shadow-sm group-hover:scale-105 transition-transform">
               <img src="/logo.svg" alt={t('nav.platform_title')} className="w-full h-full object-contain" />
             </div>
-            <span className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight hidden sm:inline">
+            <span className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight hidden sm:inline group-hover:text-[#2499F2] dark:group-hover:text-[#28C8C0] transition-colors">
               {t('nav.platform_title')}
             </span>
           </Link>
-          <span className="text-[11px] font-semibold text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200 dark:border-cyan-800/60 px-2 py-0.5 rounded-full hidden md:inline">
+          <span className="text-[11px] font-semibold text-[#2499F2] dark:text-[#28C8C0] bg-[#2499F2]/10 dark:bg-[#2499F2]/20 border border-[#2499F2]/30 px-2.5 py-0.5 rounded-full hidden md:inline">
             v1.1 Live
           </span>
         </div>
@@ -207,9 +207,9 @@ export default function LoginPage() {
 
         {/* الجانب الثاني: صندوق المصادقة التفاعلي Glassmorphism Card */}
         <section className="lg:col-span-6 xl:col-span-5 p-4 sm:p-8 flex items-center justify-center">
-          <div className="w-full max-w-md bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-slate-200/50 dark:shadow-black/60 relative overflow-hidden space-y-5">
+          <div className="w-full max-w-md bg-white/95 dark:bg-[#101E42] backdrop-blur-2xl border border-slate-200 dark:border-[#2499F2]/25 rounded-3xl p-6 sm:p-8 shadow-2xl dark:shadow-[0_4px_30px_rgba(16,30,66,0.8)] relative overflow-hidden space-y-5">
             {/* مفتاح التنقل بين تسجيل الدخول وإنشاء الحساب */}
-            <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-950/80 rounded-2xl border border-slate-200 dark:border-slate-800">
+            <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-[#152550] rounded-2xl border border-slate-200 dark:border-[#2499F2]/20">
               <button
                 type="button"
                 onClick={() => {
@@ -219,8 +219,8 @@ export default function LoginPage() {
                 }}
                 className={`py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
                   authMode === 'login'
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/20'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-gradient-to-r from-[#2499F2] to-[#1D7BC3] text-white shadow-md shadow-[#2499F2]/25'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-[#101E42] dark:hover:text-white'
                 }`}
               >
                 <LogIn className="w-3.5 h-3.5" />
@@ -236,8 +236,8 @@ export default function LoginPage() {
                 }}
                 className={`py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
                   authMode === 'register'
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/20'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-gradient-to-r from-[#2499F2] to-[#1D7BC3] text-white shadow-md shadow-[#2499F2]/25'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-[#101E42] dark:hover:text-white'
                 }`}
               >
                 <UserPlus className="w-3.5 h-3.5" />
@@ -418,7 +418,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoadingAuth}
-                className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3 px-6 rounded-xl text-xs transition-all duration-200 shadow-md shadow-cyan-500/20 hover:shadow-cyan-500/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95 mt-2"
+                className="w-full bg-gradient-to-r from-[#2499F2] to-[#28C8C0] hover:from-[#1D7BC3] hover:to-[#20aba3] text-white font-bold py-3 px-6 rounded-xl text-xs transition-all duration-200 shadow-md shadow-[#2499F2]/25 hover:shadow-[#2499F2]/35 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95 mt-2"
               >
                 {isLoadingAuth ? (
                   <>
