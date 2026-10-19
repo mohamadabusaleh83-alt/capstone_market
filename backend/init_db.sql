@@ -15,8 +15,23 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- 2. إدراج أو تحديث حساب المشرف الأكاديمي الرسمي للمشروع: د. أسامة أمين مرعي
--- البريد الإلكتروني: omarie@qou.edu
--- كلمة المرور الأولية: Doctor@2025 (المشفرة عبر bcrypt)
+-- البريد الإلكتروني الأساسي: osama.merhi@capstone.ps (كلمة المرور: password123)
+-- البريد الإلكتروني الإضافي: omarie@qou.edu (كلمة المرور: Doctor@2025)
+INSERT INTO users (full_name, email, password_hash, role, skills, created_at)
+VALUES (
+    'د. أسامة أمين مرعي',
+    'osama.merhi@capstone.ps',
+    '$2b$12$3DumjB2aG6J7wkh7XnN6/evLI6fGq72Slvj0zs8qnluc2vQbuIsWy',
+    'supervisor',
+    'نظم معلومات حاسوبية - كلية التكنولوجيا والعلوم التطبيقية',
+    CURRENT_TIMESTAMP
+)
+ON CONFLICT (email) DO UPDATE 
+SET full_name = EXCLUDED.full_name,
+    password_hash = EXCLUDED.password_hash,
+    role = EXCLUDED.role,
+    skills = EXCLUDED.skills;
+
 INSERT INTO users (full_name, email, password_hash, role, skills, created_at)
 VALUES (
     'د. أسامة أمين مرعي',

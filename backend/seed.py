@@ -15,6 +15,14 @@ logger = logging.getLogger("seed")
 
 OFFICIAL_SUPERVISOR = {
     "full_name": "د. أسامة أمين مرعي",
+    "email": "osama.merhi@capstone.ps",
+    "password": "password123",
+    "role": "supervisor",
+    "skills": "نظم معلومات حاسوبية - كلية التكنولوجيا والعلوم التطبيقية"
+}
+
+OFFICIAL_SUPERVISOR_ALT = {
+    "full_name": "د. أسامة أمين مرعي",
     "email": "omarie@qou.edu",
     "password": "Doctor@2025",
     "role": "supervisor",
@@ -23,6 +31,7 @@ OFFICIAL_SUPERVISOR = {
 
 DEFAULT_USERS = [
     OFFICIAL_SUPERVISOR,
+    OFFICIAL_SUPERVISOR_ALT,
     {
         "full_name": "أحمد منصور",
         "email": "student@capstone.ps",

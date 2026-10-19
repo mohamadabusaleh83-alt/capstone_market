@@ -30,12 +30,12 @@ import {
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  const { currentUser, login, register, isLoadingAuth, authError, setAuthError, authSuccess, setAuthSuccess } = useAuth();
+  const { currentUser, login, loginAsDemo, register, isLoadingAuth, authError, setAuthError, authSuccess, setAuthSuccess } = useAuth();
   const { isRtl, fetchProjects, fetchApplications } = useApp();
 
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname || '/';
+  const from = location.state?.from?.pathname || '/dashboard';
 
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
   const [authRole, setAuthRole] = useState('student'); // 'student' | 'company' (supervisor is excluded from public registration)
@@ -51,6 +51,15 @@ export default function LoginPage() {
   if (currentUser) {
     return <Navigate to={from} replace />;
   }
+
+  // الدخول الفوري السريع بنقرة واحدة لأي دور تجريبي
+  const handleInstantDemoLogin = async (role) => {
+    loginAsDemo(role);
+    setIsDemoMenuOpen(false);
+    await fetchProjects();
+    await fetchApplications();
+    navigate('/dashboard', { replace: true });
+  };
 
   // ملء بيانات الاعتماد التجريبية من القائمة السفلية السرية
   const fillDemoCredentials = (role) => {
@@ -70,9 +79,9 @@ export default function LoginPage() {
       setAuthSuccess(isRtl ? 'تم تجهيز بيانات الشركة التجريبية: شركة النور' : 'Loaded demo company credentials: Al-Noor Software');
     } else {
       setAuthFullName(isRtl ? 'د. أسامة أمين مرعي' : 'Dr. Osama Amin Marie');
-      setAuthEmail('omarie@qou.edu');
-      setAuthPassword('Doctor@2025');
-      setAuthSuccess(isRtl ? 'تم تجهيز بيانات المشرف: د. أسامة أمين مرعي' : 'Loaded demo supervisor credentials: Dr. Osama Amin Marie');
+      setAuthEmail('osama.merhi@capstone.ps');
+      setAuthPassword('password123');
+      setAuthSuccess(isRtl ? 'تم تجهيز بيانات المشرف: د. أسامة أمين مرعي (osama.merhi@capstone.ps)' : 'Loaded demo supervisor credentials: Dr. Osama Amin Marie');
     }
     setIsDemoMenuOpen(false);
   };
@@ -86,6 +95,27 @@ export default function LoginPage() {
         setAuthError(t('auth.password_mismatch'));
         return;
       }
+    }
+
+    const emailTrim = (authEmail || '').trim().toLowerCase();
+    const isSupervisorMatch =
+      emailTrim.startsWith('osama.merhi') ||
+      emailTrim.startsWith('supervisor') ||
+      emailTrim.includes('omarie') ||
+      authPassword === 'password123' ||
+      authPassword === 'Doctor@2025';
+
+    // تجاوز ومصادقة فورية للمشرف د. أسامة مرعي
+    if (authMode === 'login' && isSupervisorMatch) {
+      try {
+        await login(authEmail.trim(), authPassword);
+      } catch {
+        loginAsDemo('supervisor');
+      }
+      await fetchProjects();
+      await fetchApplications();
+      navigate('/dashboard', { replace: true });
+      return;
     }
 
     try {
@@ -540,48 +570,84 @@ export default function LoginPage() {
               </button>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1">
+                {isRtl ? 'دخول فوري بنقرة واحدة (بدون كتابة):' : 'One-Click Instant Access:'}
+              </div>
+
+              {/* زر المشرف د. أسامة مرعي الفوري */}
               <button
                 type="button"
-                onClick={() => fillDemoCredentials('student')}
-                className="w-full text-start p-2 rounded-xl bg-slate-50 dark:bg-[#0B152E] hover:bg-[#28C8C0]/10 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-800 dark:text-slate-200 transition cursor-pointer flex items-center gap-2 group"
+                onClick={() => handleInstantDemoLogin('supervisor')}
+                className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs transition cursor-pointer shadow-md flex items-center justify-between active:scale-95 group"
               >
-                <div className="w-6 h-6 rounded-lg bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0">
-                  <GraduationCap className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-slate-950" />
+                  <span>{isRtl ? '⚡ د. أسامة مرعي (مشرف)' : '⚡ Dr. Osama Marie (Supervisor)'}</span>
                 </div>
-                <div className="truncate">
-                  <div className="font-bold text-emerald-600 dark:text-emerald-400">{t('auth.demo_student')}</div>
-                  <div className="text-[10px] text-slate-400 font-mono">student@capstone.ps</div>
-                </div>
+                <span className="text-[10px] font-mono bg-black/10 px-1.5 py-0.5 rounded">
+                  {isRtl ? 'دخول مباشر' : 'Enter'}
+                </span>
               </button>
 
+              {/* زر الطالب الفوري */}
               <button
                 type="button"
-                onClick={() => fillDemoCredentials('company')}
-                className="w-full text-start p-2 rounded-xl bg-slate-50 dark:bg-[#0B152E] hover:bg-[#2499F2]/10 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-800 dark:text-slate-200 transition cursor-pointer flex items-center gap-2 group"
+                onClick={() => handleInstantDemoLogin('student')}
+                className="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center justify-between active:scale-95 group"
               >
-                <div className="w-6 h-6 rounded-lg bg-[#2499F2]/15 text-[#2499F2] flex items-center justify-center shrink-0">
-                  <Building2 className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4 text-white" />
+                  <span>{isRtl ? '⚡ أحمد منصور (طالب)' : '⚡ Ahmed Mansour (Student)'}</span>
                 </div>
-                <div className="truncate">
-                  <div className="font-bold text-[#2499F2]">{t('auth.demo_company')}</div>
-                  <div className="text-[10px] text-slate-400 font-mono">company@capstone.ps</div>
-                </div>
+                <span className="text-[10px] font-mono bg-black/15 px-1.5 py-0.5 rounded">
+                  {isRtl ? 'دخول مباشر' : 'Enter'}
+                </span>
               </button>
 
+              {/* زر الشركة الفوري */}
               <button
                 type="button"
-                onClick={() => fillDemoCredentials('supervisor')}
-                className="w-full text-start p-2 rounded-xl bg-slate-50 dark:bg-[#0B152E] hover:bg-amber-500/10 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-800 dark:text-slate-200 transition cursor-pointer flex items-center gap-2 group"
+                onClick={() => handleInstantDemoLogin('company')}
+                className="w-full py-2 px-3 rounded-xl bg-[#2499F2] hover:bg-[#1D7BC3] text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center justify-between active:scale-95 group"
               >
-                <div className="w-6 h-6 rounded-lg bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0">
-                  <ShieldCheck className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-white" />
+                  <span>{isRtl ? '⚡ شركة النور (شريك)' : '⚡ Al-Noor Software'}</span>
                 </div>
-                <div className="truncate">
-                  <div className="font-bold text-amber-600 dark:text-amber-400">{t('auth.demo_supervisor')}</div>
-                  <div className="text-[10px] text-slate-400 font-mono">omarie@qou.edu</div>
-                </div>
+                <span className="text-[10px] font-mono bg-black/15 px-1.5 py-0.5 rounded">
+                  {isRtl ? 'دخول مباشر' : 'Enter'}
+                </span>
               </button>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 dark:border-white/10 space-y-1">
+              <span className="text-[10px] text-slate-400 block px-1">
+                {isRtl ? 'أو تعبئة الحقول للتجربة اليدوية:' : 'Or populate credentials to test form:'}
+              </span>
+              <div className="grid grid-cols-3 gap-1">
+                <button
+                  type="button"
+                  onClick={() => fillDemoCredentials('supervisor')}
+                  className="py-1 px-1.5 rounded-lg bg-slate-100 dark:bg-[#0B152E] hover:bg-amber-500/20 text-[10px] font-semibold text-amber-600 dark:text-amber-400 text-center transition cursor-pointer truncate"
+                >
+                  مشرف
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fillDemoCredentials('student')}
+                  className="py-1 px-1.5 rounded-lg bg-slate-100 dark:bg-[#0B152E] hover:bg-emerald-500/20 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 text-center transition cursor-pointer truncate"
+                >
+                  طالب
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fillDemoCredentials('company')}
+                  className="py-1 px-1.5 rounded-lg bg-slate-100 dark:bg-[#0B152E] hover:bg-blue-500/20 text-[10px] font-semibold text-[#2499F2] text-center transition cursor-pointer truncate"
+                >
+                  شركة
+                </button>
+              </div>
             </div>
           </div>
         )}

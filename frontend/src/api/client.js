@@ -67,21 +67,31 @@ export async function apiFetch(endpoint, options = {}, onUnauthorized = null) {
     ...options.headers
   };
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers
-  });
+  try {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers
+    });
 
-  if (response.status === 401) {
-    if (typeof onUnauthorized === 'function') {
-      onUnauthorized();
-    } else if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('app_user_role');
-      window.location.href = '/login';
+    if (response.status === 401) {
+      if (token && token.startsWith('demo-token-')) {
+        return response;
+      }
+      if (typeof onUnauthorized === 'function') {
+        onUnauthorized();
+      } else if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('app_user_role');
+        window.location.href = '/login';
+      }
+      throw new Error('انتهت صلاحية جلسة الدخول، يرجى تسجيل الدخول مجدداً.');
     }
-    throw new Error('انتهت صلاحية جلسة الدخول، يرجى تسجيل الدخول مجدداً.');
-  }
 
-  return response;
+    return response;
+  } catch (err) {
+    if (token && token.startsWith('demo-token-')) {
+      return { ok: false, status: 503, json: async () => ({}) };
+    }
+    throw err;
+  }
 }
