@@ -165,12 +165,12 @@ export default function LoginPage() {
         </div>
       </header>
 
-      {/* المحتوى الرئيسي بهيكل الشاشة المقسومة (Split-Screen Modern 50/50 Layout) */}
-      <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex items-center justify-center z-10">
-        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+      {/* المحتوى الرئيسي بهيكل الشاشة المقسومة والتجاوب التام لشاشات الموبايل */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 sm:p-6 lg:p-8 flex items-center justify-center z-10">
+        <div className="w-full flex flex-col lg:grid lg:grid-cols-2 gap-6 lg:gap-8 items-stretch max-w-md sm:max-w-xl lg:max-w-none mx-auto">
           
           {/* الجانب الأيمن (الواجهة الترحيبية والهوية الرسمية الفخمة) */}
-          <section className="bg-[#101E42] text-white rounded-3xl p-8 sm:p-10 lg:p-12 flex flex-col justify-between relative overflow-hidden shadow-2xl border border-[#2499F2]/25 order-1">
+          <section className="bg-[#101E42] text-white rounded-3xl p-6 sm:p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden shadow-2xl border border-[#2499F2]/25 order-1">
             {/* لمسات إضاءة خلفية ناعمة بدرجات Turquoise & Blue */}
             <div className="absolute -top-24 -start-24 w-80 h-80 bg-[#28C8C0]/20 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-24 -end-24 w-80 h-80 bg-[#2499F2]/25 rounded-full blur-3xl pointer-events-none" />
@@ -252,8 +252,8 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* رابط العودة للمنصة الرئيسية في الأسفل */}
-            <div className="pt-6 relative z-10">
+            {/* رابط العودة للمنصة وتوثيق المطور */}
+            <div className="pt-6 relative z-10 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 mt-6">
               <Link
                 to="/"
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-[#0B152E]/80 hover:bg-[#0B152E] text-slate-200 hover:text-white border border-[#2499F2]/30 hover:border-[#28C8C0]/50 transition-all active:scale-95 group w-fit cursor-pointer shadow-md"
@@ -265,6 +265,18 @@ export default function LoginPage() {
                 )}
                 <span>{t('auth.back_to_home')}</span>
               </Link>
+
+              <div className="text-[11px] text-slate-300 flex items-center gap-1.5">
+                <span>تطوير:</span>
+                <a
+                  href="https://www.linkedin.com/in/mohamad-abu-saleh-598255350"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold text-[#28C8C0] hover:text-[#77DCC1] underline underline-offset-2 flex items-center gap-1 transition-colors"
+                >
+                  محمد أبو صالح
+                </a>
+              </div>
             </div>
           </section>
 
@@ -538,9 +550,22 @@ export default function LoginPage() {
         </div>
       </main>
 
-      {/* تذييل الصفحة الأنيق والبسيط */}
-      <footer className="text-center py-3 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-200/80 dark:border-white/5 bg-white/40 dark:bg-[#0B152E]/40 backdrop-blur-sm z-20">
-        {t('auth.footer')}
+      {/* تذييل الصفحة وتوثيق المطور */}
+      <footer className="text-center py-4 px-4 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200/80 dark:border-white/5 bg-white/40 dark:bg-[#0B152E]/40 backdrop-blur-sm z-20 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
+        <span>{t('auth.footer')}</span>
+        <span className="hidden sm:inline opacity-40">|</span>
+        <a
+          href="https://www.linkedin.com/in/mohamad-abu-saleh-598255350"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 font-bold text-[#2499F2] hover:text-[#0A66C2] dark:text-[#28C8C0] dark:hover:text-[#77DCC1] transition-colors"
+          title="Mohamad Abu Saleh - LinkedIn Profile"
+        >
+          <svg className="w-3.5 h-3.5 fill-current text-[#0A66C2] shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/>
+          </svg>
+          <span>تطوير وبرمجة: محمد أبو صالح (Mohamad Abu Saleh)</span>
+        </a>
       </footer>
     </div>
   );

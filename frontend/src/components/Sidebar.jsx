@@ -23,7 +23,8 @@ import {
   Activity,
   LogOut,
   Sparkles,
-  FileText
+  FileText,
+  X
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -71,39 +72,50 @@ export default function Sidebar() {
       {isSidebarOpen && (
         <div
           onClick={closeSidebarOnMobile}
-          className="fixed inset-x-0 top-16 bottom-0 bg-black/60 backdrop-blur-sm z-20 md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
         />
       )}
 
       {/* القائمة الجانبية: متوافقة تماماً مع Navy الفخم (#101E42) وتباين ناعم للحدود و RTL/LTR */}
       <aside
         className={`
-          fixed top-16 bottom-0 ${isRtl ? 'right-0 border-l' : 'left-0 border-r'} z-30 w-64 bg-white dark:bg-[#101E42] border-slate-200 dark:border-[#2499F2]/20 p-4 
-          overflow-y-auto flex flex-col justify-between transition-all duration-300 ease-in-out shadow-sm dark:shadow-2xl
+          fixed top-0 bottom-0 ${isRtl ? 'right-0 border-l' : 'left-0 border-r'} z-50 w-72 md:w-64 bg-white dark:bg-[#101E42] border-slate-200 dark:border-[#2499F2]/20 p-4 
+          overflow-y-auto flex flex-col justify-between transition-all duration-300 ease-in-out shadow-2xl
           md:static md:top-auto md:bottom-auto md:h-auto md:z-auto
           ${isSidebarOpen ? 'translate-x-0' : isRtl ? 'translate-x-full md:translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
         <div className="space-y-3">
-          {/* الشعار واسم المنصة في القائمة الجانبية */}
-          <Link
-            to="/"
-            onClick={closeSidebarOnMobile}
-            title={t('nav.back_home')}
-            className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 dark:bg-[#152550]/60 hover:bg-slate-100 dark:hover:bg-[#152550] border border-slate-200/80 dark:border-[#2499F2]/20 cursor-pointer hover:scale-102 transition-all duration-200 select-none group mb-2"
-          >
-            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#0B152E] border border-slate-200 dark:border-[#2499F2]/30 flex items-center justify-center shadow-md shadow-[#2499F2]/10 dark:shadow-[#2499F2]/20 overflow-hidden shrink-0 group-hover:border-[#2499F2]/60 transition-colors">
-              <img src="/logo.svg" alt="Capstone Market" className="w-6 h-6 object-contain" />
-            </div>
-            <div className="min-w-0">
-              <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white tracking-wide block leading-tight truncate group-hover:text-[#2499F2] dark:group-hover:text-[#28C8C0] transition-colors">
-                Capstone Market
-              </span>
-              <span className="text-[10px] text-[#2499F2] dark:text-[#28C8C0] font-mono block truncate">
-                v1.1 Full Suite
-              </span>
-            </div>
-          </Link>
+          {/* الشعار واسم المنصة وزر الإغلاق على الموبايل */}
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <Link
+              to="/"
+              onClick={closeSidebarOnMobile}
+              title={t('nav.back_home')}
+              className="flex-1 flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 dark:bg-[#152550]/60 hover:bg-slate-100 dark:hover:bg-[#152550] border border-slate-200/80 dark:border-[#2499F2]/20 cursor-pointer hover:scale-102 transition-all duration-200 select-none group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#0B152E] border border-slate-200 dark:border-[#2499F2]/30 flex items-center justify-center shadow-md shadow-[#2499F2]/10 dark:shadow-[#2499F2]/20 overflow-hidden shrink-0 group-hover:border-[#2499F2]/60 transition-colors">
+                <img src="/logo.svg" alt="Capstone Market" className="w-6 h-6 object-contain" />
+              </div>
+              <div className="min-w-0">
+                <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white tracking-wide block leading-tight truncate group-hover:text-[#2499F2] dark:group-hover:text-[#28C8C0] transition-colors">
+                  Capstone Market
+                </span>
+                <span className="text-[10px] text-[#2499F2] dark:text-[#28C8C0] font-mono block truncate">
+                  v1.1 Full Suite
+                </span>
+              </div>
+            </Link>
+
+            <button
+              type="button"
+              onClick={closeSidebarOnMobile}
+              className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#152550] border border-transparent hover:border-slate-200 dark:hover:border-[#2499F2]/30 transition md:hidden cursor-pointer"
+              aria-label="Close menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
           {/* بطاقة الحساب النشط */}
           <div className="p-3 bg-slate-50 dark:bg-[#152550] border border-slate-200/80 dark:border-[#2499F2]/20 rounded-xl mb-3 shadow-sm">
@@ -376,6 +388,22 @@ export default function Sidebar() {
             </div>
             <span className="text-[10px] font-mono opacity-70">Exit</span>
           </button>
+
+          {/* توثيق المطور وحقوق التطوير */}
+          <div className="pt-2 px-1 text-center border-t border-slate-200/50 dark:border-[#2499F2]/10">
+            <a
+              href="https://www.linkedin.com/in/mohamad-abu-saleh-598255350"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[11px] text-slate-500 hover:text-[#0A66C2] dark:text-slate-400 dark:hover:text-[#28C8C0] transition-colors group"
+              title="Mohamad Abu Saleh - LinkedIn Profile"
+            >
+              <svg className="w-3.5 h-3.5 fill-current text-[#0A66C2] shrink-0 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/>
+              </svg>
+              <span className="font-medium truncate">تطوير: محمد أبو صالح</span>
+            </a>
+          </div>
         </div>
       </aside>
     </>

@@ -1,3 +1,9 @@
+/**
+ * Capstone Market Platform
+ * Developed and engineered by: Mohamad Abu Saleh
+ * LinkedIn: https://www.linkedin.com/in/mohamad-abu-saleh-598255350
+ * Email: mohamadabusaleh83@gmail.com
+ **/
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
