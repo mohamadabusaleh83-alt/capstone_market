@@ -4,6 +4,26 @@ import { useAuth } from './AuthContext';
 import { useTheme } from './ThemeContext';
 import { API_URL, INITIAL_FALLBACK_PROJECTS, ACADEMIC_MAJORS } from '../api/client';
 
+const CANONICAL_SKILL_MAP = {
+  spl: 'SQL', sql: 'SQL', python: 'Python', react: 'React', fastapi: 'FastAPI',
+  docker: 'Docker', postgresql: 'PostgreSQL', postgres: 'PostgreSQL',
+  node: 'Node.js', nodejs: 'Node.js', 'node.js': 'Node.js',
+  tailwind: 'TailwindCSS', tailwindcss: 'TailwindCSS',
+  javascript: 'JavaScript', typescript: 'TypeScript',
+  'machine learning': 'Machine Learning', 'power bi': 'Power BI', powerbi: 'Power BI',
+  cybersecurity: 'Cybersecurity'
+};
+
+function normalizeSkill(s) {
+  if (!s || typeof s !== 'string') return '';
+  const clean = s.trim().replace(/^['"<]+|['">]+$/g, '').replace(/<spl/gi, 'SQL');
+  const lower = clean.toLowerCase();
+  if (!lower) return '';
+  return CANONICAL_SKILL_MAP[lower] || (clean.charAt(0).toUpperCase() + clean.slice(1));
+}
+
+let projectsMemoryCache = null;
+
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
@@ -74,45 +94,175 @@ export function AppProvider({ children }) {
 
   // ==========================================
   // حالات المشاريع والبيانات الحية (Projects & Applications)
+  // مع طبقة التخزين المؤقت الذكي (Zero-Latency Instant UI Caching)
   // ==========================================
-  const [rawProjects, setRawProjects] = useState([]);
+  const [rawProjects, setRawProjects] = useState(() => {
+    if (projectsMemoryCache && projectsMemoryCache.length > 0) return projectsMemoryCache;
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('capstone_projects_cache');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            projectsMemoryCache = parsed;
+            return parsed;
+          }
+        }
+      } catch {}
+    }
+    return INITIAL_FALLBACK_PROJECTS;
+  });
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
 
   const [applications, setApplications] = useState([]);
   const [isLoadingApplications, setIsLoadingApplications] = useState(false);
 
-  // المفضلة
-  const [favorites, setFavorites] = useState([]);
-  const toggleFavorite = useCallback((id) => {
-    setFavorites((prev) =>
-      prev.includes(id) ? prev.filter((favId) => favId !== id) : [...prev, id]
-    );
-  }, []);
+  // المفضلة - معزولة بنسبة 100% لكل مستخدم
+  const [favorites, setFavorites] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const user = localStorage.getItem('app_user_role');
+      const userId = user ? JSON.parse(user).id : 'guest';
+      const saved = localStorage.getItem(`favorites_${userId}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-  // مهارات الطالب
-  const [userSkills, setUserSkills] = useState(['Python', 'FastAPI', 'Docker', 'React', 'TailwindCSS']);
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setFavorites([]);
+      return;
+    }
+    try {
+      const saved = localStorage.getItem(`favorites_${currentUser.id}`);
+      setFavorites(saved ? JSON.parse(saved) : []);
+    } catch {
+      setFavorites([]);
+    }
+  }, [currentUser?.id]);
+
+  const toggleFavorite = useCallback((id) => {
+    setFavorites((prev) => {
+      const next = prev.includes(id) ? prev.filter((favId) => favId !== id) : [...prev, id];
+      if (typeof window !== 'undefined' && currentUser?.id) {
+        localStorage.setItem(`favorites_${currentUser.id}`, JSON.stringify(next));
+      }
+      return next;
+    });
+  }, [currentUser?.id]);
+
+  // مهارات الطالب - معزولة بنسبة 100% (الحساب الجديد يبدأ بـ 0 مهارات ونظيفة تماماً)
+  const [userSkills, setUserSkills] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const user = localStorage.getItem('app_user_role');
+      if (!user) return [];
+      const userObj = JSON.parse(user);
+      const saved = localStorage.getItem(`user_skills_${userObj.id}`);
+      if (saved) return JSON.parse(saved);
+      if (userObj.id === 'student-1') {
+        return ['Python', 'FastAPI', 'Docker', 'React', 'TailwindCSS'];
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setUserSkills([]);
+      return;
+    }
+    try {
+      const saved = localStorage.getItem(`user_skills_${currentUser.id}`);
+      if (saved) {
+        setUserSkills(JSON.parse(saved));
+      } else if (currentUser.id === 'student-1') {
+        setUserSkills(['Python', 'FastAPI', 'Docker', 'React', 'TailwindCSS']);
+      } else {
+        setUserSkills([]);
+      }
+    } catch {
+      setUserSkills([]);
+    }
+  }, [currentUser?.id]);
+
   const addSkill = useCallback((skill) => {
     const s = skill.trim();
     if (s && !userSkills.includes(s)) {
-      setUserSkills((prev) => [...prev, s]);
+      setUserSkills((prev) => {
+        const next = [...prev, s];
+        if (typeof window !== 'undefined' && currentUser?.id) {
+          localStorage.setItem(`user_skills_${currentUser.id}`, JSON.stringify(next));
+        }
+        return next;
+      });
     }
-  }, [userSkills]);
+  }, [userSkills, currentUser?.id]);
 
   const removeSkill = useCallback((skillToRemove) => {
-    setUserSkills((prev) => prev.filter((s) => s !== skillToRemove));
-  }, []);
+    setUserSkills((prev) => {
+      const next = prev.filter((s) => s !== skillToRemove);
+      if (typeof window !== 'undefined' && currentUser?.id) {
+        localStorage.setItem(`user_skills_${currentUser.id}`, JSON.stringify(next));
+      }
+      return next;
+    });
+  }, [currentUser?.id]);
 
-  // السيرة الذاتية للطالب
+  // السيرة الذاتية للطالب - معزولة بنسبة 100%
   const [studentCv, setStudentCv] = useState(() => {
-    if (typeof window === 'undefined') return { major: 'أنظمة المعلومات الحاسوبية (CIS)', course: 'مشروع تخرج 1', portfolioUrl: 'https://github.com', bio: '' };
-    const saved = localStorage.getItem('student_academic_cv');
-    return saved ? JSON.parse(saved) : {
-      major: 'أنظمة المعلومات الحاسوبية (CIS)',
-      course: 'مشروع تخرج 1',
-      portfolioUrl: 'https://github.com',
-      bio: 'طالب في السنة النهائية، مهتم بتطوير الأنظمة السحابية وحلول الويب المتكاملة.'
-    };
+    if (typeof window === 'undefined') return { major: 'أنظمة المعلومات الحاسوبية (CIS)', course: 'مشروع تخرج 1', portfolioUrl: '', bio: '' };
+    try {
+      const user = localStorage.getItem('app_user_role');
+      const userId = user ? JSON.parse(user).id : 'guest';
+      const saved = localStorage.getItem(`student_academic_cv_${userId}`);
+      if (saved) return JSON.parse(saved);
+      if (userId === 'student-1') {
+        return {
+          major: 'أنظمة المعلومات الحاسوبية (CIS)',
+          course: 'مشروع تخرج 1',
+          portfolioUrl: 'https://github.com',
+          bio: 'طالب في السنة النهائية، مهتم بتطوير الأنظمة السحابية وحلول الويب المتكاملة.'
+        };
+      }
+      return {
+        major: 'أنظمة المعلومات الحاسوبية (CIS)',
+        course: 'مشروع تخرج 1',
+        portfolioUrl: '',
+        bio: ''
+      };
+    } catch {
+      return { major: 'أنظمة المعلومات الحاسوبية (CIS)', course: 'مشروع تخرج 1', portfolioUrl: '', bio: '' };
+    }
   });
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    try {
+      const saved = localStorage.getItem(`student_academic_cv_${currentUser.id}`);
+      if (saved) {
+        setStudentCv(JSON.parse(saved));
+      } else if (currentUser.id === 'student-1') {
+        setStudentCv({
+          major: 'أنظمة المعلومات الحاسوبية (CIS)',
+          course: 'مشروع تخرج 1',
+          portfolioUrl: 'https://github.com',
+          bio: 'طالب في السنة النهائية، مهتم بتطوير الأنظمة السحابية وحلول الويب المتكاملة.'
+        });
+      } else {
+        setStudentCv({
+          major: 'أنظمة المعلومات الحاسوبية (CIS)',
+          course: 'مشروع تخرج 1',
+          portfolioUrl: '',
+          bio: ''
+        });
+      }
+    } catch {}
+  }, [currentUser?.id]);
 
   // ==========================================
   // النوافذ المنبثقة (Modals State)
@@ -254,12 +404,12 @@ export function AppProvider({ children }) {
   }, [isLoadingProjects]);
 
   // ==========================================
-  // دوال الاتصال بالباك إند وجلب البيانات
+  // دوال الاتصال بالباك إند وجلب البيانات (Ultra-Fast Parallel & SWR Fetching)
   // ==========================================
   const fetchProjects = useCallback(async () => {
     setIsLoadingProjects(true);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1500);
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
 
     try {
       const res = await fetch(`${API_URL}/projects/`, { signal: controller.signal });
@@ -268,15 +418,16 @@ export function AppProvider({ children }) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
           const formatted = data.map((p, idx) => {
-            const projectSkills = p.required_skills
-              ? p.required_skills.split(',').map((s) => s.trim()).filter(Boolean)
-              : ['Python', 'FastAPI'];
+            const rawSkillList = p.required_skills
+              ? p.required_skills.replace(/<spl/gi, ', SQL').split(',').map((s) => normalizeSkill(s)).filter(Boolean)
+              : ['Python', 'SQL', 'FastAPI', 'React'];
+            const projectSkills = Array.from(new Set(rawSkillList));
 
             return {
               id: p.id,
               title: p.title || 'مشروع تخرج',
               description: p.description || 'لا يوجد وصف متوفر حالياً.',
-              required_skills: p.required_skills || '',
+              required_skills: projectSkills.join(', '),
               skills: projectSkills,
               created_by: p.created_by,
               created_at: p.created_at,
@@ -289,13 +440,20 @@ export function AppProvider({ children }) {
               availableSeats: p.available_seats !== undefined ? p.available_seats : Math.max(0, (p.max_members || 4) - (p.current_members || 0))
             };
           });
+
+          projectsMemoryCache = formatted;
+          if (typeof window !== 'undefined') {
+            try {
+              sessionStorage.setItem('capstone_projects_cache', JSON.stringify(formatted));
+            } catch {}
+          }
           setRawProjects(formatted);
           return;
         }
       }
-      setRawProjects(INITIAL_FALLBACK_PROJECTS);
+      setRawProjects((prev) => (prev.length > 0 ? prev : INITIAL_FALLBACK_PROJECTS));
     } catch {
-      setRawProjects(INITIAL_FALLBACK_PROJECTS);
+      setRawProjects((prev) => (prev.length > 0 ? prev : INITIAL_FALLBACK_PROJECTS));
     } finally {
       clearTimeout(timeoutId);
       setIsLoadingProjects(false);
@@ -340,6 +498,15 @@ export function AppProvider({ children }) {
     }
   }, [apiFetch]);
 
+  // استدعاء متوازٍ سريع لجميع الـ Endpoints بدون أي بطء أو انتظار تعاقبي
+  const refreshAllData = useCallback(async () => {
+    const promises = [fetchProjects()];
+    if (currentUser) {
+      promises.push(fetchApplications(), fetchNotifications());
+    }
+    await Promise.allSettled(promises);
+  }, [currentUser, fetchProjects, fetchApplications, fetchNotifications]);
+
   const handleMarkNotificationRead = useCallback(async (notificationId) => {
     try {
       await apiFetch(`/notifications/${notificationId}/read`, { method: 'PUT' });
@@ -361,19 +528,17 @@ export function AppProvider({ children }) {
     }
   }, [apiFetch, showToast, isRtl]);
 
-  // تحديث البيانات عند بدء التشغيل
+  // تحديث البيانات المتوازي عند بدء التشغيل وتغيير الحساب
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+    refreshAllData();
+  }, [refreshAllData]);
 
   useEffect(() => {
     if (currentUser) {
-      fetchApplications();
-      fetchNotifications();
       const interval = setInterval(fetchNotifications, 30000);
       return () => clearInterval(interval);
     }
-  }, [currentUser, fetchApplications, fetchNotifications]);
+  }, [currentUser, fetchNotifications]);
 
   // حساب نسبة التطابق الذكية
   const matchedProjects = useMemo(() => {
@@ -550,19 +715,24 @@ export function AppProvider({ children }) {
   }, [apiFetch, fetchProjects, fetchNotifications, translateErrorMessage, isRtl, showToast, t]);
 
   // ==========================================
-  // اعتماد أو رفض مشروع من المشرف
+  // اعتماد أو رفض مشروع من المشرف (مع التحديث الفوري المباشر Optimistic Update)
   // ==========================================
   const approveProject = useCallback(async (projectId, targetStatus) => {
+    // تحديث فوري مباشر للواجهة قبل انتظار الشبكة
+    setRawProjects((prev) =>
+      prev.map((p) => (p.id === projectId ? { ...p, status: targetStatus } : p))
+    );
     try {
       const res = await apiFetch(`/projects/${projectId}/status`, {
         method: 'PUT',
         body: JSON.stringify({ status: targetStatus })
       });
       if (!res.ok) {
+        // تراجع فوري في حال حدوث خطأ
+        await fetchProjects();
         const errData = await res.json().catch(() => ({}));
         throw new Error(translateErrorMessage(errData.detail || (isRtl ? 'تعذر تحديث حالة المشروع.' : 'Could not update project status.')));
       }
-      await fetchProjects();
       fetchNotifications();
       showToast(t('toasts.project_status_updated', {
         status: targetStatus === 'approved' ? (isRtl ? 'معتمد' : 'Approved') : targetStatus === 'rejected' ? (isRtl ? 'مرفوض' : 'Rejected') : (isRtl ? 'قيد المراجعة' : 'Pending')
@@ -712,6 +882,8 @@ export function AppProvider({ children }) {
         isSubmittingProject,
         createProject,
         approveProject,
+        updateProjectStatus: approveProject,
+        refreshAllData,
         isApplyModalOpen,
         setIsApplyModalOpen,
         isSubmittingApply,

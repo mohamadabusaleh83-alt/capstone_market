@@ -18,12 +18,8 @@ export default function SavedProjectsPage() {
   const { t } = useTranslation();
   const { isRtl, rawProjects, favorites, toggleFavorite, setShowApplicationsModal, showToast } = useApp();
 
-  // المشاريع المفضلة من AppContext أو عينة واقعية في حال كانت المفضلة فارغة
-  const savedProjectsList = rawProjects.filter((p) => favorites.includes(p.id));
-  const displayProjects =
-    savedProjectsList.length > 0
-      ? savedProjectsList
-      : rawProjects.slice(0, 3); // إظهار عينة جاهزة للمعاينة إذا كانت المفضلة فارغة
+  // المشاريع المفضلة للمستخدم الحالي بنمط عزل صارم 100%
+  const displayProjects = rawProjects.filter((p) => favorites.includes(p.id));
 
   const handleRemove = (e, id) => {
     e.stopPropagation();
@@ -57,7 +53,7 @@ export default function SavedProjectsPage() {
         </div>
 
         <Link
-          to="/?tab=browse"
+          to="/projects"
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#2499F2] to-[#28C8C0] hover:opacity-95 text-[#101E42] font-black text-xs shadow-md shadow-[#2499F2]/20 transition cursor-pointer active:scale-95 shrink-0"
         >
           <Sparkles className="w-4 h-4 text-[#101E42]" />
@@ -74,16 +70,16 @@ export default function SavedProjectsPage() {
           <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
             {isRtl ? 'لا توجد مشاريع محفوظة حالياً' : 'No saved projects yet'}
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 max-w-md mx-auto leading-relaxed">
             {isRtl
-              ? 'انقر على أيقونة النجمة على بطاقة أي مشروع في سوق التخرج لحفظه هنا والرجوع إليه لاحقاً.'
-              : 'Click the star icon on any capstone card to shortlist it here for quick access.'}
+              ? 'انقر على أيقونة النجمة أو زر الحفظ على بطاقة أي مشروع في سوق التخرج لحفظه هنا والرجوع إليه لاحقاً.'
+              : 'Click the star icon or bookmark button on any capstone card to shortlist it here for quick access.'}
           </p>
           <Link
-            to="/?tab=browse"
-            className="px-5 py-2.5 rounded-xl bg-[#2499F2] text-white font-bold text-xs"
+            to="/projects"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#2499F2] to-[#28C8C0] text-white font-bold text-xs shadow-md hover:opacity-95 transition"
           >
-            {isRtl ? 'تصفح المشاريع الآن' : 'Browse Projects Now'}
+            <span>{isRtl ? 'تصفح المشاريع الآن ←' : 'Browse Projects Now →'}</span>
           </Link>
         </div>
       ) : (

@@ -207,33 +207,29 @@ export default function Sidebar() {
             </div>
           )}
 
-          {/* 2. مسارات دور الشركة (Company) */}
+          {/* 2. مسارات دور الشركة (B2B Partner & Business) */}
           {currentUser.role === 'company' && (
             <div className="space-y-1">
+              {/* 1. الرئيسية (لوحة الأعمال والشراكات) */}
               <NavLink to="/dashboard" onClick={closeSidebarOnMobile} className={navLinkClass}>
                 <div className="flex items-center gap-2.5">
                   <LayoutDashboard className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0]" />
-                  <span>{t('sidebar.dashboard', 'الرئيسية')}</span>
+                  <span>{isRtl ? 'الرئيسية (لوحة الأعمال والشراكات)' : 'Dashboard (B2B Hub)'}</span>
                 </div>
               </NavLink>
 
+              {/* 2. استكشاف المشاريع وسوق التخرج */}
               <NavLink to="/projects" onClick={closeSidebarOnMobile} className={navLinkClass}>
                 <div className="flex items-center gap-2.5">
                   <Store className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0]" />
-                  <span>{isRtl ? 'استكشاف المشاريع وسوق التخرج' : 'Explore Capstones'}</span>
+                  <span>{isRtl ? 'استكشاف المشاريع وسوق التخرج' : 'Explore Capstone Market'}</span>
                 </div>
                 <span className="text-[10px] bg-[#2499F2]/10 dark:bg-[#2499F2]/20 border border-[#2499F2]/30 px-1.5 py-0.5 rounded text-[#2499F2] dark:text-[#77DCC1] font-semibold">
                   {rawProjects.length}
                 </span>
               </NavLink>
 
-              <NavLink to="/saved-projects" onClick={closeSidebarOnMobile} className={navLinkClass}>
-                <div className="flex items-center gap-2.5">
-                  <Bookmark className="w-4 h-4 text-[#28C8C0] dark:text-[#77DCC1]" />
-                  <span>{isRtl ? 'المشاريع المحفوظة' : 'Saved Projects'}</span>
-                </div>
-              </NavLink>
-
+              {/* 3. فرص التعاون المنشورة (إدارة التحديات الخاصة بالشركة) */}
               <NavLink to="/company/opportunities" onClick={closeSidebarOnMobile} className={navLinkClass}>
                 <div className="flex items-center gap-2.5">
                   <Briefcase className="w-4 h-4 text-[#2499F2]" />
@@ -241,17 +237,11 @@ export default function Sidebar() {
                 </div>
               </NavLink>
 
-              <NavLink to="/company/partnerships" onClick={closeSidebarOnMobile} className={navLinkClass}>
-                <div className="flex items-center gap-2.5">
-                  <Users className="w-4 h-4 text-emerald-500" />
-                  <span>{isRtl ? 'الشراكات والفرق المتعاونة' : 'Active Partnerships'}</span>
-                </div>
-              </NavLink>
-
+              {/* 4. طلبات التعاون الواردة والمرسلة */}
               <NavLink to="/collaboration-requests" onClick={closeSidebarOnMobile} className={navLinkClass}>
                 <div className="flex items-center gap-2.5">
                   <Send className="w-4 h-4 text-[#28C8C0] dark:text-[#77DCC1]" />
-                  <span>{isRtl ? 'طلبات التعاون المرسلة' : 'Sent Requests'}</span>
+                  <span>{isRtl ? 'طلبات التعاون الواردة والمرسلة' : 'Collaboration Requests'}</span>
                 </div>
                 {pendingCount > 0 && (
                   <span className="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm">
@@ -260,11 +250,17 @@ export default function Sidebar() {
                 )}
               </NavLink>
 
-              <NavLink to="/dashboard#market-insights" onClick={closeSidebarOnMobile} className={navLinkClass}>
+              {/* 5. المشاريع المحفوظة (المفضلة) */}
+              <NavLink to="/saved-projects" onClick={closeSidebarOnMobile} className={navLinkClass}>
                 <div className="flex items-center gap-2.5">
-                  <BarChart3 className="w-4 h-4 text-[#77DCC1]" />
-                  <span>{t('sidebar.company_market_insights', 'تحليلات السوق والمهارات')}</span>
+                  <Bookmark className="w-4 h-4 text-amber-500" />
+                  <span>{isRtl ? 'المشاريع المحفوظة (المفضلة)' : 'Saved Projects'}</span>
                 </div>
+                {favorites.length > 0 && (
+                  <span className="text-[10px] bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded text-amber-500 font-semibold">
+                    {favorites.length}
+                  </span>
+                )}
               </NavLink>
             </div>
           )}
@@ -362,7 +358,7 @@ export default function Sidebar() {
           <NavLink to="/profile" onClick={closeSidebarOnMobile} className={navLinkClass}>
             <div className="flex items-center gap-2.5">
               <User className="w-4 h-4 text-[#28C8C0]" />
-              <span>{isRtl ? 'الملف الشخصي' : 'Profile'}</span>
+              <span>{currentUser?.role === 'company' ? (isRtl ? 'ملف الشركة' : 'Company Profile') : (isRtl ? 'الملف الشخصي' : 'Profile')}</span>
             </div>
           </NavLink>
 

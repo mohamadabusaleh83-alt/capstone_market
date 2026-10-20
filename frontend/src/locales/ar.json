@@ -225,7 +225,7 @@
   "company": {
     "dashboard_title": "لوحة تحكم: {{name}}",
     "dashboard_desc": "من هنا تطرح التحديات التقنية التي تواجه أعمالكم ليقوم طلاب مشاريع التخرج بحلها تحت إشراف أكاديمي.",
-    "post_project_btn": "طرح فكرة مشروع لشركتك (POST /projects/)",
+    "post_project_btn": "+ طرح فكرة مشروع لشركتك",
     "my_projects_title": "المشاريع التي طرحتموها للطلاب ({{count}})",
     "refresh_list": "تحديث القائمة",
     "status_approved": "معتمد أكاديمياً",

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import {
   Users,
@@ -12,14 +13,18 @@ import {
   FileText,
   ShieldCheck,
   Calendar,
-  ExternalLink
+  ExternalLink,
+  Handshake
 } from 'lucide-react';
 
 export default function CompanyPartnershipsPage() {
   const { t } = useTranslation();
+  const { currentUser } = useAuth();
   const { isRtl, setSelectedChatProject, showToast } = useApp();
 
-  const partnershipsList = [
+  const isDemoCompany = currentUser?.id === 'company-1';
+
+  const defaultDemoPartnerships = [
     {
       id: 1,
       projectTitle: isRtl
@@ -49,6 +54,8 @@ export default function CompanyPartnershipsPage() {
       statusLabel: isRtl ? 'شراكة نشطة' : 'Active Partnership'
     }
   ];
+
+  const partnershipsList = isDemoCompany ? defaultDemoPartnerships : [];
 
   const handleOpenChat = (title) => {
     setSelectedChatProject({ title });
@@ -81,8 +88,31 @@ export default function CompanyPartnershipsPage() {
         </div>
       </div>
 
-      {/* قائمة الشراكات النشطة */}
-      <div className="space-y-4">
+      {/* قائمة الشراكات النشطة أو الحالة الفارغة المنظمة */}
+      {partnershipsList.length === 0 ? (
+        <div className="text-center py-16 bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 rounded-3xl p-8 shadow-sm max-w-xl mx-auto space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-[#2499F2]/10 border border-[#2499F2]/20 text-[#2499F2] flex items-center justify-center mx-auto">
+            <Handshake className="w-7 h-7 text-[#28C8C0]" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900 dark:text-white">
+            {isRtl ? 'لا توجد شراكات أو فرق تخرج مرتبطة حالياً' : 'No active partnerships yet'}
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+            {isRtl
+              ? 'عند قبولك لطلبات التعاون مع فرق الطلاب أو رعاية مشاريع تخرجهم، ستظهر تقارير الإنجاز وغرف التواصل المباشر هنا.'
+              : 'Once your company sponsors student projects or accepts team requests, active teams will appear here.'}
+          </p>
+          <div className="pt-2">
+            <Link
+              to="/projects"
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#2499F2] to-[#28C8C0] text-[#101E42] font-black text-xs shadow-md"
+            >
+              <span>{isRtl ? 'استكشاف مشاريع التخرج لرعايتها ←' : 'Explore Capstones to Sponsor →'}</span>
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
         {partnershipsList.map((item) => (
           <div
             key={item.id}
@@ -172,6 +202,7 @@ export default function CompanyPartnershipsPage() {
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

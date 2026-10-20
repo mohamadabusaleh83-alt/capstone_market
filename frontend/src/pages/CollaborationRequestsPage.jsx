@@ -23,7 +23,10 @@ export default function CollaborationRequestsPage() {
   const { isRtl, applications, showToast } = useApp();
 
   const [activeTab, setActiveTab] = useState('received'); // 'received' | 'sent'
-  const [requestsList, setRequestsList] = useState([
+  
+  const isDemoAccount = currentUser?.id === 'student-1' || currentUser?.id === 'company-1';
+
+  const defaultDemoRequests = [
     {
       id: 1,
       senderName: 'شركة النور للحلول البرمجية',
@@ -54,7 +57,11 @@ export default function CollaborationRequestsPage() {
       createdAt: '2026-10-15T09:00:00Z',
       status: 'pending'
     }
-  ]);
+  ];
+
+  const [requestsList, setRequestsList] = useState(() => {
+    return isDemoAccount ? defaultDemoRequests : [];
+  });
 
   const handleUpdateStatus = (id, newStatus) => {
     setRequestsList((prev) =>
@@ -128,8 +135,33 @@ export default function CollaborationRequestsPage() {
         </button>
       </div>
 
-      {/* قائمة بطاقات الطلبات */}
-      <div className="space-y-4">
+      {/* قائمة بطاقات الطلبات أو الحالة الفارغة المنظمة */}
+      {filteredRequests.length === 0 ? (
+        <div className="text-center py-16 bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 rounded-3xl p-8 shadow-sm max-w-xl mx-auto space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-[#2499F2]/10 border border-[#2499F2]/20 text-[#2499F2] flex items-center justify-center mx-auto">
+            <Users className="w-7 h-7 text-[#28C8C0]" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900 dark:text-white">
+            {activeTab === 'received'
+              ? (isRtl ? 'لا توجد طلبات واردة حالياً' : 'No incoming requests')
+              : (isRtl ? 'لم تقم بإرسال أي طلبات تعاون بعد' : 'No sent requests yet')}
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+            {activeTab === 'received'
+              ? (isRtl ? 'ستظهر هنا طلبات الانضمام والرعاية الواردة لحسابكم فور وصولها.' : 'Incoming partnership inquiries will appear here.')
+              : (isRtl ? 'يمكنك تصفح سوق المشاريع وتقديم طلبات رعاية أو انضمام مباشرة.' : 'Browse the project market to submit collaboration requests.')}
+          </p>
+          <div className="pt-2">
+            <Link
+              to="/projects"
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#2499F2] to-[#28C8C0] text-[#101E42] font-black text-xs shadow-md"
+            >
+              <span>{isRtl ? 'استكشاف المشاريع المتاحة ←' : 'Explore Projects →'}</span>
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
         {filteredRequests.map((req) => (
           <div
             key={req.id}
@@ -225,6 +257,7 @@ export default function CollaborationRequestsPage() {
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

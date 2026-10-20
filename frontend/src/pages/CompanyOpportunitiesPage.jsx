@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import {
   Briefcase,
@@ -17,6 +18,7 @@ import {
 
 export default function CompanyOpportunitiesPage() {
   const { t } = useTranslation();
+  const { currentUser } = useAuth();
   const { isRtl, showToast } = useApp();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,7 +26,7 @@ export default function CompanyOpportunitiesPage() {
   const [newStipend, setNewStipend] = useState('');
   const [newDescription, setNewDescription] = useState('');
 
-  const [opportunities, setOpportunities] = useState([
+  const defaultDemoOps = [
     {
       id: 1,
       title: isRtl
@@ -53,7 +55,36 @@ export default function CompanyOpportunitiesPage() {
       viewsCount: 210,
       createdDate: '2026-10-12'
     }
-  ]);
+  ];
+
+  const [opportunities, setOpportunities] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const user = localStorage.getItem('app_user_role');
+      const userId = user ? JSON.parse(user).id : 'guest';
+      const saved = localStorage.getItem(`company_opportunities_${userId}`);
+      if (saved) return JSON.parse(saved);
+      return userId === 'company-1' ? defaultDemoOps : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    try {
+      const saved = localStorage.getItem(`company_opportunities_${currentUser.id}`);
+      if (saved) {
+        setOpportunities(JSON.parse(saved));
+      } else if (currentUser.id === 'company-1') {
+        setOpportunities(defaultDemoOps);
+      } else {
+        setOpportunities([]);
+      }
+    } catch {
+      setOpportunities([]);
+    }
+  }, [currentUser?.id]);
 
   const handleCreateOpportunity = (e) => {
     e.preventDefault();
@@ -70,7 +101,11 @@ export default function CompanyOpportunitiesPage() {
       createdDate: new Date().toISOString().split('T')[0]
     };
 
-    setOpportunities([newOp, ...opportunities]);
+    const updated = [newOp, ...opportunities];
+    setOpportunities(updated);
+    if (currentUser?.id && typeof window !== 'undefined') {
+      localStorage.setItem(`company_opportunities_${currentUser.id}`, JSON.stringify(updated));
+    }
     setIsModalOpen(false);
     setNewTitle('');
     setNewStipend('');
@@ -113,8 +148,33 @@ export default function CompanyOpportunitiesPage() {
         </button>
       </div>
 
-      {/* بطاقات الفرص المنشورة */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      {/* بطاقات الفرص المنشورة أو الحالة الفارغة المنظمة */}
+      {opportunities.length === 0 ? (
+        <div className="text-center py-16 bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 rounded-3xl p-8 shadow-sm max-w-2xl mx-auto space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-[#2499F2]/10 border border-[#2499F2]/20 text-[#2499F2] flex items-center justify-center mx-auto shadow-inner">
+            <Briefcase className="w-8 h-8 text-[#28C8C0]" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-black text-slate-900 dark:text-white">
+              {isRtl ? 'لا توجد فرص أو برامج رعاية منشورة حالياً' : 'No Published Opportunities Yet'}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+              {isRtl
+                ? 'اطرح الآن أول فرصة تدريب أو رعاية تكنولوجية لجذب أفضل الكفاءات الطلابية وفرق التخرج الواعدة إلى شركتكم.'
+                : 'Publish your first sponsorship track or internship cohort to attract top university talent.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#2499F2] to-[#28C8C0] text-[#101E42] font-black text-xs shadow-md transition cursor-pointer active:scale-95"
+          >
+            <Plus className="w-4 h-4 text-[#101E42]" />
+            <span>{isRtl ? '+ نشر أول فرصة لشركتك الآن' : '+ Post First Opportunity'}</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {opportunities.map((op) => (
           <div
             key={op.id}
@@ -170,6 +230,7 @@ export default function CompanyOpportunitiesPage() {
           </div>
         ))}
       </div>
+      )}
 
       {/* نافذة منبثقة لنشر فرصة جديدة */}
       {isModalOpen && (

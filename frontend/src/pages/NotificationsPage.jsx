@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import {
   Bell,
@@ -18,6 +19,7 @@ import {
 
 export default function NotificationsPage() {
   const { t } = useTranslation();
+  const { currentUser } = useAuth();
   const {
     isRtl,
     notifications,
@@ -73,7 +75,10 @@ export default function NotificationsPage() {
     }
   ];
 
-  const displayList = notifications && notifications.length > 0 ? notifications : fallbackNotifications;
+  const isDemoAccount = currentUser?.id === 'student-1' || currentUser?.id === 'supervisor-1';
+  const displayList = (notifications && notifications.length > 0)
+    ? notifications
+    : (isDemoAccount ? fallbackNotifications : []);
 
   const filteredNotifications = displayList.filter((notif) => {
     if (activeFilter === 'unread') return !notif.is_read;

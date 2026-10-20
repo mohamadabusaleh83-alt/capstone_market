@@ -277,21 +277,48 @@ def get_users(
 # مسارات المشاريع (Projects & Approvals)
 # ==========================================
 
+def clean_skills(skills_str: Optional[str]) -> str:
+    """تطهير وتوحيد مسميات المهارات والتقنيات المدخلة ومنع أي رموز مشوهة"""
+    if not skills_str:
+        return ""
+    import re
+    cleaned = re.sub(r'<spl', ', SQL', skills_str, flags=re.IGNORECASE)
+    parts = [s.strip().strip("'\"<>") for s in cleaned.split(',') if s.strip()]
+    normalized = []
+    canonical_map = {
+        'spl': 'SQL', 'sql': 'SQL',
+        'python': 'Python', 'react': 'React',
+        'fastapi': 'FastAPI', 'docker': 'Docker',
+        'postgresql': 'PostgreSQL', 'postgres': 'PostgreSQL',
+        'node': 'Node.js', 'nodejs': 'Node.js', 'node.js': 'Node.js',
+        'tailwind': 'TailwindCSS', 'tailwindcss': 'TailwindCSS',
+        'javascript': 'JavaScript', 'typescript': 'TypeScript'
+    }
+    seen = set()
+    for p in parts:
+        clean_p = canonical_map.get(p.lower(), p)
+        if clean_p.lower() not in seen:
+            seen.add(clean_p.lower())
+            normalized.append(clean_p)
+    return ", ".join(normalized)
+
+
 @app.post("/projects/", response_model=schemas.ProjectResponse, status_code=status.HTTP_201_CREATED)
 def create_project(
     project: schemas.ProjectCreate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_role(["partner", "company", "business", "supervisor", "student"]))
 ):
-    """طرح مشروع جديد بواسطة الشريك الصناعي أو المشرف، وتسجيل current_user.id كمالك للمشروع"""
+    """طرح مشروع جديد بواسطة الشريك الصناعي أو المشرف، وتسجيل current_user.id كمالك للمشروع وتطهير المهارات"""
     user_role = (current_user.role or "").lower()
     # مشاريع المشرفين أو الإدارة تعتمد تلقائياً، بينما مشاريع الشركات تحتاج اعتماد المشرف
     initial_status = "approved" if user_role in ["supervisor", "admin"] else "pending"
+    sanitized_skills = clean_skills(project.required_skills)
 
     db_project = models.Project(
         title=project.title,
         description=project.description,
-        required_skills=project.required_skills,
+        required_skills=sanitized_skills,
         status=initial_status,
         max_members=project.max_members or 4,
         created_by=current_user.id
@@ -309,12 +336,15 @@ def create_project(
 @app.get("/projects/", response_model=List[schemas.ProjectResponse])
 def get_projects(
     status: Optional[str] = None,
+    created_by: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
-    """جلب المشاريع المتاحة في المنصة مع التحديث الديناميكي للمقاعد المحجوزة والمتاحة"""
+    """جلب المشاريع المتاحة في المنصة مع التحديث الديناميكي للمقاعد المحجوزة والمتاحة ودعم الفلترة بمالك المشروع"""
     query = db.query(models.Project)
     if status:
         query = query.filter(models.Project.status == status.strip().lower())
+    if created_by:
+        query = query.filter(models.Project.created_by == created_by)
     projects = query.order_by(models.Project.id.desc()).all()
 
     results = []

@@ -225,7 +225,7 @@
   "company": {
     "dashboard_title": "Dashboard: {{name}}",
     "dashboard_desc": "Post real-world technical challenges facing your business for senior students to solve under academic supervision.",
-    "post_project_btn": "Post Project Challenge (POST /projects/)",
+    "post_project_btn": "+ Post Project Challenge",
     "my_projects_title": "Projects Posted for Students ({{count}})",
     "refresh_list": "Refresh List",
     "status_approved": "Academically Approved",
