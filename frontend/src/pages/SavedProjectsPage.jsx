@@ -16,10 +16,20 @@ import {
 
 export default function SavedProjectsPage() {
   const { t } = useTranslation();
-  const { isRtl, rawProjects, favorites, toggleFavorite, setShowApplicationsModal, showToast } = useApp();
+  const {
+    isRtl,
+    rawProjects = [],
+    favorites: appFavorites = [],
+    savedProjects: appSavedProjects = [],
+    toggleFavorite = () => {},
+    setShowApplicationsModal,
+    showToast = () => {}
+  } = useApp() || {};
+
+  const favorites = Array.isArray(appFavorites) ? appFavorites : (Array.isArray(appSavedProjects) ? appSavedProjects : []);
 
   // المشاريع المفضلة للمستخدم الحالي بنمط عزل صارم 100%
-  const displayProjects = rawProjects.filter((p) => favorites.includes(p.id));
+  const displayProjects = rawProjects.filter((p) => Array.isArray(favorites) && favorites.includes(p.id));
 
   const handleRemove = (e, id) => {
     e.stopPropagation();

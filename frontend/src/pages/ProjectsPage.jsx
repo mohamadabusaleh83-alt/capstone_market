@@ -18,13 +18,13 @@ import {
 export default function ProjectsPage() {
   const { t } = useTranslation();
   const {
-    matchedProjects,
+    matchedProjects = [],
     isLoadingProjects,
-    favorites,
+    favorites = [],
     setIsCreateModalOpen,
     translateMajor,
     isRtl
-  } = useApp();
+  } = useApp() || {};
 
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') || 'match';

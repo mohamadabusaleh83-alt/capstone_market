@@ -36,12 +36,18 @@ export default function Sidebar() {
     isRtl,
     isSidebarOpen,
     setIsSidebarOpen,
-    rawProjects,
-    applications,
+    rawProjects = [],
+    applications = [],
+    favorites: appFavorites = [],
+    savedProjects: appSavedProjects = [],
     setIsCreateModalOpen,
     unreadNotificationsCount,
     getRoleLabel
-  } = useApp();
+  } = useApp() || {};
+
+  const favorites = Array.isArray(appFavorites)
+    ? appFavorites
+    : (Array.isArray(appSavedProjects) ? appSavedProjects : (currentUser?.saved_projects || []));
 
   if (!currentUser) return null;
 

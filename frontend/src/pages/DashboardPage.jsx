@@ -31,24 +31,34 @@ import {
 export default function DashboardPage() {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
+  const appContext = useApp() || {};
   const {
-    rawProjects,
-    isLoadingProjects,
+    rawProjects = [],
+    isLoadingProjects = false,
     fetchProjects,
-    applications,
+    applications = [],
     setIsCreateModalOpen,
     setShowApplicationsModal,
     setShowSkillsModal,
     setActiveChatProject,
     updateProjectStatus,
     translateMajor,
-    reportsTimeline,
-    studentsList,
-    userSkills,
-    favorites,
+    reportsTimeline = [],
+    studentsList = [],
+    userSkills = [],
+    favorites: appFavorites = [],
+    savedProjects: appSavedProjects = [],
     toggleFavorite,
     isRtl
-  } = useApp();
+  } = appContext;
+
+  // تعريف مصفوفة المفضلة بشكل آمن وقاطع يمنع حدوث ReferenceError أو استدعاء على undefined
+  const favorites = useMemo(() => {
+    if (Array.isArray(appFavorites)) return appFavorites;
+    if (Array.isArray(appSavedProjects)) return appSavedProjects;
+    if (Array.isArray(currentUser?.saved_projects)) return currentUser.saved_projects;
+    return [];
+  }, [appFavorites, appSavedProjects, currentUser?.saved_projects]);
 
   // 1. المشاريع التي تخص الشركة الحالية (تصفية صارمة لمعرف المستخدم المسجل فقط)
   const myCompanyProjects = useMemo(() => {
@@ -469,7 +479,7 @@ export default function DashboardPage() {
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-black text-slate-900 dark:text-white">
-                  {favorites.length}
+                  {(favorites || []).length}
                 </span>
                 <span className="text-xs font-bold text-amber-900 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-500/20">
                   {isRtl ? 'المفضلة' : 'Watchlist'}
@@ -589,7 +599,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-slate-900 dark:text-white">{favorites.length}</span>
+              <span className="text-3xl font-black text-slate-900 dark:text-white">{(favorites || []).length}</span>
               <span className="text-xs font-bold text-amber-900 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-500/20">
                 {isRtl ? 'المفضلة' : 'Watchlist'}
               </span>
@@ -836,7 +846,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {suggestedProjects.map((proj) => {
                 const projSkills = getProjectNormalizedSkills(proj);
-                const isFav = favorites.includes(proj.id);
+                const isFav = Array.isArray(favorites) && favorites.includes(proj.id);
 
                 return (
                   <div
@@ -897,7 +907,7 @@ export default function DashboardPage() {
 
                       <button
                         type="button"
-                        onClick={() => toggleFavorite(proj.id)}
+                        onClick={() => typeof toggleFavorite === 'function' && toggleFavorite(proj.id)}
                         className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border active:scale-95 cursor-pointer ${
                           isFav
                             ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400'

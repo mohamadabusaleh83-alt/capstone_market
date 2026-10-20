@@ -15,9 +15,9 @@ export default function ProjectCard({ project }) {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
   const {
-    favorites,
+    favorites = [],
     toggleFavorite,
-    applications,
+    applications = [],
     setSelectedProject,
     setIsApplyModalOpen,
     setActiveChatProject,
@@ -25,9 +25,9 @@ export default function ProjectCard({ project }) {
     translateMajor,
     translateDifficulty,
     isRtl
-  } = useApp();
+  } = useApp() || {};
 
-  const isFav = favorites.includes(project.id);
+  const isFav = Array.isArray(favorites) && favorites.includes(project.id);
   const isAlreadyApplied = applications.some(
     (a) => a.project_id === project.id && a.student_id === currentUser?.id
   );

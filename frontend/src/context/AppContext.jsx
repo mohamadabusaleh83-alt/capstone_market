@@ -862,6 +862,7 @@ export function AppProvider({ children }) {
         isLoadingApplications,
         fetchApplications,
         favorites,
+        savedProjects: favorites,
         toggleFavorite,
         userSkills,
         setUserSkills,
