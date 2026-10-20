@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
+import { formatFriendlyError } from '../api/client';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import ThemeToggle from '../components/ThemeToggle';
 import {
@@ -75,8 +76,9 @@ export default function LoginPage() {
 
     const emailTrim = (authEmail || '').trim().toLowerCase();
     const isSupervisorMatch =
-      emailTrim.startsWith('osama.merhi') ||
+      emailTrim.startsWith('osama') ||
       emailTrim.startsWith('supervisor') ||
+      emailTrim.includes('merhi') ||
       emailTrim.includes('omarie') ||
       authPassword === 'password123' ||
       authPassword === 'Doctor@2025';
@@ -84,12 +86,14 @@ export default function LoginPage() {
     const isStudentMatch =
       emailTrim.startsWith('student') ||
       emailTrim.includes('mansour') ||
+      emailTrim.includes('ahmad') ||
       authPassword === 'pass1234';
 
     const isCompanyMatch =
       emailTrim.startsWith('company') ||
       emailTrim.startsWith('partner') ||
-      emailTrim.includes('alnoor');
+      emailTrim.includes('alnoor') ||
+      emailTrim.includes('business');
 
     // مصادقة وتجاوز احتياطي ذكي للأدوار الثلاثة في حال تعذر اتصال السيرفر
     if (authMode === 'login' && isSupervisorMatch) {
@@ -161,8 +165,9 @@ export default function LoginPage() {
       if (fetchApplications) fetchApplications();
       const dest = from && from !== '/login' ? from : (userObj?.role === 'supervisor' ? '/supervisor' : '/dashboard');
       navigate(dest, { replace: true });
-    } catch {
-      // Error is set within AuthContext
+    } catch (err) {
+      const friendlyMsg = formatFriendlyError(err);
+      setAuthError(friendlyMsg);
     }
   };
 
@@ -363,11 +368,11 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              {/* رسائل التنبيه والخطأ */}
+              {/* رسائل التنبيه والخطأ مع تنظيف وحماية تامة من نصوص الأخطاء التقنية للمتصفح */}
               {authError && (
                 <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/80 rounded-2xl text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2 animate-in fade-in duration-200">
                   <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
-                  <span className="leading-snug">{authError}</span>
+                  <span className="leading-snug">{formatFriendlyError(authError)}</span>
                 </div>
               )}
 

@@ -409,7 +409,7 @@ export function AppProvider({ children }) {
   const fetchProjects = useCallback(async () => {
     setIsLoadingProjects(true);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
       const res = await fetch(`${API_URL}/projects/`, { signal: controller.signal });

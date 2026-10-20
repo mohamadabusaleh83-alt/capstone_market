@@ -59,6 +59,40 @@ export const INITIAL_FALLBACK_PROJECTS = [
   }
 ];
 
+// دالة فحص هل الخطأ ناتج عن إلغاء الإشارة أو انقطاع المهلة (AbortError)
+export function isAbortError(err) {
+  if (!err) return false;
+  const msg = typeof err === 'string' ? err : (err.message || '');
+  const name = typeof err === 'object' && err?.name ? err.name : '';
+  return (
+    name === 'AbortError' ||
+    msg.toLowerCase().includes('abort') ||
+    msg.includes('إيقاف الإشارة') ||
+    msg.toLowerCase().includes('signal has been aborted') ||
+    msg.toLowerCase().includes('the signal has been aborted')
+  );
+}
+
+// دالة تحويل رسائل الأخطاء التقنية المزعجة إلى نص عربي واضح وسلس للمستخدم
+export function formatFriendlyError(err) {
+  if (!err) return 'تعذر الاتصال بالسيرفر، جاري المحاولة...';
+  if (isAbortError(err)) {
+    return 'تعذر الاتصال بالسيرفر، جاري المحاولة...';
+  }
+  const msg = typeof err === 'string' ? err : (err.message || '');
+  const name = typeof err === 'object' && err?.name ? err.name : '';
+  if (
+    name === 'TypeError' ||
+    msg.toLowerCase().includes('failed to fetch') ||
+    msg.toLowerCase().includes('network') ||
+    msg.toLowerCase().includes('networkerror') ||
+    msg.toLowerCase().includes('load failed')
+  ) {
+    return 'تعذر الاتصال بالسيرفر، جاري المحاولة...';
+  }
+  return msg || 'تعذر الاتصال بالسيرفر، جاري المحاولة...';
+}
+
 export async function apiFetch(endpoint, options = {}, onUnauthorized = null) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const headers = {
@@ -67,11 +101,23 @@ export async function apiFetch(endpoint, options = {}, onUnauthorized = null) {
     ...options.headers
   };
 
+  // إعداد مهلة كافية 10 ثوانٍ على الأقل لحماية الطلبات من الإلغاء المبكر
+  let timeoutId = null;
+  let signal = options.signal;
+  if (!signal) {
+    const controller = new AbortController();
+    timeoutId = setTimeout(() => controller.abort(), 10000);
+    signal = controller.signal;
+  }
+
   try {
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
-      headers
+      headers,
+      signal
     });
+
+    if (timeoutId) clearTimeout(timeoutId);
 
     if (response.status === 401) {
       if (token && token.startsWith('demo-token-')) {
@@ -89,9 +135,19 @@ export async function apiFetch(endpoint, options = {}, onUnauthorized = null) {
 
     return response;
   } catch (err) {
+    if (timeoutId) clearTimeout(timeoutId);
+
     if (token && token.startsWith('demo-token-')) {
       return { ok: false, status: 503, json: async () => ({}) };
     }
+
+    if (isAbortError(err)) {
+      const friendlyErr = new Error('تعذر الاتصال بالسيرفر، جاري المحاولة...');
+      friendlyErr.name = 'AbortError';
+      friendlyErr.originalError = err;
+      throw friendlyErr;
+    }
+
     throw err;
   }
 }

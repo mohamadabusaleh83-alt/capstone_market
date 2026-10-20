@@ -67,7 +67,7 @@ export default function SupervisorPage() {
   const loadSupervisorData = useCallback(async () => {
     setLoading(true);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1500);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
       // محاولة استدعاء الباك إند

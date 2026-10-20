@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { API_URL, apiFetch } from '../api/client';
+import { API_URL, apiFetch, isAbortError, formatFriendlyError } from '../api/client';
 
 export const DEMO_FALLBACK_USERS = {
   supervisor: {
@@ -66,18 +66,18 @@ export function AuthProvider({ children }) {
     return userObj;
   }, []);
 
-  // مؤقت أمان تلقائي: يمنع بقاء isLoadingAuth معلقاً لأكثر من 1.5 ثانية
+  // مؤقت أمان تلقائي: يمنع بقاء isLoadingAuth معلقاً لأكثر من 12 ثانية في حال حدوث تجميد غير متوقع
   useEffect(() => {
     let timer;
     if (isLoadingAuth) {
       timer = setTimeout(() => {
         setIsLoadingAuth(false);
-      }, 1500);
+      }, 12000);
     }
     return () => clearTimeout(timer);
   }, [isLoadingAuth]);
 
-  // التحقق من صحة التوكن وجلب بيانات /me عند تحميل التطبيق مع حماية جلسات التجربة ومؤقت أمان
+  // التحقق من صحة التوكن وجلب بيانات /me عند تحميل التطبيق مع حماية جلسات التجربة ومؤقت أمان كافٍ (10 ثوانٍ)
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (token) {
@@ -87,7 +87,7 @@ export function AuthProvider({ children }) {
       }
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 1500);
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       fetch(`${API_URL}/me`, {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -122,6 +122,7 @@ export function AuthProvider({ children }) {
         })
         .catch(() => {})
         .finally(() => {
+          clearTimeout(timeoutId);
           setIsLoadingAuth(false);
         });
     } else {
@@ -136,26 +137,32 @@ export function AuthProvider({ children }) {
 
     const normalizedEmail = (email || '').trim().toLowerCase();
     const isSupervisorMatch =
-      normalizedEmail.startsWith('osama.merhi') ||
+      normalizedEmail.startsWith('osama') ||
       normalizedEmail.startsWith('supervisor') ||
+      normalizedEmail.includes('merhi') ||
       normalizedEmail.includes('omarie') ||
       password === 'password123' ||
       password === 'Doctor@2025';
 
     const isStudentMatch =
       normalizedEmail.startsWith('student') ||
-      normalizedEmail.includes('mansour');
+      normalizedEmail.includes('mansour') ||
+      normalizedEmail.includes('ahmad') ||
+      password === 'pass1234';
 
     const isCompanyMatch =
       normalizedEmail.startsWith('company') ||
       normalizedEmail.startsWith('partner') ||
-      normalizedEmail.includes('alnoor');
+      normalizedEmail.includes('alnoor') ||
+      normalizedEmail.includes('business');
 
-    // إذا كان حساب المشرف، نقوم بفحص السيرفر أولاً بمؤقت سريع (1.5 ثانية) وإن تعذر نقبل الدخول فوراً
+    // إذا كان حساب المشرف، نقوم بفحص السيرفر أولاً بمؤقت كافٍ (10 ثوانٍ) وإن تعذر نقبل الدخول فوراً عبر Demo Fallback
     if (isSupervisorMatch) {
+      let timeoutId = null;
+      let meTimeoutId = null;
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1500);
+        timeoutId = setTimeout(() => controller.abort(), 10000);
 
         const loginParams = new URLSearchParams();
         loginParams.append('username', email);
@@ -176,7 +183,7 @@ export function AuthProvider({ children }) {
           localStorage.setItem('token', token);
 
           const meController = new AbortController();
-          const meTimeoutId = setTimeout(() => meController.abort(), 1500);
+          meTimeoutId = setTimeout(() => meController.abort(), 10000);
 
           const meRes = await fetch(`${API_URL}/me`, {
             headers: { 'Authorization': `Bearer ${token}` },
@@ -211,14 +218,19 @@ export function AuthProvider({ children }) {
           }
         }
       } catch {
-        // Fallback to local demo supervisor
+        // Fallback to local demo supervisor seamlessly
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+        if (meTimeoutId) clearTimeout(meTimeoutId);
       }
       return loginAsDemo('supervisor');
     }
 
+    let timeoutId = null;
+    let meTimeoutId = null;
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const loginParams = new URLSearchParams();
       loginParams.append('username', email);
@@ -246,7 +258,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem('token', token);
 
       const meController = new AbortController();
-      const meTimeoutId = setTimeout(() => meController.abort(), 1500);
+      meTimeoutId = setTimeout(() => meController.abort(), 10000);
 
       const meRes = await fetch(`${API_URL}/me`, {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -287,9 +299,15 @@ export function AuthProvider({ children }) {
       if (isStudentMatch) return loginAsDemo('student');
       if (isCompanyMatch) return loginAsDemo('company');
 
-      setAuthError(err.message || 'حدث خطأ أثناء الاتصال بالخادم.');
-      throw err;
+      // معالجة واضحة لخطأ انقطاع الاتصال أو إلغاء الإشارة (AbortError) بنص صديق للمستخدم
+      const friendlyMsg = formatFriendlyError(err);
+      setAuthError(friendlyMsg);
+      const friendlyErr = new Error(friendlyMsg);
+      friendlyErr.name = isAbortError(err) ? 'AbortError' : (err.name || 'Error');
+      throw friendlyErr;
     } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (meTimeoutId) clearTimeout(meTimeoutId);
       setIsLoadingAuth(false);
     }
   };
@@ -299,7 +317,11 @@ export function AuthProvider({ children }) {
     setAuthSuccess('');
     setIsLoadingAuth(true);
 
+    let timeoutId = null;
     try {
+      const controller = new AbortController();
+      timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const regRes = await fetch(`${API_URL}/users/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -308,8 +330,11 @@ export function AuthProvider({ children }) {
           email,
           password,
           role
-        })
+        }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!regRes.ok) {
         const errData = await regRes.json().catch(() => ({}));
@@ -319,9 +344,13 @@ export function AuthProvider({ children }) {
       setAuthSuccess('تم إنشاء الحساب بنجاح! جاري تسجيل الدخول...');
       return await login(email, password);
     } catch (err) {
-      setAuthError(err.message || 'تعذر إنشاء الحساب.');
-      throw err;
+      const friendlyMsg = formatFriendlyError(err);
+      setAuthError(friendlyMsg);
+      const friendlyErr = new Error(friendlyMsg);
+      friendlyErr.name = isAbortError(err) ? 'AbortError' : (err.name || 'Error');
+      throw friendlyErr;
     } finally {
+      if (timeoutId) clearTimeout(timeoutId);
       setIsLoadingAuth(false);
     }
   };
