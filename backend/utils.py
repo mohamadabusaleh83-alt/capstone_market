@@ -1,13 +1,45 @@
 import os
 import bcrypt
+import logging
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import jwt, JWTError
 
-# قراءة إعدادات التشفير والتوكن من متغيرات البيئة مع قيم افتراضية للتطوير
-SECRET_KEY = os.getenv("SECRET_KEY", "your-super-secret-key-change-this-in-production")
+logger = logging.getLogger("capstone_security")
+
+DEV_DEFAULT_SECRET = "your-super-secret-key-change-this-in-production"
+INSECURE_SECRETS = {
+    DEV_DEFAULT_SECRET,
+    "capstone_secret_key_change_in_production",
+    "secret",
+    "changeme",
+    "admin",
+    "password"
+}
+
+IS_PRODUCTION = (
+    os.getenv("RENDER") == "true" or 
+    os.getenv("ENVIRONMENT", "").lower() in ["production", "prod"]
+)
+
+raw_secret = os.getenv("SECRET_KEY", "").strip()
+
+if IS_PRODUCTION:
+    if not raw_secret or raw_secret in INSECURE_SECRETS or len(raw_secret) < 32:
+        error_msg = (
+            "CRITICAL SECURITY ERROR: Running in production mode without a valid, strong SECRET_KEY. "
+            "You MUST set the SECRET_KEY environment variable in your Render dashboard (minimum 32 characters). "
+            "Server startup is blocked to protect authentication integrity."
+        )
+        logger.critical(error_msg)
+        raise RuntimeError(error_msg)
+    SECRET_KEY = raw_secret
+else:
+    SECRET_KEY = raw_secret or DEV_DEFAULT_SECRET
+
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
 
 
 def hash_password(password: str) -> str:

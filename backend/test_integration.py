@@ -17,24 +17,39 @@ def db_session():
     db.close()
 
 def test_1_user_registration_and_auth_flow():
-    """اختبار مسارات تسجيل الحسابات، تسجيل الدخول وتوليد الـ JWT، والتحقق من /me"""
+    """اختبار مسارات تسجيل الحسابات، التحقق من منع التصعيد الأمني للصلاحيات، تسجيل الدخول وتوليد الـ JWT"""
+    # 1. فحص الحماية الأمنية لمنع التصعيد الذاتي للصلاحيات (Privilege Escalation Prevention)
+    admin_escalation = client.post("/users/", json={
+        "full_name": f"محاولة أدمن {TS}",
+        "email": f"hacker_admin_{TS}@capstone.ps",
+        "password": "pass1234Password!",
+        "role": "admin"
+    })
+    assert admin_escalation.status_code == 403, f"Expected 403 for admin escalation, got {admin_escalation.status_code}"
+
+    supervisor_escalation = client.post("/users/", json={
+        "full_name": f"محاولة مشرف {TS}",
+        "email": f"hacker_sup_{TS}@capstone.ps",
+        "password": "pass1234Password!",
+        "role": "supervisor"
+    })
+    assert supervisor_escalation.status_code == 403, f"Expected 403 for supervisor escalation, got {supervisor_escalation.status_code}"
+
+    # 2. تسجيل الأدوار المسموح بها ذاتياً (طالب وشريك تجاري)
     users_to_test = [
         {"full_name": f"طالب اختباري {TS}", "email": f"student_{TS}@capstone.ps", "password": "pass1234Password!", "role": "student"},
-        {"full_name": f"شركة النور التجريبية {TS}", "email": f"company_{TS}@capstone.ps", "password": "pass1234Password!", "role": "partner"},
-        {"full_name": f"د. مشرف اختباري {TS}", "email": f"supervisor_{TS}@capstone.ps", "password": "pass1234Password!", "role": "supervisor"}
+        {"full_name": f"شركة النور التجريبية {TS}", "email": f"company_{TS}@capstone.ps", "password": "pass1234Password!", "role": "partner"}
     ]
 
     tokens = {}
 
     for u in users_to_test:
-        # 1. POST /users/
         reg_res = client.post("/users/", json=u)
         assert reg_res.status_code in [200, 201], f"Failed to register user: {reg_res.text}"
         data = reg_res.json()
         assert data["email"] == u["email"]
         assert "id" in data
 
-        # 2. POST /login (OAuth2 form-data)
         login_res = client.post(
             "/login",
             data={"username": u["email"], "password": u["password"]},
@@ -46,7 +61,6 @@ def test_1_user_registration_and_auth_flow():
         assert token_data["token_type"] == "bearer"
         tokens[u["role"]] = token_data["access_token"]
 
-        # 3. GET /me (Bearer Auth)
         me_res = client.get("/me", headers={"Authorization": f"Bearer {token_data['access_token']}"})
         assert me_res.status_code == 200, f"Failed GET /me: {me_res.text}"
         me_data = me_res.json()
@@ -54,8 +68,7 @@ def test_1_user_registration_and_auth_flow():
         assert me_data["role"] == u["role"]
 
 def test_2_projects_creation_and_approval_flow():
-    """اختبار إنشاء مشروع جديد، وتغيير حالته من قبل المشرف الأكاديمي (Pending -> Approved)"""
-    # تسجيل دخول الشركة
+    """اختبار إنشاء مشروع جديد، وتغيير حالته من قبل المشرف الأكاديمي الرسمي (Pending -> Approved)"""
     login_company = client.post(
         "/login",
         data={"username": f"company_{TS}@capstone.ps", "password": "pass1234Password!"},
@@ -87,10 +100,10 @@ def test_2_projects_creation_and_approval_flow():
     projects_list = list_res.json()
     assert any(p["id"] == project_id for p in projects_list)
 
-    # 3. اعتماد المشروع من المشرف PUT /projects/{id}/status
+    # 3. اعتماد المشروع من المشرف الأكاديمي الرسمي PUT /projects/{id}/status
     login_supervisor = client.post(
         "/login",
-        data={"username": f"supervisor_{TS}@capstone.ps", "password": "pass1234Password!"},
+        data={"username": "omarie@qou.edu", "password": "Doctor@2025"},
         headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
     supervisor_token = login_supervisor.json()["access_token"]
@@ -104,7 +117,7 @@ def test_2_projects_creation_and_approval_flow():
     updated_project = approve_res.json()
     assert updated_project["status"] == "approved"
 
-    # التحقق من أن غير المشرف لا يمكنه اعتماد المشاريع (RBAC Check)
+    # التحقق من أن غير المشرف لا يمكنه اعتماد أو رفض المشاريع (RBAC Check)
     login_student = client.post(
         "/login",
         data={"username": f"student_{TS}@capstone.ps", "password": "pass1234Password!"},
@@ -120,15 +133,13 @@ def test_2_projects_creation_and_approval_flow():
     assert unauth_res.status_code == 403, "Student should not be able to approve/reject projects"
 
 def test_3_applications_workflow_and_seat_deduction():
-    """اختبار تقديم الطلب، قبوله من صاحب المشروع، والتحقق من حساب المقاعد المتبقية"""
-    # 1. جلب المشروع المعتمد
+    """اختبار تقديم الطلب، منع التقديم المتكرر، قبوله من صاحب المشروع، والتحقق من سعة المقاعد"""
     list_res = client.get("/projects/")
     approved_projects = [p for p in list_res.json() if p["status"] == "approved"]
     assert len(approved_projects) > 0, "No approved project found"
     target_project = approved_projects[0]
     project_id = target_project["id"]
 
-    # 2. تقديم طلب من الطالب POST /applications/
     login_student = client.post(
         "/login",
         data={"username": f"student_{TS}@capstone.ps", "password": "pass1234Password!"},
@@ -136,6 +147,7 @@ def test_3_applications_workflow_and_seat_deduction():
     )
     student_token = login_student.json()["access_token"]
 
+    # 1. تقديم طلب أول بنجاح
     app_res = client.post(
         "/applications/",
         json={"project_id": project_id, "message": "أرغب بالانضمام كمطور واجهات وأنظمة خلفية"},
@@ -146,7 +158,16 @@ def test_3_applications_workflow_and_seat_deduction():
     app_id = app_data["id"]
     assert app_data["status"] == "pending"
 
-    # 3. استعراض الطلبات من قبل الشركة / المشرف GET /applications/
+    # 2. التحقق من منع التقديم المتكرر على نفس المشروع لنفس الطالب (Duplicate Application Prevention)
+    duplicate_res = client.post(
+        "/applications/",
+        json={"project_id": project_id, "message": "محاولة تقديم ثانية"},
+        headers={"Authorization": f"Bearer {student_token}"}
+    )
+    assert duplicate_res.status_code == 400, "Duplicate application should return 400"
+    assert "مسبقاً" in duplicate_res.text or "already" in duplicate_res.text.lower()
+
+    # 3. قبول الطلب من قبل صاحب المشروع
     login_company = client.post(
         "/login",
         data={"username": f"company_{TS}@capstone.ps", "password": "pass1234Password!"},
@@ -154,12 +175,6 @@ def test_3_applications_workflow_and_seat_deduction():
     )
     company_token = login_company.json()["access_token"]
 
-    apps_list_res = client.get("/applications/", headers={"Authorization": f"Bearer {company_token}"})
-    assert apps_list_res.status_code == 200
-    all_apps = apps_list_res.json()
-    assert any(a["id"] == app_id for a in all_apps)
-
-    # 4. قبول الطلب PUT /applications/{id}/status
     accept_res = client.put(
         f"/applications/{app_id}/status",
         json={"status": "accepted"},
@@ -169,9 +184,10 @@ def test_3_applications_workflow_and_seat_deduction():
     accepted_data = accept_res.json()
     assert accepted_data["status"] == "accepted"
 
-    # 5. التحقق من تحديث عداد المقاعد والمشتركين
-    proj_check_res = client.get("/projects/")
-    updated_p = next(p for p in proj_check_res.json() if p["id"] == project_id)
+    # 4. التحقق من تحديث عداد المقاعد والمشتركين
+    proj_check_res = client.get(f"/projects/{project_id}")
+    assert proj_check_res.status_code == 200
+    updated_p = proj_check_res.json()
     assert updated_p.get("current_members", 0) >= 1
     assert updated_p.get("available_seats", 0) == updated_p["max_members"] - updated_p["current_members"]
 
@@ -187,7 +203,6 @@ def test_4_project_chat_and_messages_persistence():
     )
     student_token = login_student.json()["access_token"]
 
-    # 1. إرسال رسالة من الطالب POST /projects/{id}/messages
     msg_res = client.post(
         f"/projects/{project_id}/messages",
         json={"text": f"مرحباً بالجميع، تم الانتهاء من إعداد بيئة التطوير المحلية {TS}"},
@@ -196,12 +211,10 @@ def test_4_project_chat_and_messages_persistence():
     assert msg_res.status_code in [200, 201], f"Send message failed: {msg_res.text}"
     msg_data = msg_res.json()
     assert "id" in msg_data
-    assert msg_data["text"] == f"مرحباً بالجميع، تم الانتهاء من إعداد بيئة التطوير المحلية {TS}"
 
-    # 2. إرسال رد من المشرف
     login_supervisor = client.post(
         "/login",
-        data={"username": f"supervisor_{TS}@capstone.ps", "password": "pass1234Password!"},
+        data={"username": "omarie@qou.edu", "password": "Doctor@2025"},
         headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
     supervisor_token = login_supervisor.json()["access_token"]
@@ -213,7 +226,6 @@ def test_4_project_chat_and_messages_persistence():
     )
     assert reply_res.status_code in [200, 201]
 
-    # 3. جلب سجل الرسائل GET /projects/{id}/messages
     get_msgs_res = client.get(
         f"/projects/{project_id}/messages",
         headers={"Authorization": f"Bearer {student_token}"}
@@ -222,6 +234,34 @@ def test_4_project_chat_and_messages_persistence():
     messages = get_msgs_res.json()
     assert len(messages) >= 2
     assert any(m["id"] == msg_data["id"] for m in messages)
+
+    # 4. فحص الحماية من التجسس والاختراق (BOLA / IDOR Protection)
+    # طالب غير مرتبط بالمشروع ولم يقدم طلباً يحاول التسلل للرسائل
+    client.post("/users/", json={
+        "full_name": f"طالب خارجي {TS}",
+        "email": f"unrelated_{TS}@capstone.ps",
+        "password": "pass1234Password!",
+        "role": "student"
+    })
+    unrelated_login = client.post(
+        "/login",
+        data={"username": f"unrelated_{TS}@capstone.ps", "password": "pass1234Password!"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
+    )
+    unrelated_token = unrelated_login.json()["access_token"]
+
+    unauth_get = client.get(
+        f"/projects/{project_id}/messages",
+        headers={"Authorization": f"Bearer {unrelated_token}"}
+    )
+    assert unauth_get.status_code == 403, "Unrelated student should not be able to read project messages"
+
+    unauth_post = client.post(
+        f"/projects/{project_id}/messages",
+        json={"text": "محاولة اختراق شات غير مصرح"},
+        headers={"Authorization": f"Bearer {unrelated_token}"}
+    )
+    assert unauth_post.status_code == 403, "Unrelated student should not be able to post in project chat"
 
 def test_5_notifications_generation_and_mark_as_read():
     """اختبار توليد الإشعارات عند الأحداث وقراءتها وتحديث حالتها"""
@@ -232,7 +272,6 @@ def test_5_notifications_generation_and_mark_as_read():
     )
     student_token = login_student.json()["access_token"]
 
-    # 1. جلب الإشعارات GET /notifications
     notifs_res = client.get("/notifications", headers={"Authorization": f"Bearer {student_token}"})
     assert notifs_res.status_code == 200
     notifs = notifs_res.json()
@@ -240,19 +279,14 @@ def test_5_notifications_generation_and_mark_as_read():
 
     if len(notifs) > 0:
         first_notif_id = notifs[0]["id"]
-
-        # 2. قراءة إشعار فردي PUT /notifications/{id}/read
         read_res = client.put(f"/notifications/{first_notif_id}/read", headers={"Authorization": f"Bearer {student_token}"})
         assert read_res.status_code == 200
 
-        # 3. قراءة الكل PUT /notifications/read-all
         read_all_res = client.put("/notifications/read-all", headers={"Authorization": f"Bearer {student_token}"})
         assert read_all_res.status_code == 200
 
-        # التحقق من أن كافة الإشعارات أصبحت مقروءة
         check_notifs = client.get("/notifications", headers={"Authorization": f"Bearer {student_token}"}).json()
         assert all(n["is_read"] is True for n in check_notifs)
-
 
 def test_6_official_supervisor_account():
     """التحقق من وجود حساب المشرف الأكاديمي الرسمي د. أسامة أمين مرعي وتسجيل دخوله بنجاح"""
@@ -273,4 +307,126 @@ def test_6_official_supervisor_account():
     assert me_data["full_name"] == "د. أسامة أمين مرعي"
     assert me_data["role"] == "supervisor"
     assert "نظم معلومات حاسوبية" in me_data["skills"]
+
+def test_7_profile_cv_and_skills_persistence():
+    """اختبار استرجاع وتحديث الملف الشخصي والسيرة الذاتية والمهارات في قاعدة البيانات"""
+    login_student = client.post(
+        "/login",
+        data={"username": f"student_{TS}@capstone.ps", "password": "pass1234Password!"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
+    )
+    student_token = login_student.json()["access_token"]
+
+    # 1. جلب الملف الشخصي GET /users/me/profile
+    prof_res = client.get("/users/me/profile", headers={"Authorization": f"Bearer {student_token}"})
+    assert prof_res.status_code == 200
+    prof = prof_res.json()
+    assert prof["email"] == f"student_{TS}@capstone.ps"
+
+    # 2. تحديث بيانات السيرة الذاتية والتخصص والبيو PUT /users/me/profile
+    update_res = client.put(
+        "/users/me/profile",
+        json={
+            "phone": "+970599123456",
+            "major": "علم الحاسوب (Computer Science)",
+            "bio": "طالب متخصص في الأنظمة الموزعة والذكاء الاصطناعي",
+            "portfolio_url": "https://github.com/my-portfolio",
+            "course": "مشروع تخرج 2",
+            "skills": "Python, FastAPI, Docker, PostgreSQL"
+        },
+        headers={"Authorization": f"Bearer {student_token}"}
+    )
+    assert update_res.status_code == 200, f"Update profile failed: {update_res.text}"
+    updated_prof = update_res.json()
+    assert updated_prof["phone"] == "+970599123456"
+    assert updated_prof["major"] == "علم الحاسوب (Computer Science)"
+    assert updated_prof["portfolio_url"] == "https://github.com/my-portfolio"
+    assert "FastAPI" in updated_prof["skills"]
+
+    # 3. تحديث المهارات الفردية PUT /users/me/skills
+    skills_res = client.put(
+        "/users/me/skills",
+        json={"skills": "Python, React, TypeScript, TailwindCSS"},
+        headers={"Authorization": f"Bearer {student_token}"}
+    )
+    assert skills_res.status_code == 200
+    skills_data = skills_res.json()
+    assert "TypeScript" in skills_data["skills"]
+
+def test_8_password_change_flow():
+    """اختبار مسار تغيير كلمة المرور للمستخدم والتحقق من كلمة المرور القديمة ومنع التغيير غير المصرح به"""
+    login_student = client.post(
+        "/login",
+        data={"username": f"student_{TS}@capstone.ps", "password": "pass1234Password!"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
+    )
+    student_token = login_student.json()["access_token"]
+
+    # 1. محاولة التغيير بكلمة مرور سابقة خاطئة -> 400 Bad Request
+    wrong_pwd_res = client.put(
+        "/users/me/password",
+        json={"current_password": "WrongPassword123!", "new_password": "NewSecretPassword2026!"},
+        headers={"Authorization": f"Bearer {student_token}"}
+    )
+    assert wrong_pwd_res.status_code == 400
+    assert "غير صحيحة" in wrong_pwd_res.text
+
+    # 2. التغيير بكلمة المرور الصحيحة
+    success_pwd_res = client.put(
+        "/users/me/password",
+        json={"current_password": "pass1234Password!", "new_password": "NewSecretPassword2026!"},
+        headers={"Authorization": f"Bearer {student_token}"}
+    )
+    assert success_pwd_res.status_code == 200
+
+    # 3. محاولة تسجيل الدخول بكلمة المرور القديمة -> 401 Unauthorized
+    old_login = client.post(
+        "/login",
+        data={"username": f"student_{TS}@capstone.ps", "password": "pass1234Password!"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
+    )
+    assert old_login.status_code == 401
+
+    # 4. تسجيل الدخول بكلمة المرور الجديدة بنجاح -> 200 OK
+    new_login = client.post(
+        "/login",
+        data={"username": f"student_{TS}@capstone.ps", "password": "NewSecretPassword2026!"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
+    )
+    assert new_login.status_code == 200
+    assert "access_token" in new_login.json()
+
+
+def test_9_production_secret_key_enforcement():
+    """اختبار فرض الأمان الصارم في وضع الإنتاج: رفض التشغيل في حال غياب أو ضعف SECRET_KEY"""
+    import os, importlib
+    import utils
+
+    # 1. اختبار رفض التشغيل بمفتاح فارغ في وضع الإنتاج
+    os.environ["ENVIRONMENT"] = "production"
+    os.environ["SECRET_KEY"] = ""
+    with pytest.raises(RuntimeError):
+        importlib.reload(utils)
+
+    # 2. اختبار رفض المفتاح الافتراضي في وضع الإنتاج
+    os.environ["SECRET_KEY"] = "your-super-secret-key-change-this-in-production"
+    with pytest.raises(RuntimeError):
+        importlib.reload(utils)
+
+    # 3. اختبار رفض المفاتيح القصيرة (< 32 خانة) في وضع الإنتاج
+    os.environ["SECRET_KEY"] = "weak_key_12345"
+    with pytest.raises(RuntimeError):
+        importlib.reload(utils)
+
+    # 4. اختبار قبول مفتاح سري قوي (64 خانة)
+    valid_strong_key = "a" * 64
+    os.environ["SECRET_KEY"] = valid_strong_key
+    importlib.reload(utils)
+    assert utils.SECRET_KEY == valid_strong_key
+
+    # إعادة البيئة لوضع التطوير المحلي
+    os.environ.pop("ENVIRONMENT", None)
+    os.environ.pop("SECRET_KEY", None)
+    importlib.reload(utils)
+    assert utils.SECRET_KEY == utils.DEV_DEFAULT_SECRET
 

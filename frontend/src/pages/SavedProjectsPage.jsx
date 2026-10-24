@@ -1,14 +1,11 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import {
   Bookmark,
   Star,
-  Building2,
   Users,
   ChevronRight,
-  ExternalLink,
   Trash2,
   Send,
   Sparkles
@@ -22,7 +19,6 @@ export default function SavedProjectsPage() {
     favorites: appFavorites = [],
     savedProjects: appSavedProjects = [],
     toggleFavorite = () => {},
-    setShowApplicationsModal,
     showToast = () => {}
   } = useApp() || {};
 

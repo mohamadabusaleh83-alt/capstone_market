@@ -10,7 +10,6 @@ import {
   Users,
   Store,
   Send,
-  BarChart3,
   CheckCircle2,
   ShieldCheck,
   GraduationCap,
@@ -197,7 +196,7 @@ export default function Sidebar() {
                   <span>{isRtl ? 'طلبات التعاون والشراكات' : 'Collaboration Requests'}</span>
                 </div>
                 <span className="bg-[#2499F2] text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm">
-                  {myApplicationsCount > 0 ? myApplicationsCount : 2}
+                  {myApplicationsCount}
                 </span>
               </NavLink>
 

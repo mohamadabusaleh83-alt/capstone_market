@@ -135,97 +135,6 @@ export function AuthProvider({ children }) {
     setAuthSuccess('');
     setIsLoadingAuth(true);
 
-    const normalizedEmail = (email || '').trim().toLowerCase();
-    const isSupervisorMatch =
-      normalizedEmail.startsWith('osama') ||
-      normalizedEmail.startsWith('supervisor') ||
-      normalizedEmail.includes('merhi') ||
-      normalizedEmail.includes('omarie') ||
-      password === 'password123' ||
-      password === 'Doctor@2025';
-
-    const isStudentMatch =
-      normalizedEmail.startsWith('student') ||
-      normalizedEmail.includes('mansour') ||
-      normalizedEmail.includes('ahmad') ||
-      password === 'pass1234';
-
-    const isCompanyMatch =
-      normalizedEmail.startsWith('company') ||
-      normalizedEmail.startsWith('partner') ||
-      normalizedEmail.includes('alnoor') ||
-      normalizedEmail.includes('business');
-
-    // إذا كان حساب المشرف، نقوم بفحص السيرفر أولاً بمؤقت كافٍ (10 ثوانٍ) وإن تعذر نقبل الدخول فوراً عبر Demo Fallback
-    if (isSupervisorMatch) {
-      let timeoutId = null;
-      let meTimeoutId = null;
-      try {
-        const controller = new AbortController();
-        timeoutId = setTimeout(() => controller.abort(), 10000);
-
-        const loginParams = new URLSearchParams();
-        loginParams.append('username', email);
-        loginParams.append('password', password);
-
-        const loginRes = await fetch(`${API_URL}/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: loginParams.toString(),
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (loginRes.ok) {
-          const tokenData = await loginRes.json();
-          const token = tokenData.access_token;
-          localStorage.setItem('token', token);
-
-          const meController = new AbortController();
-          meTimeoutId = setTimeout(() => meController.abort(), 10000);
-
-          const meRes = await fetch(`${API_URL}/me`, {
-            headers: { 'Authorization': `Bearer ${token}` },
-            signal: meController.signal
-          });
-
-          clearTimeout(meTimeoutId);
-
-          if (meRes.ok) {
-            const userData = await meRes.json();
-            const normalizedRole = (userData.role === 'partner' || userData.role === 'business') ? 'company' : userData.role;
-            const titleByRole = {
-              student: 'طالب خريج',
-              supervisor: 'مشرف أكاديمي',
-              company: 'شريك تجاري / شركة',
-              admin: 'مسؤول النظام'
-            };
-
-            const userObj = {
-              id: userData.id,
-              name: userData.full_name,
-              email: userData.email,
-              role: normalizedRole,
-              rawRole: userData.role,
-              title: titleByRole[normalizedRole] || userData.role
-            };
-
-            localStorage.setItem('app_user_role', JSON.stringify(userObj));
-            setCurrentUser(userObj);
-            setIsLoadingAuth(false);
-            return userObj;
-          }
-        }
-      } catch {
-        // Fallback to local demo supervisor seamlessly
-      } finally {
-        if (timeoutId) clearTimeout(timeoutId);
-        if (meTimeoutId) clearTimeout(meTimeoutId);
-      }
-      return loginAsDemo('supervisor');
-    }
-
     let timeoutId = null;
     let meTimeoutId = null;
     try {
@@ -233,8 +142,8 @@ export function AuthProvider({ children }) {
       timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const loginParams = new URLSearchParams();
-      loginParams.append('username', email);
-      loginParams.append('password', password);
+      loginParams.append('username', (email || '').trim().toLowerCase());
+      loginParams.append('password', password || '');
 
       const loginRes = await fetch(`${API_URL}/login`, {
         method: 'POST',
@@ -246,9 +155,6 @@ export function AuthProvider({ children }) {
       clearTimeout(timeoutId);
 
       if (!loginRes.ok) {
-        if (isStudentMatch) return loginAsDemo('student');
-        if (isCompanyMatch) return loginAsDemo('company');
-
         const errData = await loginRes.json().catch(() => ({}));
         throw new Error(errData.detail || 'البريد الإلكتروني أو كلمة المرور غير صحيحة.');
       }
@@ -268,8 +174,6 @@ export function AuthProvider({ children }) {
       clearTimeout(meTimeoutId);
 
       if (!meRes.ok) {
-        if (isStudentMatch) return loginAsDemo('student');
-        if (isCompanyMatch) return loginAsDemo('company');
         throw new Error('فشل جلب بيانات وصلاحيات المستخدم.');
       }
 
@@ -296,10 +200,6 @@ export function AuthProvider({ children }) {
       setIsLoadingAuth(false);
       return userObj;
     } catch (err) {
-      if (isStudentMatch) return loginAsDemo('student');
-      if (isCompanyMatch) return loginAsDemo('company');
-
-      // معالجة واضحة لخطأ انقطاع الاتصال أو إلغاء الإشارة (AbortError) بنص صديق للمستخدم
       const friendlyMsg = formatFriendlyError(err);
       setAuthError(friendlyMsg);
       const friendlyErr = new Error(friendlyMsg);

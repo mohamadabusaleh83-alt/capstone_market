@@ -1,9 +1,10 @@
 // عنوان الباك إند API: يدعم السيرفر المحلي تلقائياً عند التشغيل على localhost
-export const API_URL = import.meta.env.VITE_API_URL || (
+const rawApiUrl = import.meta.env.VITE_API_URL || (
   typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://127.0.0.1:8000'
     : 'https://capstone-market.onrender.com'
 );
+export const API_URL = rawApiUrl.replace(/\/+$/, '');
 
 export const ACADEMIC_MAJORS = [
   'أنظمة المعلومات الحاسوبية (CIS)',
@@ -101,12 +102,12 @@ export async function apiFetch(endpoint, options = {}, onUnauthorized = null) {
     ...options.headers
   };
 
-  // إعداد مهلة كافية 10 ثوانٍ على الأقل لحماية الطلبات من الإلغاء المبكر
+  // إعداد مهلة كافية تدعم استيقاظ خادم Render عند الإقلاع البارد (Cold Start)
   let timeoutId = null;
   let signal = options.signal;
   if (!signal) {
     const controller = new AbortController();
-    timeoutId = setTimeout(() => controller.abort(), 10000);
+    timeoutId = setTimeout(() => controller.abort(), 45000);
     signal = controller.signal;
   }
 

@@ -108,7 +108,9 @@ export function AppProvider({ children }) {
             return parsed;
           }
         }
-      } catch {}
+      } catch (_err) {
+        // Ignore cache parsing error
+      }
     }
     return INITIAL_FALLBACK_PROJECTS;
   });
@@ -116,6 +118,8 @@ export function AppProvider({ children }) {
 
   const [applications, setApplications] = useState([]);
   const [isLoadingApplications, setIsLoadingApplications] = useState(false);
+
+  const currentUserId = currentUser?.id;
 
   // المفضلة - معزولة بنسبة 100% لكل مستخدم
   const [favorites, setFavorites] = useState(() => {
@@ -131,27 +135,27 @@ export function AppProvider({ children }) {
   });
 
   useEffect(() => {
-    if (!currentUser?.id) {
+    if (!currentUserId) {
       setFavorites([]);
       return;
     }
     try {
-      const saved = localStorage.getItem(`favorites_${currentUser.id}`);
+      const saved = localStorage.getItem(`favorites_${currentUserId}`);
       setFavorites(saved ? JSON.parse(saved) : []);
     } catch {
       setFavorites([]);
     }
-  }, [currentUser?.id]);
+  }, [currentUserId]);
 
   const toggleFavorite = useCallback((id) => {
     setFavorites((prev) => {
       const next = prev.includes(id) ? prev.filter((favId) => favId !== id) : [...prev, id];
-      if (typeof window !== 'undefined' && currentUser?.id) {
-        localStorage.setItem(`favorites_${currentUser.id}`, JSON.stringify(next));
+      if (typeof window !== 'undefined' && currentUserId) {
+        localStorage.setItem(`favorites_${currentUserId}`, JSON.stringify(next));
       }
       return next;
     });
-  }, [currentUser?.id]);
+  }, [currentUserId]);
 
   // مهارات الطالب - معزولة بنسبة 100% (الحساب الجديد يبدأ بـ 0 مهارات ونظيفة تماماً)
   const [userSkills, setUserSkills] = useState(() => {
@@ -193,25 +197,35 @@ export function AppProvider({ children }) {
   const addSkill = useCallback((skill) => {
     const s = skill.trim();
     if (s && !userSkills.includes(s)) {
-      setUserSkills((prev) => {
-        const next = [...prev, s];
-        if (typeof window !== 'undefined' && currentUser?.id) {
-          localStorage.setItem(`user_skills_${currentUser.id}`, JSON.stringify(next));
-        }
-        return next;
-      });
+      const nextSkills = [...userSkills, s];
+      setUserSkills(nextSkills);
+      if (typeof window !== 'undefined' && currentUserId) {
+        localStorage.setItem(`user_skills_${currentUserId}`, JSON.stringify(nextSkills));
+      }
+      if (apiFetch) {
+        apiFetch('/users/me/skills', {
+          method: 'PUT',
+          body: JSON.stringify({ skills: nextSkills.join(', ') })
+        }).catch(() => {});
+      }
     }
-  }, [userSkills, currentUser?.id]);
+  }, [userSkills, currentUserId, apiFetch]);
 
   const removeSkill = useCallback((skillToRemove) => {
     setUserSkills((prev) => {
       const next = prev.filter((s) => s !== skillToRemove);
-      if (typeof window !== 'undefined' && currentUser?.id) {
-        localStorage.setItem(`user_skills_${currentUser.id}`, JSON.stringify(next));
+      if (typeof window !== 'undefined' && currentUserId) {
+        localStorage.setItem(`user_skills_${currentUserId}`, JSON.stringify(next));
+      }
+      if (apiFetch) {
+        apiFetch('/users/me/skills', {
+          method: 'PUT',
+          body: JSON.stringify({ skills: next.join(', ') })
+        }).catch(() => {});
       }
       return next;
     });
-  }, [currentUser?.id]);
+  }, [currentUserId, apiFetch]);
 
   // السيرة الذاتية للطالب - معزولة بنسبة 100%
   const [studentCv, setStudentCv] = useState(() => {
@@ -261,7 +275,9 @@ export function AppProvider({ children }) {
           bio: ''
         });
       }
-    } catch {}
+    } catch (_err) {
+      // Ignore student CV reload error
+    }
   }, [currentUser?.id]);
 
   // ==========================================
@@ -445,7 +461,9 @@ export function AppProvider({ children }) {
           if (typeof window !== 'undefined') {
             try {
               sessionStorage.setItem('capstone_projects_cache', JSON.stringify(formatted));
-            } catch {}
+            } catch (_err) {
+              // Ignore session storage error
+            }
           }
           setRawProjects(formatted);
           return;
@@ -498,14 +516,49 @@ export function AppProvider({ children }) {
     }
   }, [apiFetch]);
 
+  const fetchUserProfile = useCallback(async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token || token.startsWith('demo-token-')) return;
+
+    try {
+      const res = await apiFetch('/users/me/profile');
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data.skills) {
+          const sList = data.skills.split(',').map((s) => s.trim()).filter(Boolean);
+          if (sList.length > 0) {
+            setUserSkills(sList);
+            if (typeof window !== 'undefined' && currentUserId) {
+              localStorage.setItem(`user_skills_${currentUserId}`, JSON.stringify(sList));
+            }
+          }
+        }
+        if (data.major || data.bio || data.portfolio_url || data.course) {
+          const cvObj = {
+            major: data.major || 'أنظمة المعلومات الحاسوبية (CIS)',
+            course: data.course || 'مشروع تخرج 1',
+            portfolioUrl: data.portfolio_url || '',
+            bio: data.bio || ''
+          };
+          setStudentCv(cvObj);
+          if (typeof window !== 'undefined' && currentUserId) {
+            localStorage.setItem(`student_academic_cv_${currentUserId}`, JSON.stringify(cvObj));
+          }
+        }
+      }
+    } catch (_err) {
+      // Ignored
+    }
+  }, [apiFetch, currentUserId]);
+
   // استدعاء متوازٍ سريع لجميع الـ Endpoints بدون أي بطء أو انتظار تعاقبي
   const refreshAllData = useCallback(async () => {
     const promises = [fetchProjects()];
     if (currentUser) {
-      promises.push(fetchApplications(), fetchNotifications());
+      promises.push(fetchApplications(), fetchNotifications(), fetchUserProfile());
     }
     await Promise.allSettled(promises);
-  }, [currentUser, fetchProjects, fetchApplications, fetchNotifications]);
+  }, [currentUser, fetchProjects, fetchApplications, fetchNotifications, fetchUserProfile]);
 
   const handleMarkNotificationRead = useCallback(async (notificationId) => {
     try {
@@ -840,11 +893,22 @@ export function AppProvider({ children }) {
   // ==========================================
   const saveStudentCv = useCallback((newCv) => {
     setStudentCv(newCv);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('student_academic_cv', JSON.stringify(newCv));
+    if (typeof window !== 'undefined' && currentUserId) {
+      localStorage.setItem(`student_academic_cv_${currentUserId}`, JSON.stringify(newCv));
+    }
+    if (apiFetch) {
+      apiFetch('/users/me/profile', {
+        method: 'PUT',
+        body: JSON.stringify({
+          major: newCv.major,
+          course: newCv.course,
+          portfolio_url: newCv.portfolioUrl,
+          bio: newCv.bio
+        })
+      }).catch(() => {});
     }
     showToast(t('toasts.cv_saved'), 'success');
-  }, [showToast, t]);
+  }, [currentUserId, apiFetch, showToast, t]);
 
   return (
     <AppContext.Provider

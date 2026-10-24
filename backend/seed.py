@@ -50,19 +50,19 @@ DEFAULT_USERS = [
 
 
 def seed_user(db: Session, user_data: dict) -> models.User:
-    """إدراج أو تحديث حساب مستخدم بالاعتماد على البريد الإلكتروني مع تشفير آمن لكلمة المرور"""
+    """إدراج أو التحقق من حساب مستخدم بالاعتماد على البريد الإلكتروني دون حذف أو إعادة كتابة كلمات المرور للمستخدمين الحاليين"""
     email = user_data["email"].strip().lower()
     user = db.query(models.User).filter(models.User.email == email).first()
 
-    password_hash = utils.hash_password(user_data["password"])
-
     if user:
-        user.full_name = user_data["full_name"]
-        user.role = user_data["role"]
-        user.password_hash = password_hash
-        user.skills = user_data.get("skills", "")
-        logger.info(f"Updated existing user: {email} ({user_data['full_name']})")
+        # الحساب موجود مسبقاً: نحافظ على كلمة المرور والبيانات الخاصة بالمستخدم دون أي حذف أو استبدال
+        if not user.password_hash:
+            user.password_hash = utils.hash_password(user_data["password"])
+            db.commit()
+            db.refresh(user)
+        logger.info(f"Verified existing user: {email} ({user.full_name}) - credentials preserved")
     else:
+        password_hash = utils.hash_password(user_data["password"])
         user = models.User(
             full_name=user_data["full_name"],
             email=email,
@@ -71,10 +71,10 @@ def seed_user(db: Session, user_data: dict) -> models.User:
             skills=user_data.get("skills", "")
         )
         db.add(user)
+        db.commit()
+        db.refresh(user)
         logger.info(f"Created new user: {email} ({user_data['full_name']})")
 
-    db.commit()
-    db.refresh(user)
     return user
 
 

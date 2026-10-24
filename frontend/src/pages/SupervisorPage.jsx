@@ -126,7 +126,7 @@ export default function SupervisorPage() {
       prev.map((p) => (p.id === projectId ? { ...p, status: 'approved' } : p))
     );
     try {
-      if (approveProject) await approveProject(projectId);
+      if (approveProject) await approveProject(projectId, 'approved');
     } catch {
       // Ignored - local state already updated
     }
@@ -139,15 +139,25 @@ export default function SupervisorPage() {
     setLocalProjects((prev) =>
       prev.map((p) => (p.id === projectId ? { ...p, status: 'rejected' } : p))
     );
+    try {
+      if (approveProject) await approveProject(projectId, 'rejected');
+    } catch {
+      // Ignored
+    }
     if (showToast) {
       showToast(isRtl ? 'تم رفض المشروع وإرسال الملاحظات للطلبة' : 'Project marked as rejected', 'info');
     }
   };
 
-  const handleResetPending = (projectId) => {
+  const handleResetPending = async (projectId) => {
     setLocalProjects((prev) =>
       prev.map((p) => (p.id === projectId ? { ...p, status: 'pending' } : p))
     );
+    try {
+      if (approveProject) await approveProject(projectId, 'pending');
+    } catch {
+      // Ignored
+    }
     if (showToast) {
       showToast(isRtl ? 'تمت إعادة المشروع لحالة قيد المراجعة' : 'Project reset to pending review', 'info');
     }

@@ -14,9 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. إدراج أو تحديث حساب المشرف الأكاديمي الرسمي للمشروع: د. أسامة أمين مرعي
--- البريد الإلكتروني الأساسي: osama.merhi@capstone.ps (كلمة المرور: password123)
--- البريد الإلكتروني الإضافي: omarie@qou.edu (كلمة المرور: Doctor@2025)
+-- 2. إدراج حساب المشرف الأكاديمي الرسمي للمنصة إن لم يكن موجوداً
 INSERT INTO users (full_name, email, password_hash, role, skills, created_at)
 VALUES (
     'د. أسامة أمين مرعي',
@@ -26,11 +24,7 @@ VALUES (
     'نظم معلومات حاسوبية - كلية التكنولوجيا والعلوم التطبيقية',
     CURRENT_TIMESTAMP
 )
-ON CONFLICT (email) DO UPDATE 
-SET full_name = EXCLUDED.full_name,
-    password_hash = EXCLUDED.password_hash,
-    role = EXCLUDED.role,
-    skills = EXCLUDED.skills;
+ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO users (full_name, email, password_hash, role, skills, created_at)
 VALUES (
@@ -41,11 +35,7 @@ VALUES (
     'نظم معلومات حاسوبية - كلية التكنولوجيا والعلوم التطبيقية',
     CURRENT_TIMESTAMP
 )
-ON CONFLICT (email) DO UPDATE 
-SET full_name = EXCLUDED.full_name,
-    password_hash = EXCLUDED.password_hash,
-    role = EXCLUDED.role,
-    skills = EXCLUDED.skills;
+ON CONFLICT (email) DO NOTHING;
 
 -- 3. حساب الطالب التجريبي (أحمد منصور - pass1234)
 INSERT INTO users (full_name, email, password_hash, role, skills, created_at)

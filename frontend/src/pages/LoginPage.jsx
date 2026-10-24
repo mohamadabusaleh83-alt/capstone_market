@@ -7,7 +7,6 @@ import { formatFriendlyError } from '../api/client';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import ThemeToggle from '../components/ThemeToggle';
 import {
-  ShieldCheck,
   AlertCircle,
   CheckCircle2,
   Mail,
@@ -20,16 +19,16 @@ import {
   Building2,
   ArrowRight,
   ArrowLeft,
-  Info,
   Eye,
   EyeOff,
+  ShieldCheck,
   School,
   Briefcase
 } from 'lucide-react';
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  const { currentUser, login, loginAsDemo, register, isLoadingAuth, authError, setAuthError, authSuccess, setAuthSuccess } = useAuth();
+  const { currentUser, login, register, isLoadingAuth, authError, setAuthError, authSuccess, setAuthSuccess } = useAuth();
   const { isRtl, fetchProjects, fetchApplications } = useApp();
 
   const navigate = useNavigate();
@@ -50,100 +49,19 @@ export default function LoginPage() {
     return <Navigate to={from} replace />;
   }
 
-  // تسجيل الدخول التجريبي الفوري بنقرة واحدة بدون Race Condition
-  const handleQuickDemoLogin = (role) => {
-    const user = loginAsDemo(role);
-    if (user && typeof window !== 'undefined') {
-      localStorage.setItem('app_user_role', JSON.stringify(user));
-    }
-    // تحديث البيانات في الخلفية دون تعطيل الانتقال الفوري
-    if (fetchProjects) fetchProjects();
-    if (fetchApplications) fetchApplications();
-    const destination = role === 'supervisor' ? '/supervisor' : (from && from !== '/login' ? from : '/dashboard');
-    navigate(destination, { replace: true });
-  };
-
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
 
     if (authMode === 'register') {
       if (authPassword !== authConfirmPassword) {
-        setAuthError(t('auth.password_mismatch'));
+        setAuthError(t('auth.password_mismatch', 'كلمة المرور وتأكيدها غير متطابقين'));
         return;
       }
-    }
-
-    const emailTrim = (authEmail || '').trim().toLowerCase();
-    const isSupervisorMatch =
-      emailTrim.startsWith('osama') ||
-      emailTrim.startsWith('supervisor') ||
-      emailTrim.includes('merhi') ||
-      emailTrim.includes('omarie') ||
-      authPassword === 'password123' ||
-      authPassword === 'Doctor@2025';
-
-    const isStudentMatch =
-      emailTrim.startsWith('student') ||
-      emailTrim.includes('mansour') ||
-      emailTrim.includes('ahmad') ||
-      authPassword === 'pass1234';
-
-    const isCompanyMatch =
-      emailTrim.startsWith('company') ||
-      emailTrim.startsWith('partner') ||
-      emailTrim.includes('alnoor') ||
-      emailTrim.includes('business');
-
-    // مصادقة وتجاوز احتياطي ذكي للأدوار الثلاثة في حال تعذر اتصال السيرفر
-    if (authMode === 'login' && isSupervisorMatch) {
-      let userObj;
-      try {
-        userObj = await login(authEmail.trim(), authPassword);
-      } catch {
-        userObj = loginAsDemo('supervisor');
+      if (authPassword.length < 6) {
+        setAuthError(isRtl ? 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل' : 'Password must be at least 6 characters');
+        return;
       }
-      if (userObj && typeof window !== 'undefined') {
-        localStorage.setItem('app_user_role', JSON.stringify(userObj));
-      }
-      // استدعاء البيانات في الخلفية دون تعطيل واجهة المستخدم
-      if (fetchProjects) fetchProjects();
-      if (fetchApplications) fetchApplications();
-      const destination = from && from !== '/login' ? from : '/supervisor';
-      navigate(destination, { replace: true });
-      return;
-    }
-
-    if (authMode === 'login' && isStudentMatch) {
-      let userObj;
-      try {
-        userObj = await login(authEmail.trim(), authPassword);
-      } catch {
-        userObj = loginAsDemo('student');
-      }
-      if (userObj && typeof window !== 'undefined') {
-        localStorage.setItem('app_user_role', JSON.stringify(userObj));
-      }
-      if (fetchProjects) fetchProjects();
-      if (fetchApplications) fetchApplications();
-      navigate(from && from !== '/login' ? from : '/dashboard', { replace: true });
-      return;
-    }
-
-    if (authMode === 'login' && isCompanyMatch) {
-      let userObj;
-      try {
-        userObj = await login(authEmail.trim(), authPassword);
-      } catch {
-        userObj = loginAsDemo('company');
-      }
-      if (userObj && typeof window !== 'undefined') {
-        localStorage.setItem('app_user_role', JSON.stringify(userObj));
-      }
-      if (fetchProjects) fetchProjects();
-      if (fetchApplications) fetchApplications();
-      navigate(from && from !== '/login' ? from : '/dashboard', { replace: true });
-      return;
     }
 
     try {
@@ -176,12 +94,12 @@ export default function LoginPage() {
       className="min-h-screen bg-[#F4F8FC] dark:bg-[#0B152E] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200 relative overflow-x-hidden"
       dir={isRtl ? 'rtl' : 'ltr'}
     >
-      {/* الشريط العلوي للتحكم والمظهر */}
-      <header className="w-full bg-white/80 dark:bg-[#101E42]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-[#2499F2]/20 px-4 sm:px-8 py-3 flex items-center justify-between z-20">
+      {/* الشريط العلوي للتحكم والتنقل */}
+      <header className="w-full bg-white/80 dark:bg-[#101E42]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-[#2499F2]/20 px-4 sm:px-8 py-3.5 flex items-center justify-between z-20">
         <div className="flex items-center gap-3">
           <Link
             to="/"
-            title={t('nav.back_home')}
+            title={t('nav.back_home', 'العودة للصفحة الرئيسية')}
             className="flex items-center gap-2.5 group cursor-pointer"
           >
             <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-[#0B152E] border border-slate-200 dark:border-[#2499F2]/30 flex items-center justify-center p-1.5 shadow-sm group-hover:scale-105 transition-transform">
@@ -191,125 +109,135 @@ export default function LoginPage() {
               Capstone Market
             </span>
           </Link>
-          <span className="text-[11px] font-semibold text-[#2499F2] dark:text-[#28C8C0] bg-[#2499F2]/10 dark:bg-[#2499F2]/20 border border-[#2499F2]/30 px-2.5 py-0.5 rounded-full hidden sm:inline">
-            v1.1 Live
-          </span>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-[#2499F2] dark:hover:text-[#28C8C0] px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 hover:border-[#2499F2]/30 transition"
+          >
+            {isRtl ? (
+              <ArrowRight className="w-3.5 h-3.5 text-[#28C8C0]" />
+            ) : (
+              <ArrowLeft className="w-3.5 h-3.5 text-[#28C8C0]" />
+            )}
+            <span>{t('auth.back_to_home', 'العودة للرئيسية')}</span>
+          </Link>
           <ThemeToggle />
           <LanguageSwitcher />
         </div>
       </header>
 
-      {/* المحتوى الرئيسي بهيكل الشاشة المقسومة والتجاوب التام لشاشات الموبايل */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 sm:p-6 lg:p-8 flex items-center justify-center z-10">
-        <div className="w-full flex flex-col lg:grid lg:grid-cols-2 gap-6 lg:gap-8 items-stretch max-w-md sm:max-w-xl lg:max-w-none mx-auto">
+      {/* المحتوى الرئيسي المتجاوب */}
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-8 sm:p-6 lg:p-10 flex items-center justify-center z-10">
+        <div className="w-full flex flex-col lg:grid lg:grid-cols-12 gap-6 lg:gap-8 items-stretch max-w-md sm:max-w-xl lg:max-w-none mx-auto">
           
-          {/* الجانب الأيمن (الواجهة الترحيبية والهوية الرسمية الفخمة) */}
-          <section className="bg-[#101E42] text-white rounded-3xl p-6 sm:p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden shadow-2xl border border-[#2499F2]/25 order-1">
-            {/* لمسات إضاءة خلفية ناعمة بدرجات Turquoise & Blue */}
-            <div className="absolute -top-24 -start-24 w-80 h-80 bg-[#28C8C0]/20 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-24 -end-24 w-80 h-80 bg-[#2499F2]/25 rounded-full blur-3xl pointer-events-none" />
+          {/* الجانب التعريفي بالمشروع (Brand & Project Value Card) */}
+          <section className="lg:col-span-6 bg-[#101E42] text-white rounded-3xl p-6 sm:p-8 lg:p-10 flex flex-col justify-between relative overflow-hidden shadow-2xl border border-[#2499F2]/25 order-2 lg:order-1">
+            {/* إضاءات خلفية ناعمة */}
+            <div className="absolute -top-24 -start-24 w-72 h-72 bg-[#28C8C0]/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -end-24 w-72 h-72 bg-[#2499F2]/20 rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative z-10 space-y-6">
-              {/* الشعار المعتمد بحجم كبير وبارز في الأعلى */}
+              {/* الشعار والهوية المعتمدة */}
               <div className="flex items-center gap-4">
-                <div className="p-3.5 rounded-2xl bg-[#0B152E]/90 border border-[#28C8C0]/35 shadow-xl shadow-[#28C8C0]/15 backdrop-blur-xl shrink-0 hover:scale-105 transition-transform duration-300">
+                <div className="p-3.5 rounded-2xl bg-[#0B152E]/90 border border-[#28C8C0]/35 shadow-xl shadow-[#28C8C0]/15 shrink-0">
                   <img
                     src="/logo.svg"
                     alt="Capstone Market"
-                    className="w-14 h-14 sm:w-16 sm:h-16 object-contain drop-shadow-[0_0_20px_rgba(40,200,192,0.45)]"
+                    className="w-12 h-12 sm:w-14 sm:h-14 object-contain drop-shadow-[0_0_15px_rgba(40,200,192,0.4)]"
                   />
                 </div>
                 <div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#28C8C0]/15 border border-[#28C8C0]/30 text-[#77DCC1] text-[11px] font-bold mb-1">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#28C8C0]/15 border border-[#28C8C0]/30 text-[#77DCC1] text-[11px] font-bold mb-1">
                     <Sparkles className="w-3.5 h-3.5 text-[#28C8C0]" />
-                    <span>Academic & Industry Gateway</span>
+                    <span>{isRtl ? 'منظومة مشاريع التخرج وسوق التحديات' : 'Academic & Industry Gateway'}</span>
                   </div>
                   <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                    {t('auth.hero_headline')}
+                    Capstone Market
                   </h1>
                 </div>
               </div>
 
-              {/* شعار المنصة الفرعي والنبذة التعريفية */}
+              {/* النبذة التعريفية المركزة */}
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-[#28C8C0] tracking-wide">
-                  {t('auth.tagline')}
+                <p className="text-sm font-bold text-[#28C8C0]">
+                  {isRtl ? 'جسر عملي يربط مشاريع التخرج بتحديات الشركات الحقيقية' : 'Bridging graduation projects with real company challenges'}
                 </p>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-lg">
-                  {t('auth.hero_subheadline')}
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                  {isRtl 
+                    ? 'منصة تربط بين الطلبة الخريجين والشركات الرائدة لطرح مشكلات برمجية وتشغيلية واقعية، وتشكيل فرق طلابية لإنجازها تحت إشراف وتوجيه أكاديمي معتمد.'
+                    : 'A platform connecting graduating students with industry partners to solve real-world technical challenges under direct academic supervision.'}
                 </p>
               </div>
 
-              {/* قائمة الميزات بثلاث نقاط أنيقة بأيقونات ملونة */}
+              {/* الركائز الأساسية الثلاث */}
               <div className="space-y-3 pt-2">
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:border-[#28C8C0]/40 transition">
+                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
                   <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
-                    <CheckCircle2 className="w-4 h-4" />
+                    <ShieldCheck className="w-4 h-4" />
                   </div>
                   <div>
                     <h3 className="text-xs font-bold text-white mb-0.5">
-                      {t('auth.feature_1')}
+                      {isRtl ? 'إشراف أكاديمي مباشر' : 'Direct Academic Supervision'}
                     </h3>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                      {t('auth.feature_supervision_desc')}
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      {isRtl ? 'متابعة دورية لمراحل المشروع، مراجعة التقارير، واعتماد المخرجات وفق المعايير الأكاديمية.' : 'Continuous monitoring, milestone reviews, and formal proposal evaluation by university supervisors.'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:border-[#2499F2]/40 transition">
+                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
                   <div className="w-8 h-8 rounded-xl bg-[#2499F2]/20 border border-[#2499F2]/30 flex items-center justify-center text-[#2499F2] shrink-0 mt-0.5">
                     <Building2 className="w-4 h-4" />
                   </div>
                   <div>
                     <h3 className="text-xs font-bold text-white mb-0.5">
-                      {t('auth.feature_2')}
+                      {isRtl ? 'تحديات حقيقية من الشركات' : 'Real Industry Challenges'}
                     </h3>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                      {t('auth.feature_collab_desc')}
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      {isRtl ? 'فرص برمجية واستشارية تطرحها مؤسسات وشركات محلية وإقليمية لتنفيذها بمشاريع تخرج قيّمة.' : 'Real-world software and operational problems published by companies looking for student talent.'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:border-[#28C8C0]/40 transition">
+                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
                   <div className="w-8 h-8 rounded-xl bg-[#28C8C0]/20 border border-[#28C8C0]/30 flex items-center justify-center text-[#28C8C0] shrink-0 mt-0.5">
-                    <Sparkles className="w-4 h-4" />
+                    <GraduationCap className="w-4 h-4" />
                   </div>
                   <div>
                     <h3 className="text-xs font-bold text-white mb-0.5">
-                      {t('auth.feature_3')}
+                      {isRtl ? 'تأهيل عملي لسوق العمل' : 'Workforce Readiness'}
                     </h3>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                      {t('auth.feature_match_desc')}
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      {isRtl ? 'إكساب الطلبة خبرة تطوير حقيقية في بيئات العمل، وبناء ملف أعمال تقني قوي يسهل التوظيف.' : 'Empowering graduates with real engineering experience, teamwork, and strong project portfolios.'}
                     </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* رابط العودة للمنصة وتوثيق المطور */}
+            {/* أسفل البطاقة: رابط العودة وتوثيق المطور */}
             <div className="pt-6 relative z-10 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 mt-6">
               <Link
                 to="/"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-[#0B152E]/80 hover:bg-[#0B152E] text-slate-200 hover:text-white border border-[#2499F2]/30 hover:border-[#28C8C0]/50 transition-all active:scale-95 group w-fit cursor-pointer shadow-md"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-[#0B152E]/90 hover:bg-[#0B152E] text-slate-200 hover:text-white border border-[#2499F2]/30 hover:border-[#28C8C0]/50 transition-all active:scale-95 group cursor-pointer shadow-md"
               >
                 {isRtl ? (
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1 text-[#28C8C0]" />
                 ) : (
                   <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1 text-[#28C8C0]" />
                 )}
-                <span>{t('auth.back_to_home')}</span>
+                <span>{t('auth.back_to_home', 'العودة للصفحة الرئيسية')}</span>
               </Link>
 
               <div className="text-[11px] text-slate-300 flex items-center gap-1.5">
-                <span>تطوير:</span>
+                <span>{isRtl ? 'تطوير:' : 'Developer:'}</span>
                 <a
                   href="https://www.linkedin.com/in/mohamad-abu-saleh-598255350"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-bold text-[#28C8C0] hover:text-[#77DCC1] underline underline-offset-2 flex items-center gap-1 transition-colors"
+                  className="font-bold text-[#28C8C0] hover:text-[#77DCC1] underline underline-offset-2 transition-colors"
                 >
                   محمد أبو صالح
                 </a>
@@ -317,12 +245,12 @@ export default function LoginPage() {
             </div>
           </section>
 
-          {/* الجانب الأيسر (بطاقة المصادقة التفاعلية Glassmorphism Card) */}
-          <section className="flex items-center justify-center order-2">
-            <div className="w-full max-w-md bg-white dark:bg-[#101E42]/95 backdrop-blur-2xl border border-slate-200 dark:border-slate-700/50 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden space-y-5">
+          {/* الجانب المخصص لنموذج تسجيل الدخول وإنشاء الحساب (Interactive Form Card) */}
+          <section className="lg:col-span-6 flex items-center justify-center order-1 lg:order-2">
+            <div className="w-full bg-white dark:bg-[#101E42]/95 backdrop-blur-2xl border border-slate-200 dark:border-slate-700/60 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden space-y-5">
               
-              {/* شريط تبديل سلس أعلى البطاقة للتحويل الفوري بين [تسجيل الدخول] و [إنشاء حساب جديد] */}
-              <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-[#0B152E] rounded-2xl border border-slate-200 dark:border-[#2499F2]/20">
+              {/* شريط تبديل متوازن 50% / 50% بين [تسجيل الدخول] و [إنشاء حساب جديد] */}
+              <div className="grid grid-cols-2 p-1.5 bg-slate-100 dark:bg-[#0B152E] rounded-2xl border border-slate-200 dark:border-[#2499F2]/20">
                 <button
                   type="button"
                   onClick={() => {
@@ -330,14 +258,14 @@ export default function LoginPage() {
                     setAuthError('');
                     setAuthSuccess('');
                   }}
-                  className={`py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 ${
+                  className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 ${
                     authMode === 'login'
-                      ? 'bg-gradient-to-r from-[#2499F2] to-[#28C8C0] text-[#101E42] font-black shadow-md shadow-[#2499F2]/20'
+                      ? 'bg-gradient-to-r from-[#2499F2] to-[#28C8C0] text-[#0B152E] font-black shadow-md shadow-[#2499F2]/20'
                       : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <LogIn className="w-4 h-4" />
-                  <span>{t('auth.tab_login')}</span>
+                  <span>{t('auth.tab_login', 'تسجيل الدخول')}</span>
                 </button>
 
                 <button
@@ -347,28 +275,32 @@ export default function LoginPage() {
                     setAuthError('');
                     setAuthSuccess('');
                   }}
-                  className={`py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 ${
+                  className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 ${
                     authMode === 'register'
-                      ? 'bg-gradient-to-r from-[#2499F2] to-[#28C8C0] text-[#101E42] font-black shadow-md shadow-[#2499F2]/20'
+                      ? 'bg-gradient-to-r from-[#2499F2] to-[#28C8C0] text-[#0B152E] font-black shadow-md shadow-[#2499F2]/20'
                       : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <UserPlus className="w-4 h-4" />
-                  <span>{t('auth.tab_register')}</span>
+                  <span>{t('auth.tab_register', 'إنشاء حساب جديد')}</span>
                 </button>
               </div>
 
               {/* عنوان النموذج والوصف التوضيحي */}
               <div className="space-y-1">
                 <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-                  {authMode === 'login' ? t('auth.login_title') : t('auth.register_title')}
+                  {authMode === 'login' 
+                    ? t('auth.login_title', 'تسجيل الدخول الموحد') 
+                    : t('auth.register_title', 'إنشاء حساب جديد بالمنصة')}
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  {authMode === 'login' ? t('auth.login_desc') : t('auth.register_desc')}
+                  {authMode === 'login' 
+                    ? t('auth.login_desc', 'أدخل بريدك الإلكتروني وكلمة المرور للمتابعة إلى لوحتك المخصصة.') 
+                    : t('auth.register_desc', 'أنشئ حسابك الجديد كطالب خريج أو كشركة لاستكشاف وطرح المشاريع.')}
                 </p>
               </div>
 
-              {/* رسائل التنبيه والخطأ مع تنظيف وحماية تامة من نصوص الأخطاء التقنية للمتصفح */}
+              {/* رسائل التنبيه والخطأ */}
               {authError && (
                 <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/80 rounded-2xl text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2 animate-in fade-in duration-200">
                   <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
@@ -383,8 +315,8 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* نموذج المصادقة التفاعلي */}
-              <form onSubmit={handleAuthSubmit} className="space-y-3.5">
+              {/* نموذج المصادقة */}
+              <form onSubmit={handleAuthSubmit} className="space-y-4">
                 
                 {/* ----------------- حقول إنشاء الحساب الجديد (Register Mode) ----------------- */}
                 {authMode === 'register' && (
@@ -392,7 +324,7 @@ export default function LoginPage() {
                     {/* اختيار نوع الحساب بخيارين فقط: طالب أو شركة */}
                     <div>
                       <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1.5 font-semibold">
-                        {t('auth.account_type')}
+                        {t('auth.account_type', 'نوع الحساب')}
                       </label>
                       <div className="grid grid-cols-2 gap-2">
                         <button
@@ -400,12 +332,12 @@ export default function LoginPage() {
                           onClick={() => setAuthRole('student')}
                           className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
                             authRole === 'student'
-                              ? 'bg-[#28C8C0]/15 dark:bg-[#28C8C0]/20 border-[#28C8C0] text-[#101E42] dark:text-[#77DCC1] shadow-sm'
-                              : 'bg-slate-50 dark:bg-[#0B152E]/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100'
+                              ? 'bg-[#28C8C0]/15 dark:bg-[#28C8C0]/20 border-[#28C8C0] text-[#0B152E] dark:text-[#77DCC1] shadow-sm'
+                              : 'bg-slate-50 dark:bg-[#0B152E]/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#0B152E]'
                           }`}
                         >
                           <GraduationCap className="w-4 h-4 text-[#28C8C0]" />
-                          <span>{t('auth.option_student')}</span>
+                          <span>{t('auth.option_student', 'طالب خريج')}</span>
                         </button>
 
                         <button
@@ -413,46 +345,48 @@ export default function LoginPage() {
                           onClick={() => setAuthRole('company')}
                           className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
                             authRole === 'company'
-                              ? 'bg-[#2499F2]/15 dark:bg-[#2499F2]/20 border-[#2499F2] text-[#101E42] dark:text-[#2499F2] shadow-sm'
-                              : 'bg-slate-50 dark:bg-[#0B152E]/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100'
+                              ? 'bg-[#2499F2]/15 dark:bg-[#2499F2]/20 border-[#2499F2] text-[#0B152E] dark:text-[#2499F2] shadow-sm'
+                              : 'bg-slate-50 dark:bg-[#0B152E]/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#0B152E]'
                           }`}
                         >
                           <Building2 className="w-4 h-4 text-[#2499F2]" />
-                          <span>{t('auth.option_company')}</span>
+                          <span>{t('auth.option_company', 'شركة / شريك')}</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* ملاحظة خافتة لتوضيح استبعاد المشرفين من التسجيل العام */}
+                    {/* تنبيه واضح بأن المشرفين لا يسجلون من التسجيل العام */}
                     <div className="p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-xl text-amber-800 dark:text-amber-300 text-[11px] flex items-start gap-2">
-                      <Info className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                      <span className="leading-relaxed">{t('auth.supervisor_notice')}</span>
+                      <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                      <span className="leading-relaxed">
+                        {t('auth.supervisor_notice', 'حسابات المشرفين الأكاديميين تعتمد وتصدر مسبقاً من إدارة الكلية.')}
+                      </span>
                     </div>
 
                     {/* حقل الاسم الكامل أو اسم الشركة */}
                     <div>
                       <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-semibold">
-                        {authRole === 'student' ? t('auth.full_name') : t('auth.company_name')}
+                        {authRole === 'student' ? t('auth.full_name', 'الاسم الكامل') : t('auth.company_name', 'اسم الشركة')}
                       </label>
                       <input
                         type="text"
                         required
-                        placeholder={authRole === 'student' ? t('auth.full_name_placeholder') : t('auth.company_name_placeholder')}
+                        placeholder={authRole === 'student' ? t('auth.full_name_placeholder', 'مثال: أحمد منصور') : t('auth.company_name_placeholder', 'مثال: شركة النور للحلول البرمجية')}
                         value={authFullName}
                         onChange={(e) => setAuthFullName(e.target.value)}
                         className="w-full bg-slate-50 dark:bg-[#0B152E] border border-slate-300 dark:border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2] focus:ring-1 focus:ring-[#2499F2] transition"
                       />
                     </div>
 
-                    {/* حقل ديناميكي: (الجامعة والتخصص للطالب | مجال النشاط للشركة) */}
+                    {/* حقل الجامعة أو مجال الشركة */}
                     <div>
                       <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-semibold">
-                        {authRole === 'student' ? t('auth.student_field_label') : t('auth.company_field_label')}
+                        {authRole === 'student' ? t('auth.student_field_label', 'الجامعة والتخصص') : t('auth.company_field_label', 'مجال النشاط والقطاع')}
                       </label>
                       <div className="relative">
                         <input
                           type="text"
-                          placeholder={authRole === 'student' ? t('auth.student_field_placeholder') : t('auth.company_field_placeholder')}
+                          placeholder={authRole === 'student' ? t('auth.student_field_placeholder', 'مثال: جامعة القدس المفتوحة - هندسة أنظمة معلومات') : t('auth.company_field_placeholder', 'مثال: تطوير البرمجيات والذكاء الاصطناعي')}
                           value={authExtraField}
                           onChange={(e) => setAuthExtraField(e.target.value)}
                           className="w-full bg-slate-50 dark:bg-[#0B152E] border border-slate-300 dark:border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2] focus:ring-1 focus:ring-[#2499F2] transition ps-3 pe-9"
@@ -467,10 +401,10 @@ export default function LoginPage() {
                   </>
                 )}
 
-                {/* ----------------- حقل البريد الإلكتروني (مشترك) ----------------- */}
+                {/* ----------------- حقل البريد الإلكتروني ----------------- */}
                 <div>
-                  <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-semibold">
-                    {t('auth.email')}
+                  <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1.5 font-semibold">
+                    {t('auth.email', 'البريد الإلكتروني')}
                   </label>
                   <div className="relative">
                     <input
@@ -486,11 +420,30 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* ----------------- حقل كلمة المرور ----------------- */}
+                {/* ----------------- حقل كلمة المرور مع رابط الإظهار والإخفاء ----------------- */}
                 <div>
-                  <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-semibold">
-                    {t('auth.password')}
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                      {t('auth.password', 'كلمة المرور')}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-[11px] text-[#2499F2] dark:text-[#28C8C0] hover:underline flex items-center gap-1 cursor-pointer font-medium transition"
+                    >
+                      {showPassword ? (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5" />
+                          <span>{isRtl ? 'إخفاء كلمة المرور' : 'Hide Password'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>{isRtl ? 'إظهار كلمة المرور' : 'Show Password'}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
@@ -513,12 +466,31 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* ----------------- حقل تأكيد كلمة المرور (في وضع إنشاء الحساب فقط) ----------------- */}
+                {/* ----------------- حقل تأكيد كلمة المرور (عند إنشاء الحساب) ----------------- */}
                 {authMode === 'register' && (
                   <div>
-                    <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-semibold">
-                      {t('auth.confirm_password')}
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                        {t('auth.confirm_password', 'تأكيد كلمة المرور')}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="text-[11px] text-[#2499F2] dark:text-[#28C8C0] hover:underline flex items-center gap-1 cursor-pointer font-medium transition"
+                      >
+                        {showConfirmPassword ? (
+                          <>
+                            <EyeOff className="w-3.5 h-3.5" />
+                            <span>{isRtl ? 'إخفاء' : 'Hide'}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>{isRtl ? 'إظهار' : 'Show'}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                     <div className="relative">
                       <input
                         type={showConfirmPassword ? 'text' : 'password'}
@@ -542,78 +514,33 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                {/* زر الإرسال الرئيسي بلون Turquoise/Mint (#28C8C0) مع نص كحلي غامق وعريض text-[#101E42] font-bold لضمان الوضوح التام */}
+                {/* زر الإرسال الرئيسي البارز */}
                 <button
                   type="submit"
                   disabled={isLoadingAuth}
-                  className="w-full bg-gradient-to-r from-[#28C8C0] to-[#77DCC1] hover:from-[#20aba3] hover:to-[#5fc4a8] text-[#101E42] font-black text-sm py-3 px-6 rounded-xl transition-all duration-200 shadow-lg shadow-[#28C8C0]/30 hover:shadow-[#28C8C0]/45 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95 mt-4"
+                  className="w-full bg-gradient-to-r from-[#2499F2] via-[#28C8C0] to-[#77DCC1] hover:opacity-95 text-[#0B152E] font-black text-sm py-3 px-6 rounded-xl transition-all duration-200 shadow-lg shadow-[#2499F2]/25 hover:shadow-[#28C8C0]/35 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95 mt-4"
                 >
                   {isLoadingAuth ? (
                     <>
-                      <RefreshCw className="w-4 h-4 animate-spin text-[#101E42]" />
-                      <span>{t('auth.connecting')}</span>
+                      <RefreshCw className="w-4 h-4 animate-spin text-[#0B152E]" />
+                      <span>{t('auth.connecting', 'جاري التحقق والاتصال...')}</span>
                     </>
                   ) : authMode === 'login' ? (
                     <>
-                      <LogIn className="w-4 h-4 text-[#101E42]" />
-                      <span>{t('auth.login_submit')}</span>
+                      <LogIn className="w-4 h-4 text-[#0B152E]" />
+                      <span>{t('auth.login_submit', 'تسجيل الدخول')}</span>
                     </>
                   ) : (
                     <>
-                      <UserPlus className="w-4 h-4 text-[#101E42]" />
-                      <span>{t('auth.register_submit')}</span>
+                      <UserPlus className="w-4 h-4 text-[#0B152E]" />
+                      <span>{t('auth.register_submit', 'إنشاء الحساب')}</span>
                     </>
                   )}
                 </button>
               </form>
 
-              {/* قسم الدخول التجريبي الفوري بنقرة واحدة (1-Click Instant Demo Login) */}
-              {authMode === 'login' && (
-                <div className="pt-3 border-t border-slate-200 dark:border-white/10 space-y-2">
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
-                    <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                      <Sparkles className="w-3.5 h-3.5 text-[#28C8C0]" />
-                      <span>{isRtl ? 'دخول تجريبي سريع ومباشر:' : 'Quick Demo Access:'}</span>
-                    </span>
-                    <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-mono font-bold">1-Click</span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleQuickDemoLogin('supervisor')}
-                      className="p-2 sm:p-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[11px] font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
-                      title={isRtl ? 'دخول فوري بحساب المشرف الأكاديمي (د. أسامة مرعي)' : 'Supervisor Demo'}
-                    >
-                      <ShieldCheck className="w-4 h-4 text-amber-500" />
-                      <span className="truncate max-w-full">{isRtl ? 'مشرف أكاديمي' : 'Supervisor'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleQuickDemoLogin('student')}
-                      className="p-2 sm:p-2.5 rounded-xl bg-[#28C8C0]/10 hover:bg-[#28C8C0]/20 border border-[#28C8C0]/30 text-[#101E42] dark:text-[#77DCC1] text-[11px] font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
-                      title={isRtl ? 'دخول فوري بحساب الطالب (أحمد منصور)' : 'Student Demo'}
-                    >
-                      <GraduationCap className="w-4 h-4 text-[#28C8C0]" />
-                      <span className="truncate max-w-full">{isRtl ? 'طالب خريج' : 'Student'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleQuickDemoLogin('company')}
-                      className="p-2 sm:p-2.5 rounded-xl bg-[#2499F2]/10 hover:bg-[#2499F2]/20 border border-[#2499F2]/30 text-[#2499F2] text-[11px] font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
-                      title={isRtl ? 'دخول فوري بحساب الشركة (شركة النور)' : 'Company Demo'}
-                    >
-                      <Building2 className="w-4 h-4 text-[#2499F2]" />
-                      <span className="truncate max-w-full">{isRtl ? 'شركة شريكة' : 'Company'}</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* رابط فوري للتبديل بين تسجيل الدخول وإنشاء الحساب */}
-              <div className="text-center pt-2 border-t border-slate-200 dark:border-slate-800">
+              {/* رابط التبديل المباشر بين تسجيل الدخول وإنشاء الحساب */}
+              <div className="text-center pt-3 border-t border-slate-200 dark:border-white/10">
                 <button
                   type="button"
                   onClick={() => {
@@ -623,7 +550,9 @@ export default function LoginPage() {
                   }}
                   className="text-xs text-[#2499F2] dark:text-[#28C8C0] hover:underline font-bold transition cursor-pointer"
                 >
-                  {authMode === 'login' ? t('auth.no_account_cta') : t('auth.have_account_cta')}
+                  {authMode === 'login' 
+                    ? t('auth.no_account_cta', 'ليس لديك حساب؟ أنشئ حسابك كطالب أو كشركة') 
+                    : t('auth.have_account_cta', 'لديك حساب بالفعل؟ سجل دخولك الآن')}
                 </button>
               </div>
             </div>
@@ -634,7 +563,7 @@ export default function LoginPage() {
 
       {/* تذييل الصفحة وتوثيق المطور */}
       <footer className="text-center py-4 px-4 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200/80 dark:border-white/5 bg-white/40 dark:bg-[#0B152E]/40 backdrop-blur-sm z-20 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
-        <span>{t('auth.footer')}</span>
+        <span>{t('auth.footer', 'سوق مشاريع التخرج (Capstone Market) • جميع الحقوق محفوظة')}</span>
         <span className="hidden sm:inline opacity-40">|</span>
         <Link
           to="/about"

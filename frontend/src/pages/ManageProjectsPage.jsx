@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
@@ -19,7 +19,7 @@ import {
 
 export default function ManageProjectsPage() {
   const { t } = useTranslation();
-  const { isRtl, rawProjects, showToast } = useApp();
+  const { isRtl, rawProjects, showToast, approveProject } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -67,10 +67,21 @@ export default function ManageProjectsPage() {
         ];
   });
 
-  const handleQuickApprove = (id) => {
+  useEffect(() => {
+    if (rawProjects && rawProjects.length > 0) {
+      setProjectsList(rawProjects);
+    }
+  }, [rawProjects]);
+
+  const handleQuickApprove = async (id) => {
     setProjectsList((prev) =>
       prev.map((p) => (p.id === id ? { ...p, status: 'approved' } : p))
     );
+    try {
+      if (approveProject) await approveProject(id, 'approved');
+    } catch {
+      // Ignored
+    }
     showToast(isRtl ? 'تم اعتماد المشروع وتحديث سجله الأكاديمي بنجاح!' : 'Project approved successfully!', 'success');
   };
 

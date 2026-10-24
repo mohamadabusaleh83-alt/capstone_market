@@ -1,0 +1,38 @@
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/database.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/init_db.sql', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/main.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/models.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/schemas.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/seed.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/test_integration.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/utils.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/App.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/api/client.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/components/Sidebar.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/context/AppContext.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/context/AuthContext.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/LoginPage.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/ManageProjectsPage.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/NotificationsPage.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/OpportunitiesPage.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/ProfilePage.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/SavedProjectsPage.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/SettingsPage.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/SupervisorPage.jsx', LF will be replaced by CRLF the next time Git touches it
+backend/utils.py:22: trailing whitespace.
+[32m+[m[32m    os.getenv("RENDER") == "true" or[m[41m [m
+frontend/src/pages/LoginPage.jsx:168: trailing whitespace.
+[32m+[m[32m                  {isRtl[m[41m [m
+frontend/src/pages/LoginPage.jsx:292: trailing whitespace.
+[32m+[m[32m                  {authMode === 'login'[m[41m [m
+frontend/src/pages/LoginPage.jsx:293: trailing whitespace.
+[32m+[m[32m                    ? t('auth.login_title', 'تسجيل الدخول الموحد')[m[41m [m
+frontend/src/pages/LoginPage.jsx:297: trailing whitespace.
+[32m+[m[32m                  {authMode === 'login'[m[41m [m
+frontend/src/pages/LoginPage.jsx:298: trailing whitespace.
+[32m+[m[32m                    ? t('auth.login_desc', 'أدخل بريدك الإلكتروني وكلمة المرور للمتابعة إلى لوحتك المخصصة.')[m[41m [m
+frontend/src/pages/LoginPage.jsx:553: trailing whitespace.
+[32m+[m[32m                  {authMode === 'login'[m[41m [m
+frontend/src/pages/LoginPage.jsx:554: trailing whitespace.
+[32m+[m[32m                    ? t('auth.no_account_cta', 'ليس لديك حساب؟ أنشئ حسابك كطالب أو كشركة')[m[41m [m

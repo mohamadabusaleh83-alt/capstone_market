@@ -22,7 +22,45 @@ class UserResponse(BaseModel):
     email: str
     role: str
     skills: Optional[str] = ""
+    phone: Optional[str] = None
     created_at: Optional[datetime] = None
+
+
+class UserProfileResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    full_name: str
+    email: str
+    role: str
+    phone: Optional[str] = None
+    skills: Optional[str] = ""
+    major: Optional[str] = None
+    bio: Optional[str] = None
+    portfolio_url: Optional[str] = None
+    course: Optional[str] = None
+    university: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class UserProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    major: Optional[str] = None
+    bio: Optional[str] = None
+    portfolio_url: Optional[str] = None
+    course: Optional[str] = None
+    university: Optional[str] = None
+    skills: Optional[str] = None
+
+
+class UserSkillsUpdate(BaseModel):
+    skills: str
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 
 # ==========================================

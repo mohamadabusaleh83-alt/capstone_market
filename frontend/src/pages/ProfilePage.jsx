@@ -1,29 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import {
   User,
-  Mail,
-  GraduationCap,
-  Building2,
-  ShieldCheck,
   Save,
   Plus,
   X,
-  Globe,
-  Phone,
   Sparkles,
   ChevronRight,
-  School,
-  Briefcase,
   FileText
 } from 'lucide-react';
 
 export default function ProfilePage() {
   const { t } = useTranslation();
-  const { currentUser } = useAuth();
+  const { currentUser, apiFetch } = useAuth();
   const { isRtl, userSkills, setUserSkills, showToast, getRoleLabel } = useApp();
 
   const [fullName, setFullName] = useState(currentUser?.name || '');
@@ -48,6 +40,33 @@ export default function ProfilePage() {
   const [newSkillInput, setNewSkillInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    let isMounted = true;
+    if (apiFetch && currentUser) {
+      apiFetch('/users/me/profile')
+        .then(async (res) => {
+          if (res && res.ok) {
+            const data = await res.json();
+            if (isMounted) {
+              if (data.full_name) setFullName(data.full_name);
+              if (data.phone) setPhone(data.phone);
+              if (data.university) setUniversity(data.university);
+              if (data.major) setMajor(data.major);
+              if (data.bio) setBio(data.bio);
+              if (data.skills) {
+                const sList = data.skills.split(',').map((s) => s.trim()).filter(Boolean);
+                if (sList.length > 0) setUserSkills(sList);
+              }
+            }
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [apiFetch, currentUser, setUserSkills]);
+
   const handleAddSkill = (e) => {
     e.preventDefault();
     if (!newSkillInput.trim()) return;
@@ -58,21 +77,53 @@ export default function ProfilePage() {
     const updated = [...userSkills, newSkillInput.trim()];
     setUserSkills(updated);
     setNewSkillInput('');
-    showToast(isRtl ? 'تمت إضافة المهارة بنجاح' : 'Skill added successfully', 'success');
+    if (apiFetch) {
+      apiFetch('/users/me/skills', {
+        method: 'PUT',
+        body: JSON.stringify({ skills: updated.join(', ') })
+      }).catch(() => {});
+    }
+    showToast(isRtl ? 'تمت إضافة المهارة وحفظها بنجاح' : 'Skill added successfully', 'success');
   };
 
   const handleRemoveSkill = (skillToRemove) => {
     const updated = userSkills.filter((s) => s !== skillToRemove);
     setUserSkills(updated);
+    if (apiFetch) {
+      apiFetch('/users/me/skills', {
+        method: 'PUT',
+        body: JSON.stringify({ skills: updated.join(', ') })
+      }).catch(() => {});
+    }
   };
 
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    setTimeout(() => {
+    try {
+      if (apiFetch) {
+        const res = await apiFetch('/users/me/profile', {
+          method: 'PUT',
+          body: JSON.stringify({
+            full_name: fullName.trim(),
+            phone: phone.trim(),
+            university: university.trim(),
+            major: major.trim(),
+            bio: bio.trim(),
+            skills: userSkills.join(', ')
+          })
+        });
+        if (res && res.ok) {
+          showToast(isRtl ? 'تم حفظ بيانات الملف الشخصي بنجاح في قاعدة البيانات!' : 'Profile updated successfully!', 'success');
+          return;
+        }
+      }
+      showToast(isRtl ? 'تم حفظ بيانات الملف الشخصي محلياً بنجاح!' : 'Profile updated successfully!', 'success');
+    } catch {
+      showToast(isRtl ? 'تم حفظ بيانات الملف الشخصي محلياً' : 'Saved locally', 'info');
+    } finally {
       setIsSaving(false);
-      showToast(isRtl ? 'تم حفظ بيانات الملف الشخصي بنجاح!' : 'Profile updated successfully!', 'success');
-    }, 600);
+    }
   };
 
   return (

@@ -7,12 +7,8 @@ import {
   Building2,
   Sparkles,
   ChevronRight,
-  CheckCircle2,
-  DollarSign,
-  Clock,
   Send,
-  Search,
-  Filter
+  Search
 } from 'lucide-react';
 
 export default function OpportunitiesPage() {

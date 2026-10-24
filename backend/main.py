@@ -21,18 +21,25 @@ logger = logging.getLogger("capstone_api")
 # إنشاء الجداول تلقائياً إن لم تكن موجودة مسبقاً
 models.Base.metadata.create_all(bind=engine)
 
-# التحقق من وجود الأعمدة الحديثة في قاعدة البيانات (PostgreSQL/SQLite) دون تعطيل التشغيل
+# التحقق من وجود الأعمدة والقيود الحديثة في قاعدة البيانات (PostgreSQL/SQLite) دون تعطيل التشغيل
 with engine.connect() as conn:
-    try:
-        conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS status VARCHAR DEFAULT 'pending'"))
-        conn.commit()
-    except Exception as e:
-        logger.debug(f"projects.status column check: {e}")
-    try:
-        conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS max_members INTEGER DEFAULT 4"))
-        conn.commit()
-    except Exception as e:
-        logger.debug(f"projects.max_members column check: {e}")
+    for stmt in [
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS status VARCHAR DEFAULT 'pending'",
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS max_members INTEGER DEFAULT 4",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS skills TEXT DEFAULT ''",
+        "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS bio TEXT",
+        "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS portfolio_url VARCHAR(255)",
+        "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS course VARCHAR(100)",
+        "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS university VARCHAR(150)",
+        "ALTER TABLE applications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_student_app ON applications (project_id, student_id)",
+    ]:
+        try:
+            conn.execute(text(stmt))
+            conn.commit()
+        except Exception as e:
+            logger.debug(f"DB check ({stmt}): {e}")
 
 # ضمان تهيئة حساب المشرف الأكاديمي الرسمي والحسابات الأساسية في قاعدة البيانات
 try:
@@ -221,6 +228,12 @@ def login(
         )
 
 
+@app.post("/logout", summary="تسجيل الخروج")
+def logout(current_user: models.User = Depends(get_current_user)):
+    """تأكيد تسجيل الخروج وإنهاء جلسة المستخدم"""
+    return {"message": "تم تسجيل الخروج بنجاح", "user_id": current_user.id}
+
+
 @app.get("/me", response_model=schemas.UserResponse)
 def get_me(current_user: models.User = Depends(get_current_user)):
     """التحقق من هوية المستخدم الحالية وصلاحياته من الـ JWT Token"""
@@ -229,7 +242,7 @@ def get_me(current_user: models.User = Depends(get_current_user)):
 
 @app.post("/users/", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    """إنشاء حساب مستخدم جديد مع معالجة آمنة للأخطاء لمنع أخطاء 500"""
+    """إنشاء حساب مستخدم جديد مع حماية أمنية لمنع التصعيد الذاتي للصلاحيات"""
     try:
         clean_email = user.email.strip().lower()
         db_user = db.query(models.User).filter(models.User.email == clean_email).first()
@@ -239,8 +252,22 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
                 detail="البريد الإلكتروني مسجل مسبقاً لمستخدم آخر"
             )
 
+        raw_role = (user.role or "student").strip().lower()
+        # حماية أمنية: منع التسجيل الذاتي برتبة مسؤول أو مشرف أكاديمي
+        if raw_role in ["admin", "supervisor"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="غير مصرح بالتسجيل الذاتي برتبة مسؤول أو مشرف أكاديمي"
+            )
+
+        allowed_roles = {"student", "partner", "company", "business"}
+        if raw_role not in allowed_roles:
+            raw_role = "student"
+
+        # توحيد مسميات الشركاء
+        user_role = "partner" if raw_role in ["company", "business"] else raw_role
+
         hashed_pwd = utils.hash_password(user.password)
-        user_role = (user.role or "student").strip().lower()
 
         new_user = models.User(
             full_name=user.full_name.strip(),
@@ -252,6 +279,18 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
+
+        # إنشاء سجل ملف أكاديمي مبدئي للطلبة
+        if user_role == "student":
+            student_profile = models.StudentProfile(
+                user_id=new_user.id,
+                major="أنظمة المعلومات الحاسوبية (CIS)",
+                skills="",
+                interests=""
+            )
+            db.add(student_profile)
+            db.commit()
+
         return new_user
     except HTTPException:
         raise
@@ -262,6 +301,115 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"حدث خطأ أثناء إنشاء المستخدم: {str(e)}"
         )
+
+
+def get_user_profile_response(user: models.User, db: Session) -> schemas.UserProfileResponse:
+    """بناء نموذج استجابة شامل للملف الشخصي والأكاديمي للمستخدم"""
+    profile = db.query(models.StudentProfile).filter(models.StudentProfile.user_id == user.id).first()
+    return schemas.UserProfileResponse(
+        id=user.id,
+        full_name=user.full_name,
+        email=user.email,
+        role=user.role,
+        phone=user.phone,
+        skills=user.skills or (profile.skills if profile else "") or "",
+        major=profile.major if profile else None,
+        bio=profile.bio if profile else None,
+        portfolio_url=profile.portfolio_url if profile else None,
+        course=profile.course if profile else None,
+        university=profile.university if profile else None,
+        created_at=user.created_at
+    )
+
+
+@app.get("/users/me/profile", response_model=schemas.UserProfileResponse)
+@app.get("/profile", response_model=schemas.UserProfileResponse)
+def get_my_profile(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """جلب بيانات الملف الشخصي والأكاديمي والمهارات للمستخدم الحالي"""
+    return get_user_profile_response(current_user, db)
+
+
+@app.put("/users/me/profile", response_model=schemas.UserProfileResponse)
+@app.put("/profile", response_model=schemas.UserProfileResponse)
+def update_my_profile(
+    profile_data: schemas.UserProfileUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """تحديث بيانات الملف الشخصي والأكاديمي والسيرة الذاتية للمستخدم الحالي وحفظها في قاعدة البيانات"""
+    if profile_data.full_name is not None and profile_data.full_name.strip():
+        current_user.full_name = profile_data.full_name.strip()
+    if profile_data.phone is not None:
+        current_user.phone = profile_data.phone.strip()
+    if profile_data.skills is not None:
+        sanitized_skills = clean_skills(profile_data.skills)
+        current_user.skills = sanitized_skills
+
+    profile = db.query(models.StudentProfile).filter(models.StudentProfile.user_id == current_user.id).first()
+    if not profile:
+        profile = models.StudentProfile(user_id=current_user.id)
+        db.add(profile)
+
+    if profile_data.major is not None:
+        profile.major = profile_data.major.strip()
+    if profile_data.bio is not None:
+        profile.bio = profile_data.bio.strip()
+    if profile_data.portfolio_url is not None:
+        profile.portfolio_url = profile_data.portfolio_url.strip()
+    if profile_data.course is not None:
+        profile.course = profile_data.course.strip()
+    if profile_data.university is not None:
+        profile.university = profile_data.university.strip()
+    if profile_data.skills is not None:
+        profile.skills = clean_skills(profile_data.skills)
+
+    db.commit()
+    db.refresh(current_user)
+    return get_user_profile_response(current_user, db)
+
+
+@app.put("/users/me/skills", response_model=schemas.UserProfileResponse)
+def update_my_skills(
+    skills_in: schemas.UserSkillsUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """تحديث وتطهير مهارات المستخدم الحالي وحفظها في قاعدة البيانات"""
+    sanitized = clean_skills(skills_in.skills)
+    current_user.skills = sanitized
+
+    profile = db.query(models.StudentProfile).filter(models.StudentProfile.user_id == current_user.id).first()
+    if profile:
+        profile.skills = sanitized
+
+    db.commit()
+    db.refresh(current_user)
+    return get_user_profile_response(current_user, db)
+
+
+@app.put("/users/me/password")
+def change_my_password(
+    pwd_data: schemas.PasswordChangeRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """تغيير كلمة المرور للمستخدم الحالي بعد التحقق الأمني من كلمة المرور السابقة"""
+    if not utils.verify_password(pwd_data.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="كلمة المرور الحالية غير صحيحة"
+        )
+    if len(pwd_data.new_password.strip()) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="يجب أن تتكون كلمة المرور الجديدة من 6 خانات على الأقل"
+        )
+    current_user.password_hash = utils.hash_password(pwd_data.new_password.strip())
+    db.commit()
+    return {"message": "تم تحديث كلمة المرور بنجاح"}
 
 
 @app.get("/users/", response_model=List[schemas.UserResponse])
@@ -683,6 +831,22 @@ def update_application_status_alias(
 # مسارات الرسائل والشات التفاعلي (Project Messages)
 # ==========================================
 
+def check_project_access(project: models.Project, user: models.User, db: Session) -> bool:
+    """التحقق من أحقية المستخدم في الوصول لشات المشروع (المالك، المشرف، أو طالب لديه طلب بالمشروع)"""
+    user_role = (user.role or "").lower()
+    if user_role in ["supervisor", "admin"]:
+        return True
+    if project.created_by == user.id:
+        return True
+    app = db.query(models.Application).filter(
+        models.Application.project_id == project.id,
+        models.Application.student_id == user.id
+    ).first()
+    if app:
+        return True
+    return False
+
+
 @app.post("/projects/{project_id}/messages", response_model=schemas.MessageResponse, status_code=status.HTTP_201_CREATED)
 def create_project_message(
     project_id: int,
@@ -690,12 +854,18 @@ def create_project_message(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """إرسال رسالة جديدة في شات المشروع مع تسجيل بيانات المرسل وتوقيت الرسالة"""
+    """إرسال رسالة جديدة في شات المشروع مع حماية الخصوصية ومنع الوصول غير المصرح به"""
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"المشروع برقم {project_id} غير موجود"
+        )
+
+    if not check_project_access(project, current_user, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ليس لديك الصلاحية للدخول أو المشاركة في شات هذا المشروع"
         )
 
     text_content = msg_in.text.strip()
@@ -741,12 +911,18 @@ def get_project_messages(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """جلب سجل رسائل شات مشروع محدد بالترتيب الزمني التصاعدي"""
+    """جلب سجل رسائل شات مشروع محدد بالترتيب الزمني مع حماية الخصوصية"""
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"المشروع برقم {project_id} غير موجود"
+        )
+
+    if not check_project_access(project, current_user, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ليس لديك الصلاحية لعرض شات هذا المشروع"
         )
 
     messages = db.query(models.Message).filter(

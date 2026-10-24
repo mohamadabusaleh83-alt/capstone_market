@@ -18,7 +18,10 @@
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 3. متغيرات البيئة (**Environment Variables**):
-   - `DATABASE_URL`: رابط الاتصال بقاعدة بيانات PostgreSQL (يمكن إنشاؤها مجاناً أيضاً على Render أو Neon/Supabase).
+   - `DATABASE_URL`: رابط الاتصال بقاعدة بيانات PostgreSQL السحابية (من Render PostgreSQL أو Neon/Supabase).
+   - `SECRET_KEY`: سلسلة نصية سرية قوية لحماية وتوقيع رموز JWT (مثل 64 رمزاً عشوائياً).
+   - `ENVIRONMENT`: `production`
+   - `ALLOWED_ORIGINS`: رابط موقع الفرونت إند على Vercel (مثال: `https://capstone-market.vercel.app`).
 
 ---
 
@@ -30,4 +33,4 @@
    - **Build Command**: `npm run build`
    - **Output Directory**: `dist`
 3. متغيرات البيئة (**Environment Variables**):
-   - `VITE_API_URL`: رابط الباك إند على Render (مثال: `https://capstone-backend.onrender.com`).
+   - `VITE_API_URL`: رابط الباك إند الفعلي على Render (مثال: `https://capstone-market.onrender.com`).

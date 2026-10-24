@@ -53,7 +53,7 @@ export default function App() {
                 <Route path="/about" element={<AboutPage />} />
               </Route>
 
-              {/* المسارات المحمية داخل الهيكل الأساسي (MainLayout) */}
+              {/* المسارات المحمية العامة المشتركة داخل الهيكل الأساسي */}
               <Route
                 element={
                   <ProtectedRoute>
@@ -69,19 +69,43 @@ export default function App() {
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+              </Route>
 
-                {/* 2. مسارات دور الطالب (Student Routes) */}
+              {/* 2. مسارات دور الطالب (Student Routes) - محمي بدور الطالب والإدارة */}
+              <Route
+                element={
+                  <ProtectedRoute allowedRoles={['student', 'admin']}>
+                    <MainLayout />
+                  </ProtectedRoute>
+                }
+              >
                 <Route path="/my-projects" element={<MyProjectsPage />} />
                 <Route path="/collaboration-requests" element={<CollaborationRequestsPage />} />
                 <Route path="/opportunities" element={<OpportunitiesPage />} />
                 <Route path="/cv" element={<StudentCvPage />} />
+              </Route>
 
-                {/* 3. مسارات دور الشركة (Company Routes) */}
+              {/* 3. مسارات دور الشركة (Company Routes) - محمي بدور الشركة والشركاء والإدارة */}
+              <Route
+                element={
+                  <ProtectedRoute allowedRoles={['company', 'partner', 'business', 'admin']}>
+                    <MainLayout />
+                  </ProtectedRoute>
+                }
+              >
                 <Route path="/saved-projects" element={<SavedProjectsPage />} />
                 <Route path="/company/opportunities" element={<CompanyOpportunitiesPage />} />
                 <Route path="/company/partnerships" element={<CompanyPartnershipsPage />} />
+              </Route>
 
-                {/* 4. مسارات دور المشرف الأكاديمي والإدارة (Supervisor & Management Routes) */}
+              {/* 4. مسارات دور المشرف الأكاديمي والإدارة (Supervisor & Management Routes) */}
+              <Route
+                element={
+                  <ProtectedRoute allowedRoles={['supervisor', 'admin']}>
+                    <MainLayout />
+                  </ProtectedRoute>
+                }
+              >
                 <Route path="/supervisor" element={<SupervisorPage />} />
                 <Route path="/supervisor/dashboard" element={<SupervisorPage />} />
                 <Route path="/approvals" element={<SupervisorPage />} />
@@ -94,8 +118,16 @@ export default function App() {
                 <Route path="/supervisor/reports" element={<ReportsPage />} />
                 <Route path="/manage/logs" element={<ActivityLogsPage />} />
                 <Route path="/teams" element={<TeamsHubPage />} />
+              </Route>
 
-                {/* صفحة 404 لأي مسار غير معرّف داخل التطبيق */}
+              {/* صفحة 404 لأي مسار غير معرّف داخل التطبيق */}
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <MainLayout />
+                  </ProtectedRoute>
+                }
+              >
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
 

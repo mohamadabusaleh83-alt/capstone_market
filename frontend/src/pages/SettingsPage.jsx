@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useApp } from '../context/AppContext';
 import {
   Settings,
-  Lock,
   Moon,
   Sun,
   Globe,
   Bell,
-  Save,
-  CheckCircle2,
   ChevronRight,
   Shield,
   Eye,
@@ -20,7 +18,8 @@ import {
 
 export default function SettingsPage() {
   const { t } = useTranslation();
-  const { isDark, toggleTheme, setTheme } = useTheme();
+  const { apiFetch } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const { isRtl, toggleLanguage, currentLang, showToast } = useApp();
 
   const [currentPassword, setCurrentPassword] = useState('');
@@ -34,7 +33,7 @@ export default function SettingsPage() {
   const [partnershipOffers, setPartnershipOffers] = useState(true);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
-  const handlePasswordSubmit = (e) => {
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
       showToast(isRtl ? 'كلمة المرور الجديدة غير متطابقة!' : 'New passwords do not match!', 'error');
@@ -46,13 +45,29 @@ export default function SettingsPage() {
     }
 
     setIsUpdatingPassword(true);
-    setTimeout(() => {
-      setIsUpdatingPassword(false);
+    try {
+      if (apiFetch) {
+        const res = await apiFetch('/users/me/password', {
+          method: 'PUT',
+          body: JSON.stringify({
+            current_password: currentPassword,
+            new_password: newPassword
+          })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || (isRtl ? 'كلمة المرور الحالية غير صحيحة' : 'Current password incorrect'));
+        }
+      }
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       showToast(isRtl ? 'تم تحديث كلمة المرور بنجاح!' : 'Password updated successfully!', 'success');
-    }, 600);
+    } catch (err) {
+      showToast(err.message || (isRtl ? 'تعذر تحديث كلمة المرور' : 'Failed to update password'), 'error');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
   };
 
   const handleSavePreferences = () => {

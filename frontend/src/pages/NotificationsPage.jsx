@@ -17,6 +17,49 @@ import {
   ChevronRight
 } from 'lucide-react';
 
+const STATIC_FALLBACK_NOTIFICATIONS = [
+  {
+    id: 'notif-1',
+    titleAr: 'تم اعتماد مشروعك الأكاديمي بنجاح',
+    titleEn: 'Your Capstone Project was Approved',
+    messageAr: 'قام المشرف الأكاديمي د. أسامة أمين مرعي باعتماد مقترح مشروع تخرجك رسمياً.',
+    messageEn: 'Dr. Osama Amin Marie has approved your capstone project proposal.',
+    created_at: '2026-10-24T18:30:00Z',
+    is_read: false,
+    type: 'academic'
+  },
+  {
+    id: 'notif-2',
+    titleAr: 'طلب شراكة جديد من شركة النور للحلول البرمجية',
+    titleEn: 'New Partnership Request from Al-Noor Software',
+    messageAr: 'أرسلت شركة النور طلباً لرعاية مشروعك التقني ومطابقة المهارات المطلوبة.',
+    messageEn: 'Al-Noor Software sent a sponsorship and partnership request for your project.',
+    created_at: '2026-10-24T16:00:00Z',
+    is_read: false,
+    type: 'collab'
+  },
+  {
+    id: 'notif-3',
+    titleAr: 'تذكير: اقتراب موعد تسليم تقرير المتطلبات (SRS)',
+    titleEn: 'Reminder: SRS Requirements Report Deadline',
+    messageAr: 'بقي 48 ساعة على موعد التسليم الأكاديمي للتقرير الأول عبر المنصة.',
+    messageEn: '48 hours remaining for the official SRS milestone submission on the portal.',
+    created_at: '2026-10-24T12:00:00Z',
+    is_read: true,
+    type: 'academic'
+  },
+  {
+    id: 'notif-4',
+    titleAr: 'انضمام عضو جديد لفريق التخرج',
+    titleEn: 'New Member Joined the Project Team',
+    messageAr: 'تمت مصادقة انضمام الطالب أحمد منصور لفريق العمل بنجاح.',
+    messageEn: 'Student Ahmed Mansour has officially joined the project team.',
+    created_at: '2026-10-23T10:00:00Z',
+    is_read: true,
+    type: 'collab'
+  }
+];
+
 export default function NotificationsPage() {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
@@ -31,49 +74,14 @@ export default function NotificationsPage() {
 
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'unread' | 'academic' | 'collab'
 
-  // بيانات افتراضية غنية في حال كانت الإشعارات من السيرفر فارغة
-  const fallbackNotifications = [
-    {
-      id: 'notif-1',
-      title: isRtl ? 'تم اعتماد مشروعك الأكاديمي بنجاح' : 'Your Capstone Project was Approved',
-      message: isRtl
-        ? 'قام المشرف الأكاديمي د. أسامة أمين مرعي باعتماد مقترح مشروع تخرجك رسمياً.'
-        : 'Dr. Osama Amin Marie has approved your capstone project proposal.',
-      created_at: new Date(Date.now() - 35 * 60 * 1000).toISOString(),
-      is_read: false,
-      type: 'academic'
-    },
-    {
-      id: 'notif-2',
-      title: isRtl ? 'طلب شراكة جديد من شركة النور للحلول البرمجية' : 'New Partnership Request from Al-Noor Software',
-      message: isRtl
-        ? 'أرسلت شركة النور طلباً لرعاية مشروعك التقني ومطابقة المهارات المطلوبة.'
-        : 'Al-Noor Software sent a sponsorship and partnership request for your project.',
-      created_at: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
-      is_read: false,
-      type: 'collab'
-    },
-    {
-      id: 'notif-3',
-      title: isRtl ? 'تذكير: اقتراب موعد تسليم تقرير المتطلبات (SRS)' : 'Reminder: SRS Requirements Report Deadline',
-      message: isRtl
-        ? 'بقي 48 ساعة على موعد التسليم الأكاديمي للتقرير الأول عبر المنصة.'
-        : '48 hours remaining for the official SRS milestone submission on the portal.',
-      created_at: new Date(Date.now() - 360 * 60 * 1000).toISOString(),
-      is_read: true,
-      type: 'academic'
-    },
-    {
-      id: 'notif-4',
-      title: isRtl ? 'انضمام عضو جديد لفريق التخرج' : 'New Member Joined the Project Team',
-      message: isRtl
-        ? 'تمت مصادقة انضمام الطالب أحمد منصور لفريق العمل بنجاح.'
-        : 'Student Ahmed Mansour has officially joined the project team.',
-      created_at: new Date(Date.now() - 1440 * 60 * 1000).toISOString(),
-      is_read: true,
-      type: 'collab'
-    }
-  ];
+  const fallbackNotifications = STATIC_FALLBACK_NOTIFICATIONS.map((n) => ({
+    id: n.id,
+    title: isRtl ? n.titleAr : n.titleEn,
+    message: isRtl ? n.messageAr : n.messageEn,
+    created_at: n.created_at,
+    is_read: n.is_read,
+    type: n.type
+  }));
 
   const isDemoAccount = currentUser?.id === 'student-1' || currentUser?.id === 'supervisor-1';
   const displayList = (notifications && notifications.length > 0)
