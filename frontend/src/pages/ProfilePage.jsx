@@ -16,7 +16,7 @@ import {
 export default function ProfilePage() {
   const { t } = useTranslation();
   const { currentUser, apiFetch } = useAuth();
-  const { isRtl, userSkills, setUserSkills, showToast, getRoleLabel } = useApp();
+  const { isRtl, userSkills, setUserSkills, showToast, getRoleLabel, setIsOnboardingModalOpen } = useApp();
 
   const [fullName, setFullName] = useState(currentUser?.name || '');
   const [email] = useState(currentUser?.email || '');
@@ -151,14 +151,27 @@ export default function ProfilePage() {
           </p>
         </div>
 
-        <button
-          onClick={handleSaveProfile}
-          disabled={isSaving}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#2499F2] to-[#28C8C0] hover:opacity-95 text-[#101E42] font-black text-xs shadow-md shadow-[#2499F2]/20 transition cursor-pointer active:scale-95 shrink-0"
-        >
-          <Save className="w-4 h-4 text-[#101E42]" />
-          <span>{isSaving ? (isRtl ? 'جاري الحفظ...' : 'Saving...') : (isRtl ? 'حفظ التعديلات' : 'Save Changes')}</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          {currentUser?.role === 'student' && (
+            <button
+              type="button"
+              onClick={() => setIsOnboardingModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-[#152550] hover:bg-slate-200 dark:hover:bg-[#182b5c] text-slate-800 dark:text-slate-100 font-bold text-xs border border-slate-300/80 dark:border-[#2499F2]/30 transition cursor-pointer active:scale-95 shrink-0"
+            >
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              <span>{isRtl ? 'معالج الإعداد السريع' : 'Quick Onboarding Wizard'}</span>
+            </button>
+          )}
+
+          <button
+            onClick={handleSaveProfile}
+            disabled={isSaving}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#2499F2] to-[#28C8C0] hover:opacity-95 text-[#101E42] font-black text-xs shadow-md shadow-[#2499F2]/20 transition cursor-pointer active:scale-95 shrink-0"
+          >
+            <Save className="w-4 h-4 text-[#101E42]" />
+            <span>{isSaving ? (isRtl ? 'جاري الحفظ...' : 'Saving...') : (isRtl ? 'حفظ التعديلات' : 'Save Changes')}</span>
+          </button>
+        </div>
       </div>
 
       {/* بطاقة الهوية الرسمية البارزة */}

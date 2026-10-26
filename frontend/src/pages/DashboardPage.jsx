@@ -40,6 +40,7 @@ export default function DashboardPage() {
     setIsCreateModalOpen,
     setShowApplicationsModal,
     setShowSkillsModal,
+    setIsOnboardingModalOpen,
     setActiveChatProject,
     updateProjectStatus,
     translateMajor,
@@ -808,6 +809,14 @@ export default function DashboardPage() {
                   <PlusCircle className="w-4 h-4 text-[#28C8C0]" />
                   <span>{isRtl ? '+ طرح فكرة مشروع تخرج' : '+ Propose Project Idea'}</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setIsOnboardingModalOpen(true)}
+                  className="inline-flex items-center gap-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-700 dark:text-amber-300 px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-xs active:scale-95 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <span>{isRtl ? 'إعداد ملف الطالب السريع' : 'Setup Profile'}</span>
+                </button>
               </div>
             </div>
           </div>
@@ -843,7 +852,7 @@ export default function DashboardPage() {
               {isRtl ? 'لا توجد مشاريع مقترحة حالياً.' : 'No suggested projects available right now.'}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {suggestedProjects.map((proj) => {
                 const projSkills = getProjectNormalizedSkills(proj);
                 const isFav = Array.isArray(favorites) && favorites.includes(proj.id);
@@ -1241,7 +1250,7 @@ export default function DashboardPage() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {myCompanyProjects.map((p) => {
                 const projectApps = applications.filter((a) => a.project_id === p.id);
                 const curM = p.currentMembers || 0;

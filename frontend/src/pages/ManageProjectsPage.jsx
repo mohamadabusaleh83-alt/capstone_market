@@ -198,7 +198,7 @@ export default function ManageProjectsPage() {
       {/* جدول المشاريع الشامل */}
       <div className="bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 rounded-3xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-start text-xs">
+          <table className="w-full text-start text-xs min-w-[640px]">
             <thead className="bg-slate-50 dark:bg-[#0B152E] text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-white/10 uppercase tracking-wider font-semibold">
               <tr>
                 <th className="py-3.5 px-4 text-start">{isRtl ? 'عنوان المشروع' : 'Project Title'}</th>

@@ -1,10 +1,12 @@
 import os
+import shutil
 import logging
 from typing import List, Optional
 from datetime import datetime
 
-from fastapi import FastAPI, Depends, HTTPException, Query, Request, status
+from fastapi import FastAPI, Depends, HTTPException, Query, Request, status, UploadFile, File
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -79,6 +81,11 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+# تهيئة مجلد الرفع وخدمة الملفات الثابتة (مثل ملفات PDF للسيرة الذاتية)
+uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(uploads_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 # معالج عام لأي خطأ غير متوقع لضمان عودة الاستجابة بترويسات CORS دائماً
 @app.exception_handler(Exception)
@@ -324,6 +331,9 @@ def get_user_profile_response(user: models.User, db: Session) -> schemas.UserPro
 
 @app.get("/users/me/profile", response_model=schemas.UserProfileResponse)
 @app.get("/profile", response_model=schemas.UserProfileResponse)
+@app.get("/users/me", response_model=schemas.UserProfileResponse)
+@app.get("/api/users/me", response_model=schemas.UserProfileResponse)
+@app.get("/api/users/me/profile", response_model=schemas.UserProfileResponse)
 def get_my_profile(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -334,6 +344,9 @@ def get_my_profile(
 
 @app.put("/users/me/profile", response_model=schemas.UserProfileResponse)
 @app.put("/profile", response_model=schemas.UserProfileResponse)
+@app.put("/users/me", response_model=schemas.UserProfileResponse)
+@app.put("/api/users/me", response_model=schemas.UserProfileResponse)
+@app.put("/api/users/me/profile", response_model=schemas.UserProfileResponse)
 def update_my_profile(
     profile_data: schemas.UserProfileUpdate,
     current_user: models.User = Depends(get_current_user),
@@ -388,6 +401,44 @@ def update_my_skills(
     db.commit()
     db.refresh(current_user)
     return get_user_profile_response(current_user, db)
+
+
+@app.post("/users/me/cv-upload")
+@app.post("/api/users/me/cv-upload")
+async def upload_student_cv(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """رفع ملف السيرة الذاتية (PDF) وتحديث رابط الملف الشخصي للمستخدم الحالي"""
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="صيغة الملف غير مدعومة، يرجى رفع ملف بصيغة PDF فقط."
+        )
+
+    cvs_dir = os.path.join(uploads_dir, "cvs")
+    os.makedirs(cvs_dir, exist_ok=True)
+    safe_filename = f"cv_{current_user.id}_{int(datetime.now().timestamp())}.pdf"
+    file_path = os.path.join(cvs_dir, safe_filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    portfolio_url = f"/uploads/cvs/{safe_filename}"
+    profile = db.query(models.StudentProfile).filter(models.StudentProfile.user_id == current_user.id).first()
+    if not profile:
+        profile = models.StudentProfile(user_id=current_user.id)
+        db.add(profile)
+    profile.portfolio_url = portfolio_url
+    db.commit()
+    db.refresh(current_user)
+
+    return {
+        "status": "success",
+        "message": "تم رفع ملف السيرة الذاتية بنجاح",
+        "portfolio_url": portfolio_url
+    }
 
 
 @app.put("/users/me/password")

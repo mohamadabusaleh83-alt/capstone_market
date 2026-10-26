@@ -35,9 +35,11 @@ export default function Navbar() {
       <div className="flex items-center gap-3">
         {currentUser && (
           <button
+            type="button"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 rounded-xl bg-slate-100 dark:bg-[#152550] hover:bg-slate-200 dark:hover:bg-[#182b5c] text-slate-700 dark:text-slate-200 md:hidden transition cursor-pointer"
-            aria-label={t('nav.sidebar_toggle')}
+            className="p-2.5 rounded-xl bg-slate-100 dark:bg-[#152550] hover:bg-slate-200 dark:hover:bg-[#182b5c] text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-[#2499F2]/20 md:hidden transition cursor-pointer shadow-xs active:scale-95 flex items-center justify-center"
+            aria-label={t('nav.sidebar_toggle', 'القائمة الجانبية')}
+            title={t('nav.sidebar_toggle', 'القائمة الجانبية')}
           >
             <Menu className="w-5 h-5" />
           </button>

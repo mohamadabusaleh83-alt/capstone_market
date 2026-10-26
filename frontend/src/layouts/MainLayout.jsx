@@ -9,6 +9,7 @@ import SkillsModal from '../components/SkillsModal';
 import CreateProjectModal from '../components/CreateProjectModal';
 import ApplyModal from '../components/ApplyModal';
 import ApplicationsModal from '../components/ApplicationsModal';
+import StudentOnboardingModal from '../components/StudentOnboardingModal';
 
 export default function MainLayout() {
   const { isRtl } = useApp();
@@ -68,6 +69,7 @@ export default function MainLayout() {
       <CreateProjectModal />
       <ApplyModal />
       <ApplicationsModal />
+      <StudentOnboardingModal />
     </div>
   );
 }

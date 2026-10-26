@@ -398,35 +398,54 @@ def test_8_password_change_flow():
 
 
 def test_9_production_secret_key_enforcement():
-    """اختبار فرض الأمان الصارم في وضع الإنتاج: رفض التشغيل في حال غياب أو ضعف SECRET_KEY"""
+    """اختبار فرض الأمان الصارم في وضع الإنتاج: رفض التشغيل في حال غياب أو ضعف SECRET_KEY مع التحقق من دقة الرسائل التشخيصية"""
     import os, importlib
     import utils
 
-    # 1. اختبار رفض التشغيل بمفتاح فارغ في وضع الإنتاج
-    os.environ["ENVIRONMENT"] = "production"
-    os.environ["SECRET_KEY"] = ""
-    with pytest.raises(RuntimeError):
+    try:
+        # 1. اختبار رفض التشغيل بمفتاح فارغ في وضع الإنتاج
+        os.environ["ENVIRONMENT"] = "production"
+        os.environ["SECRET_KEY"] = ""
+        with pytest.raises(RuntimeError) as exc_empty:
+            importlib.reload(utils)
+        assert "missing or empty" in str(exc_empty.value)
+
+        # 2. اختبار رفض المفتاح الافتراضي في وضع الإنتاج
+        os.environ["SECRET_KEY"] = "your-super-secret-key-change-this-in-production"
+        with pytest.raises(RuntimeError) as exc_default:
+            importlib.reload(utils)
+        assert "insecure/example" in str(exc_default.value)
+
+        # 3. اختبار رفض مفتاح النموذج التوضيحي (.env.example) في وضع الإنتاج
+        os.environ["SECRET_KEY"] = "capstone_secret_key_change_in_production"
+        with pytest.raises(RuntimeError) as exc_example:
+            importlib.reload(utils)
+        assert "insecure/example" in str(exc_example.value)
+
+        # 4. اختبار رفض المفاتيح القصيرة (< 32 خانة) في وضع الإنتاج والتأكد من إظهار الطول
+        os.environ["SECRET_KEY"] = "weak_key_12345"
+        with pytest.raises(RuntimeError) as exc_short:
+            importlib.reload(utils)
+        assert "length is 14 characters" in str(exc_short.value)
+
+        # 5. اختبار تفعيل وضع الإنتاج عبر متغير RENDER=true
+        os.environ.pop("ENVIRONMENT", None)
+        os.environ["RENDER"] = "true"
+        os.environ["SECRET_KEY"] = "short"
+        with pytest.raises(RuntimeError):
+            importlib.reload(utils)
+
+        # 6. اختبار قبول مفتاح سري قوي (64 خانة) مع علامات اقتباس محيطة
+        valid_strong_key = "a" * 64
+        os.environ["SECRET_KEY"] = f'"{valid_strong_key}"'
         importlib.reload(utils)
+        assert utils.SECRET_KEY == valid_strong_key
 
-    # 2. اختبار رفض المفتاح الافتراضي في وضع الإنتاج
-    os.environ["SECRET_KEY"] = "your-super-secret-key-change-this-in-production"
-    with pytest.raises(RuntimeError):
+    finally:
+        # إعادة البيئة لوضع التطوير المحلي دائماً
+        os.environ.pop("ENVIRONMENT", None)
+        os.environ.pop("RENDER", None)
+        os.environ.pop("SECRET_KEY", None)
         importlib.reload(utils)
-
-    # 3. اختبار رفض المفاتيح القصيرة (< 32 خانة) في وضع الإنتاج
-    os.environ["SECRET_KEY"] = "weak_key_12345"
-    with pytest.raises(RuntimeError):
-        importlib.reload(utils)
-
-    # 4. اختبار قبول مفتاح سري قوي (64 خانة)
-    valid_strong_key = "a" * 64
-    os.environ["SECRET_KEY"] = valid_strong_key
-    importlib.reload(utils)
-    assert utils.SECRET_KEY == valid_strong_key
-
-    # إعادة البيئة لوضع التطوير المحلي
-    os.environ.pop("ENVIRONMENT", None)
-    os.environ.pop("SECRET_KEY", None)
-    importlib.reload(utils)
-    assert utils.SECRET_KEY == utils.DEV_DEFAULT_SECRET
+        assert utils.SECRET_KEY == utils.DEV_DEFAULT_SECRET
 

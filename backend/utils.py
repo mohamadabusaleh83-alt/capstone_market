@@ -23,17 +23,51 @@ IS_PRODUCTION = (
     os.getenv("ENVIRONMENT", "").lower() in ["production", "prod"]
 )
 
-raw_secret = os.getenv("SECRET_KEY", "").strip()
+# تقليم المسافات وعلامات الاقتباس المحيطة التي قد تنتج عن النسخ واللصق في لوحة التحكم
+raw_secret = os.getenv("SECRET_KEY", "").strip().strip("'\"")
+insecure_secrets_lower = {s.lower() for s in INSECURE_SECRETS}
 
 if IS_PRODUCTION:
-    if not raw_secret or raw_secret in INSECURE_SECRETS or len(raw_secret) < 32:
+    key_length = len(raw_secret)
+    is_set = bool(raw_secret)
+
+    # تشخيص أمني آمن: تسجيل وجود المتغير وطوله فقط دون طباعة أو كشف أي جزء من قيمته
+    logger.info(
+        "Production security check: SECRET_KEY present=%s, length=%d characters",
+        is_set,
+        key_length
+    )
+
+    if not raw_secret:
         error_msg = (
-            "CRITICAL SECURITY ERROR: Running in production mode without a valid, strong SECRET_KEY. "
+            "CRITICAL SECURITY ERROR: Running in production mode without a valid SECRET_KEY. "
+            "The SECRET_KEY environment variable is missing or empty in the Render environment. "
             "You MUST set the SECRET_KEY environment variable in your Render dashboard (minimum 32 characters). "
             "Server startup is blocked to protect authentication integrity."
         )
         logger.critical(error_msg)
         raise RuntimeError(error_msg)
+
+    if raw_secret.lower() in insecure_secrets_lower:
+        error_msg = (
+            "CRITICAL SECURITY ERROR: Running in production mode with a known insecure/example SECRET_KEY. "
+            "The value configured in Render matches an insecure default placeholder (e.g. from .env.example). "
+            "You MUST generate and set a unique, random SECRET_KEY in your Render dashboard (minimum 32 characters). "
+            "Server startup is blocked to protect authentication integrity."
+        )
+        logger.critical(error_msg)
+        raise RuntimeError(error_msg)
+
+    if key_length < 32:
+        error_msg = (
+            f"CRITICAL SECURITY ERROR: Running in production mode with a weak SECRET_KEY. "
+            f"The provided SECRET_KEY length is {key_length} characters, which is less than the required minimum of 32 characters. "
+            "You MUST set a stronger SECRET_KEY in your Render dashboard (minimum 32 characters). "
+            "Server startup is blocked to protect authentication integrity."
+        )
+        logger.critical(error_msg)
+        raise RuntimeError(error_msg)
+
     SECRET_KEY = raw_secret
 else:
     SECRET_KEY = raw_secret or DEV_DEFAULT_SECRET

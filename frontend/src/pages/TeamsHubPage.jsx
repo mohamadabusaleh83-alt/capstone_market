@@ -71,7 +71,7 @@ export default function TeamsHubPage() {
 
         <div className="bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 rounded-2xl overflow-hidden shadow-sm dark:shadow-[0_4px_20px_-4px_rgba(16,30,66,0.6)]">
           <div className="overflow-x-auto">
-            <table className="w-full text-start text-xs">
+            <table className="w-full text-start text-xs min-w-[640px]">
             <thead className="bg-slate-50 dark:bg-[#152550] border-b border-slate-200 dark:border-[#2499F2]/20 text-slate-600 dark:text-slate-300">
               <tr>
                 <th className="p-3.5 text-start">{t('supervisor.table_academic_id')}</th>
@@ -234,7 +234,7 @@ export default function TeamsHubPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {studentsList.map((student) => (
           <div
             key={student.id}

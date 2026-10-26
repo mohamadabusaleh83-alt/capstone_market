@@ -96,8 +96,9 @@ export function formatFriendlyError(err) {
 
 export async function apiFetch(endpoint, options = {}, onUnauthorized = null) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...options.headers
   };

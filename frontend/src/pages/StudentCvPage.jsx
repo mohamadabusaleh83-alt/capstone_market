@@ -3,17 +3,19 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { ACADEMIC_MAJORS } from '../api/client';
-import { FileText, Award, CheckCircle } from 'lucide-react';
+import { FileText, Award, CheckCircle, Sparkles } from 'lucide-react';
 
 export default function StudentCvPage() {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
   const {
+    isRtl,
     studentCv,
     setStudentCv,
     saveStudentCv,
     userSkills,
     setShowSkillsModal,
+    setIsOnboardingModalOpen,
     translateMajor
   } = useApp();
 
@@ -34,13 +36,23 @@ export default function StudentCvPage() {
             <FileText className="w-5 h-5 text-[#2499F2] dark:text-[#28C8C0]" />
             {t('student_cv.title')}
           </h2>
-          <button
-            type="button"
-            onClick={() => setShowSkillsModal(true)}
-            className="text-xs text-[#2499F2] dark:text-[#28C8C0] hover:underline flex items-center gap-1 cursor-pointer transition font-medium"
-          >
-            <Award className="w-4 h-4" /> {t('student_cv.edit_skills')}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsOnboardingModalOpen(true)}
+              className="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer transition font-medium"
+            >
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              <span>{isRtl ? 'معالج الإعداد السريع' : 'Quick Onboarding Wizard'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSkillsModal(true)}
+              className="text-xs text-[#2499F2] dark:text-[#28C8C0] hover:underline flex items-center gap-1 cursor-pointer transition font-medium"
+            >
+              <Award className="w-4 h-4" /> {t('student_cv.edit_skills')}
+            </button>
+          </div>
         </div>
 
         {cvUpdateMessage && (

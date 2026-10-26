@@ -289,9 +289,32 @@ export function AppProvider({ children }) {
   const [selectedProject, setSelectedProject] = useState(null);
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
   const [showSkillsModal, setShowSkillsModal] = useState(false);
+  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
 
   // السايد بار في الموبايل
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // فحص استكمال ملف الطالب تلقائياً عند تسجيل الدخول أو تحميل الصفحة
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'student') {
+      setIsOnboardingModalOpen(false);
+      return;
+    }
+
+    const isSkipped = typeof window !== 'undefined' && sessionStorage.getItem('skip_student_onboarding') === 'true';
+    if (isSkipped) return;
+
+    const hasBio = Boolean(studentCv?.bio && studentCv.bio.trim().length > 0);
+    const hasSkills = Boolean(Array.isArray(userSkills) && userSkills.length > 0);
+
+    if (!hasBio || !hasSkills) {
+      // إعطاء مهلة قصيرة (400ms) للسماح بتسوية تحميل الصفحة والمكونات بسلاسة
+      const timer = setTimeout(() => {
+        setIsOnboardingModalOpen(true);
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [currentUser?.role, currentUser?.id, studentCv?.bio, userSkills]);
 
   // ==========================================
   // الإشعارات الحية (Live Notifications)
@@ -960,6 +983,9 @@ export function AppProvider({ children }) {
         setShowApplicationsModal,
         showSkillsModal,
         setShowSkillsModal,
+        isOnboardingModalOpen,
+        setIsOnboardingModalOpen,
+        openStudentOnboarding: () => setIsOnboardingModalOpen(true),
         isSidebarOpen,
         setIsSidebarOpen,
         notifications,
