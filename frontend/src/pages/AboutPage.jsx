@@ -457,7 +457,8 @@ export default function AboutPage() {
 
         <div className="flex items-center gap-3 shrink-0">
           <Link
-            to="/projects"
+            to={currentUser ? '/projects' : '/login'}
+            state={currentUser ? undefined : { from: { pathname: '/projects' } }}
             className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#2499F2] to-[#1D7BC3] hover:from-[#1D7BC3] hover:to-[#175E95] text-white text-xs font-bold shadow-md shadow-[#2499F2]/30 active:scale-95 transition-all cursor-pointer"
           >
             {isRtl ? 'تصفح المشاريع' : 'Browse Projects'}
