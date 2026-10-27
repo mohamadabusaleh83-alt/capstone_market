@@ -189,9 +189,6 @@ export function AppProvider({ children }) {
       const userObj = JSON.parse(user);
       const saved = localStorage.getItem(`user_skills_${userObj.id}`);
       if (saved) return JSON.parse(saved);
-      if (userObj.id === 'student-1') {
-        return ['Python', 'FastAPI', 'Docker', 'React', 'TailwindCSS'];
-      }
       return [];
     } catch {
       return [];
@@ -207,8 +204,6 @@ export function AppProvider({ children }) {
       const saved = localStorage.getItem(`user_skills_${currentUser.id}`);
       if (saved) {
         setUserSkills(JSON.parse(saved));
-      } else if (currentUser.id === 'student-1') {
-        setUserSkills(['Python', 'FastAPI', 'Docker', 'React', 'TailwindCSS']);
       } else {
         setUserSkills([]);
       }
@@ -258,14 +253,6 @@ export function AppProvider({ children }) {
       const userId = user ? JSON.parse(user).id : 'guest';
       const saved = localStorage.getItem(`student_academic_cv_${userId}`);
       if (saved) return JSON.parse(saved);
-      if (userId === 'student-1') {
-        return {
-          major: 'أنظمة المعلومات الحاسوبية (CIS)',
-          course: 'مشروع تخرج 1',
-          portfolioUrl: 'https://github.com',
-          bio: 'طالب في السنة النهائية، مهتم بتطوير الأنظمة السحابية وحلول الويب المتكاملة.'
-        };
-      }
       return {
         major: '',
         course: '',
@@ -283,13 +270,6 @@ export function AppProvider({ children }) {
       const saved = localStorage.getItem(`student_academic_cv_${currentUser.id}`);
       if (saved) {
         setStudentCv(JSON.parse(saved));
-      } else if (currentUser.id === 'student-1') {
-        setStudentCv({
-          major: 'أنظمة المعلومات الحاسوبية (CIS)',
-          course: 'مشروع تخرج 1',
-          portfolioUrl: 'https://github.com',
-          bio: 'طالب في السنة النهائية، مهتم بتطوير الأنظمة السحابية وحلول الويب المتكاملة.'
-        });
       } else {
         setStudentCv({
           major: '',
@@ -589,7 +569,7 @@ export function AppProvider({ children }) {
 
   const fetchUserProfile = useCallback(async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    if (!token || token.startsWith('demo-token-')) return;
+    if (!token) return;
 
     try {
       const res = await apiFetch('/users/me/profile');

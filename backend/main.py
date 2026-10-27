@@ -1530,17 +1530,6 @@ def update_application_status(
     return format_application_item(application, db)
 
 
-@app.put("/applications/{application_id}/status", response_model=schemas.ApplicationResponse, include_in_schema=False)
-def update_application_status_alias(
-    application_id: int,
-    status_update: Optional[schemas.ApplicationStatusUpdate] = None,
-    status_query: Optional[str] = Query(None, alias="status"),
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
-    return update_application_status(application_id, status_update, status_query, db, current_user)
-
-
 # ==========================================
 # مسارات الرسائل والشات التفاعلي (Project Messages)
 # ==========================================

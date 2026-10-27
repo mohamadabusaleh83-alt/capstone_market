@@ -173,7 +173,7 @@ export default function StudentOnboardingModal() {
       setStudentCv(updatedCv);
 
       if (typeof window !== 'undefined') {
-        const userId = currentUser.id || 'student-1';
+        const userId = currentUser.id;
         localStorage.setItem(`user_skills_${userId}`, JSON.stringify(skills));
         localStorage.setItem(`student_academic_cv_${userId}`, JSON.stringify(updatedCv));
         sessionStorage.setItem('skip_student_onboarding', 'true');

@@ -79,9 +79,6 @@ export async function apiFetch(endpoint, options = {}, onUnauthorized = null) {
     if (timeoutId) clearTimeout(timeoutId);
 
     if (response.status === 401) {
-      if (token && token.startsWith('demo-token-')) {
-        return response;
-      }
       if (typeof onUnauthorized === 'function') {
         onUnauthorized();
       } else if (typeof window !== 'undefined') {
@@ -95,10 +92,6 @@ export async function apiFetch(endpoint, options = {}, onUnauthorized = null) {
     return response;
   } catch (err) {
     if (timeoutId) clearTimeout(timeoutId);
-
-    if (token && token.startsWith('demo-token-')) {
-      return { ok: false, status: 503, json: async () => ({}) };
-    }
 
     if (isAbortError(err)) {
       const friendlyErr = new Error('تعذر الاتصال بالسيرفر، جاري المحاولة...');

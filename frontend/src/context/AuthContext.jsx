@@ -2,33 +2,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { API_URL, apiFetch, isAbortError, formatFriendlyError } from '../api/client';
 
-export const DEMO_FALLBACK_USERS = {
-  supervisor: {
-    id: 'supervisor-1',
-    name: 'د. أسامة أمين مرعي',
-    email: 'osama.merhi@capstone.ps',
-    role: 'supervisor',
-    rawRole: 'supervisor',
-    title: 'مشرف أكاديمي'
-  },
-  student: {
-    id: 'student-1',
-    name: 'أحمد منصور',
-    email: 'student@capstone.ps',
-    role: 'student',
-    rawRole: 'student',
-    title: 'طالب خريج'
-  },
-  company: {
-    id: 'company-1',
-    name: 'شركة النور للحلول البرمجية',
-    email: 'company@capstone.ps',
-    role: 'company',
-    rawRole: 'partner',
-    title: 'شريك تجاري / شركة'
-  }
-};
-
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -64,21 +37,6 @@ export function AuthProvider({ children }) {
     setIsRoleVerified(false);
   }, []);
 
-  // تسجيل الدخول التجريبي الفوري بنقرة واحدة (Mock / Demo Auth Bypass)
-  const loginAsDemo = useCallback((role = 'supervisor') => {
-    const userObj = DEMO_FALLBACK_USERS[role] || DEMO_FALLBACK_USERS.supervisor;
-    const token = `demo-token-${role}-${Date.now()}`;
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('token', token);
-      localStorage.setItem('app_user_role', JSON.stringify(userObj));
-    }
-    setCurrentUser(userObj);
-    setIsLoadingAuth(false);
-    setAuthError('');
-    setAuthSuccess(`تم الدخول بنجاح كـ ${userObj.name}`);
-    return userObj;
-  }, []);
-
   // مؤقت أمان تلقائي: يمنع بقاء isLoadingAuth معلقاً لأكثر من 12 ثانية في حال حدوث تجميد غير متوقع
   useEffect(() => {
     let timer;
@@ -94,11 +52,6 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (token) {
-      if (token.startsWith('demo-token-')) {
-        setIsLoadingAuth(false);
-        return;
-      }
-
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       let retryTimer = null;
@@ -292,7 +245,6 @@ export function AuthProvider({ children }) {
         authSuccess,
         setAuthSuccess,
         login,
-        loginAsDemo,
         register,
         logout,
         apiFetch: (endpoint, options) => apiFetch(endpoint, options, logout)
