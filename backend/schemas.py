@@ -1,17 +1,18 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 
 
 # ==========================================
 # نماذج المستخدمين (User Schemas)
 # ==========================================
 
+# الحدود القصوى تطابق أطوال أعمدة قاعدة البيانات حتى تُرفض المدخلات الطويلة بـ 422 بدلاً من خطأ 500
 class UserCreate(BaseModel):
-    full_name: str
-    email: EmailStr
-    password: str
-    role: Optional[str] = "student"
+    full_name: str = Field(max_length=100)
+    email: EmailStr = Field(max_length=120)
+    password: str = Field(max_length=128)
+    role: Optional[str] = Field(default="student", max_length=20)
 
 
 class UserResponse(BaseModel):
@@ -49,23 +50,23 @@ class UserProfileResponse(BaseModel):
 
 
 class UserProfileUpdate(BaseModel):
-    full_name: Optional[str] = None
-    phone: Optional[str] = None
-    major: Optional[str] = None
-    bio: Optional[str] = None
-    portfolio_url: Optional[str] = None
-    course: Optional[str] = None
-    university: Optional[str] = None
-    skills: Optional[str] = None
+    full_name: Optional[str] = Field(default=None, max_length=100)
+    phone: Optional[str] = Field(default=None, max_length=50)
+    major: Optional[str] = Field(default=None, max_length=100)
+    bio: Optional[str] = Field(default=None, max_length=5000)
+    portfolio_url: Optional[str] = Field(default=None, max_length=255)
+    course: Optional[str] = Field(default=None, max_length=100)
+    university: Optional[str] = Field(default=None, max_length=150)
+    skills: Optional[str] = Field(default=None, max_length=1000)
 
 
 class UserSkillsUpdate(BaseModel):
-    skills: str
+    skills: str = Field(max_length=1000)
 
 
 class PasswordChangeRequest(BaseModel):
-    current_password: str
-    new_password: str
+    current_password: str = Field(max_length=128)
+    new_password: str = Field(max_length=128)
 
 
 # ==========================================
@@ -73,30 +74,30 @@ class PasswordChangeRequest(BaseModel):
 # ==========================================
 
 class ProjectCreate(BaseModel):
-    title: str
-    description: Optional[str] = ""
-    required_skills: Optional[str] = ""
+    title: str = Field(max_length=150)
+    description: Optional[str] = Field(default="", max_length=10000)
+    required_skills: Optional[str] = Field(default="", max_length=1000)
     max_members: Optional[int] = 4
-    category: Optional[str] = None
-    stipend: Optional[str] = None
-    company_name: Optional[str] = None
+    category: Optional[str] = Field(default=None, max_length=100)
+    stipend: Optional[str] = Field(default=None, max_length=100)
+    company_name: Optional[str] = Field(default=None, max_length=150)
 
 
 class ProjectUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    required_skills: Optional[str] = None
+    title: Optional[str] = Field(default=None, max_length=150)
+    description: Optional[str] = Field(default=None, max_length=10000)
+    required_skills: Optional[str] = Field(default=None, max_length=1000)
     max_members: Optional[int] = None
-    category: Optional[str] = None
-    stipend: Optional[str] = None
-    company_name: Optional[str] = None
+    category: Optional[str] = Field(default=None, max_length=100)
+    stipend: Optional[str] = Field(default=None, max_length=100)
+    company_name: Optional[str] = Field(default=None, max_length=150)
     supervisor_id: Optional[int] = None
-    supervisor_feedback: Optional[str] = None
+    supervisor_feedback: Optional[str] = Field(default=None, max_length=5000)
 
 
 class ProjectStatusUpdate(BaseModel):
-    status: str  # approved, rejected, pending
-    feedback: Optional[str] = None
+    status: str = Field(max_length=30)  # approved, rejected, pending
+    feedback: Optional[str] = Field(default=None, max_length=5000)
 
 
 class ProjectResponse(BaseModel):
@@ -126,12 +127,12 @@ class ProjectResponse(BaseModel):
 
 class ApplicationCreate(BaseModel):
     project_id: int
-    message: Optional[str] = None
+    message: Optional[str] = Field(default=None, max_length=2000)
 
 
 class ApplicationStatusUpdate(BaseModel):
-    status: str
-    feedback: Optional[str] = None
+    status: str = Field(max_length=30)
+    feedback: Optional[str] = Field(default=None, max_length=2000)
 
 
 class ApplicationResponse(BaseModel):
@@ -160,16 +161,16 @@ class ApplicationResponse(BaseModel):
 
 class ReportCreate(BaseModel):
     project_id: int
-    title: str
-    description: Optional[str] = None
-    file_url: Optional[str] = None
-    deadline_date: Optional[str] = None
+    title: str = Field(max_length=200)
+    description: Optional[str] = Field(default=None, max_length=10000)
+    file_url: Optional[str] = Field(default=None, max_length=255)
+    deadline_date: Optional[str] = Field(default=None, max_length=50)
 
 
 class ReportStatusUpdate(BaseModel):
-    status: str  # pending, approved, needs_changes
-    supervisor_feedback: Optional[str] = None
-    grade: Optional[str] = None
+    status: str = Field(max_length=30)  # pending, approved, needs_changes
+    supervisor_feedback: Optional[str] = Field(default=None, max_length=5000)
+    grade: Optional[str] = Field(default=None, max_length=50)
 
 
 class ReportResponse(BaseModel):
@@ -219,7 +220,7 @@ class AnalyticsOverviewResponse(BaseModel):
 # ==========================================
 
 class MessageCreate(BaseModel):
-    text: str
+    text: str = Field(max_length=5000)
 
 
 class MessageResponse(BaseModel):

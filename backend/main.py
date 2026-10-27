@@ -1,4 +1,6 @@
 import os
+import re
+import uuid
 import shutil
 import logging
 from typing import List, Optional
@@ -58,6 +60,7 @@ app = FastAPI(
 )
 
 # إعداد CORS للنطاقات المصرح لها
+ALLOWED_ORIGIN_REGEX = re.compile(r"https://.*\.vercel\.app")
 origins = [
     "https://capstone-market.vercel.app",
     "http://localhost:5173",
@@ -76,7 +79,7 @@ if env_origins:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX.pattern,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -88,20 +91,36 @@ uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(uploads_dir, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
-# معالج عام لأي خطأ غير متوقع لضمان عودة الاستجابة بترويسات CORS دائماً
+def is_allowed_origin(origin: Optional[str]) -> bool:
+    return bool(origin) and (origin in origins or bool(ALLOWED_ORIGIN_REGEX.fullmatch(origin)))
+
+
+# معرّف فريد لكل طلب يُعاد في الترويسة X-Request-ID ويُسجّل مع أي خطأ لتسهيل التتبع
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    request_id = uuid.uuid4().hex
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
+# معالج عام لأي خطأ غير متوقع: رسالة عامة + معرّف الطلب للمستخدم، والتفاصيل في سجل الخادم فقط
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    request_id = getattr(request.state, "request_id", None) or uuid.uuid4().hex
+    logger.error(f"Unhandled exception [request_id={request_id}] {request.method} {request.url.path}", exc_info=exc)
+
+    # هذا الرد يتجاوز CORSMiddleware، لذا نضيف ترويسات CORS يدوياً للنطاقات المسموحة فقط
+    headers = {"X-Request-ID": request_id}
     origin = request.headers.get("origin")
-    headers = {}
-    if origin:
+    if is_allowed_origin(origin):
         headers["Access-Control-Allow-Origin"] = origin
         headers["Access-Control-Allow-Credentials"] = "true"
-        headers["Access-Control-Allow-Methods"] = "*"
-        headers["Access-Control-Allow-Headers"] = "*"
-    logger.error(f"Global unhandled exception: {str(exc)}", exc_info=True)
+        headers["Vary"] = "Origin"
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": f"خطأ داخلي في الخادم: {str(exc)}"},
+        content={"detail": "حدث خطأ داخلي في الخادم، يرجى المحاولة لاحقاً", "request_id": request_id},
         headers=headers
     )
 
@@ -228,11 +247,11 @@ def login(
         return {"access_token": access_token, "token_type": "bearer"}
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Error in login: {str(e)}", exc_info=True)
+    except Exception:
+        logger.error("Error in login", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"حدث خطأ أثناء تسجيل الدخول: {str(e)}"
+            detail="حدث خطأ أثناء تسجيل الدخول، يرجى المحاولة لاحقاً"
         )
 
 
@@ -302,12 +321,12 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         return new_user
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         db.rollback()
-        logger.error(f"Error in create_user: {str(e)}", exc_info=True)
+        logger.error("Error in create_user", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"حدث خطأ أثناء إنشاء المستخدم: {str(e)}"
+            detail="حدث خطأ أثناء إنشاء المستخدم، يرجى التأكد من البيانات"
         )
 
 
