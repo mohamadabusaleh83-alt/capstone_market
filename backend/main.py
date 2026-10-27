@@ -518,9 +518,10 @@ def format_user_item(u: models.User):
 def get_users(
     role: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(require_role(["supervisor", "admin"]))
 ):
-    """جلب قائمة المستخدمين مع دعم الفلترة بحسب الدور وإرجاع بيانات الملف الشخصي الكاملة"""
+    """جلب قائمة المستخدمين (للمشرف والأدمن فقط) مع الفلترة بحسب الدور.
+    الشركات ترى بيانات المتقدمين عبر /projects/{id}/applications فقط"""
     query = db.query(models.User)
     if role:
         r = role.lower().strip()

@@ -461,6 +461,11 @@ export function AppProvider({ children }) {
   const fetchStudents = useCallback(async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (!token) return;
+    // دليل الطلاب متاح للمشرف والأدمن فقط (GET /users/)
+    if (!['supervisor', 'admin'].includes(currentUser?.role)) {
+      setStudentsList([]);
+      return;
+    }
     try {
       const res = await apiFetch('/users/?role=student');
       if (res && res.ok) {
@@ -487,7 +492,7 @@ export function AppProvider({ children }) {
     } catch (_err) {
       // Ignored
     }
-  }, [apiFetch]);
+  }, [apiFetch, currentUser?.role]);
 
   const fetchApplications = useCallback(async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
