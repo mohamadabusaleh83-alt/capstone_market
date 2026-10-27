@@ -729,13 +729,14 @@ def update_project_status(
             detail="ليس لديك الصلاحية لتعديل حالة هذا المشروع، فقط المشرف الأكاديمي أو الأدمن يمكنه ذلك"
         )
 
-    new_status = None
-    if status_update and status_update.status:
-        new_status = status_update.status.strip().lower()
-    elif status_query:
-        new_status = status_query.strip().lower()
-    else:
-        new_status = "approved"
+    # الحالة مطلوبة صراحةً (في الجسم أو كمعامل status) - لا اعتماد افتراضي عند غيابها
+    raw_status = (status_update.status if status_update and status_update.status else status_query) or ""
+    new_status = raw_status.strip().lower()
+    if not new_status:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="يرجى تحديد حالة المشروع الجديدة: approved, rejected, pending"
+        )
 
     if new_status not in ["approved", "academically_approved", "rejected", "pending"]:
         raise HTTPException(
