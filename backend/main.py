@@ -170,13 +170,23 @@ def get_optional_user(
 
 
 def visible_projects_query(query, user: Optional[models.User]):
-    """قواعد ظهور المشاريع: الزائر والطالب يرون المعتمد فقط، الشركة ترى المعتمد ومشاريعها، المشرف والأدمن يرون الكل"""
+    """قواعد ظهور المشاريع: الزائر يرى المعتمد فقط، الطالب والشركة يريان المعتمد ومشاريعهم بأي حالة، المشرف والأدمن يرون الكل"""
     user_role = (user.role or "").lower() if user else ""
     if user_role in ("supervisor", "admin"):
         return query
-    if user_role in COMPANY_ROLES:
+    if user:
         return query.filter(or_(models.Project.status == "approved", models.Project.created_by == user.id))
     return query.filter(models.Project.status == "approved")
+
+
+def supervisor_can_manage(project: Optional[models.Project], user: models.User) -> bool:
+    """الأدمن يدير كل المشاريع؛ المشرف يدير المشاريع غير المسندة أو المسندة إليه فقط"""
+    user_role = (user.role or "").lower()
+    if user_role == "admin":
+        return True
+    if user_role != "supervisor":
+        return False
+    return project is None or project.supervisor_id in (None, user.id)
 
 
 def require_role(allowed_roles: List[str]):
@@ -732,7 +742,7 @@ def update_project(
         )
 
     is_owner = project.created_by == current_user.id
-    is_supervisor_or_admin = (current_user.role or "").lower() in ["supervisor", "admin"]
+    is_supervisor_or_admin = supervisor_can_manage(project, current_user)
 
     if not (is_owner or is_supervisor_or_admin):
         raise HTTPException(
@@ -805,7 +815,7 @@ def update_project_status(
             detail=f"المشروع برقم {project_id} غير موجود"
         )
 
-    is_supervisor_or_admin = (current_user.role or "").lower() in ["supervisor", "admin"]
+    is_supervisor_or_admin = supervisor_can_manage(project, current_user)
 
     if not is_supervisor_or_admin:
         raise HTTPException(
@@ -858,7 +868,7 @@ def delete_project(
         )
 
     is_owner = project.created_by == current_user.id
-    is_supervisor_or_admin = (current_user.role or "").lower() in ["supervisor", "admin"]
+    is_supervisor_or_admin = supervisor_can_manage(project, current_user)
 
     if not (is_owner or is_supervisor_or_admin):
         raise HTTPException(
@@ -1013,7 +1023,7 @@ def get_project_applications(
         )
 
     is_owner = project.created_by == current_user.id
-    is_supervisor_or_admin = (current_user.role or "").lower() in ["supervisor", "admin"]
+    is_supervisor_or_admin = supervisor_can_manage(project, current_user)
 
     if not (is_owner or is_supervisor_or_admin):
         raise HTTPException(
@@ -1063,10 +1073,17 @@ def get_application_actor(project: Optional[models.Project], user: models.User) 
     """تحديد صفة المستخدم في قرار الطلب: supervisor (مشرف/أدمن) أو owner (الشركة المالكة) أو None"""
     user_role = (user.role or "").lower()
     if user_role in ("supervisor", "admin"):
-        return "supervisor"
+        return "supervisor" if supervisor_can_manage(project, user) else None
     if project and project.created_by == user.id and user_role in COMPANY_ROLES:
         return "owner"
     return None
+
+
+def project_has_company_owner(project: Optional[models.Project], db: Session) -> bool:
+    if not project or not project.created_by:
+        return False
+    creator = db.query(models.User).filter(models.User.id == project.created_by).first()
+    return bool(creator) and (creator.role or "").lower() in COMPANY_ROLES
 
 
 @app.put("/applications/{id}/status", response_model=schemas.ApplicationResponse)
@@ -1120,6 +1137,14 @@ def update_application_status(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"انتقال غير مسموح من الحالة '{current_status}' إلى '{new_status}'"
+        )
+
+    # مشاريع الشركات: الاعتماد الأكاديمي يتطلب ترشيح الشركة أولاً (company_accepted)
+    if (new_status == "academically_approved" and current_status == "applied"
+            and project_has_company_owner(project, db)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="مشاريع الشركات تتطلب ترشيح الشركة للطالب قبل الاعتماد الأكاديمي"
         )
 
     if new_status == "academically_approved" and (not project or project.status != "approved"):

@@ -104,6 +104,7 @@ export default function SupervisorPage() {
               ? p.required_skills.split(',').map((s) => s.trim()).filter(Boolean)
               : ['React', 'FastAPI'],
             created_by: p.created_by,
+            supervisor_id: p.supervisor_id || null,
             maxMembers: p.max_members || 4,
             currentMembers: p.current_members !== undefined ? p.current_members : 0,
             availableSeats: Math.max(0, (p.max_members || 4) - (p.current_members || 0))
@@ -226,6 +227,23 @@ export default function SupervisorPage() {
       (a) => a.status === 'company_accepted' || a.status === 'pending_academic_approval'
     );
   }, [applications]);
+
+  // المشرف يدير المشاريع غير المسندة أو المسندة إليه فقط (الأدمن يدير الكل) - مطابق لقواعد الخادم
+  const canManage = useCallback((project) => {
+    if (currentUser?.role === 'admin') return true;
+    return !project?.supervisor_id || project.supervisor_id === currentUser?.id;
+  }, [currentUser?.role, currentUser?.id]);
+
+  const canManageApp = useCallback((app) => {
+    const project = localProjects.find((p) => p.id === app.project_id) || rawProjects.find((p) => p.id === app.project_id);
+    return canManage(project);
+  }, [localProjects, rawProjects, canManage]);
+
+  const assignedElsewhereNote = (
+    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+      {isRtl ? 'مسند لمشرف آخر - للاطلاع فقط' : 'Assigned to another supervisor - view only'}
+    </p>
+  );
 
   const pendingProjectsList = useMemo(() => {
     return localProjects.filter((p) => p.status === 'pending');
@@ -503,6 +521,7 @@ export default function SupervisorPage() {
                     </div>
 
                     {/* أزرار القرار الأكاديمي */}
+                    {canManageApp(app) ? (
                     <div className="pt-2 flex items-center gap-2">
                       <button
                         type="button"
@@ -524,6 +543,7 @@ export default function SupervisorPage() {
                         <span>{isRtl ? 'رفض' : 'Reject'}</span>
                       </button>
                     </div>
+                    ) : assignedElsewhereNote}
                   </div>
                 ))}
               </div>
@@ -587,6 +607,7 @@ export default function SupervisorPage() {
                     </div>
 
                     {/* أزرار القرار الأكاديمي للمشروع */}
+                    {canManage(project) ? (
                     <div className="pt-2 flex items-center gap-2">
                       <button
                         type="button"
@@ -606,6 +627,7 @@ export default function SupervisorPage() {
                         <span>{isRtl ? 'رفض' : 'Reject'}</span>
                       </button>
                     </div>
+                    ) : assignedElsewhereNote}
                   </div>
                 ))}
               </div>
@@ -726,6 +748,7 @@ export default function SupervisorPage() {
             const isApproved = project.status === 'approved';
             const isRejected = project.status === 'rejected';
             const isPending = !isApproved && !isRejected;
+            const manageable = canManage(project);
 
             return (
               <div
@@ -782,6 +805,7 @@ export default function SupervisorPage() {
 
                 {/* أزرار الإجراءات والاعتماد الفوري للمشرف */}
                 <div className="pt-4 border-t border-slate-100 dark:border-[#2499F2]/15 flex items-center justify-between gap-2 flex-wrap">
+                  {manageable ? (
                   <div className="flex items-center gap-1.5">
                     {/* زر الاعتماد */}
                     <button
@@ -823,8 +847,10 @@ export default function SupervisorPage() {
                       </button>
                     )}
                   </div>
+                  ) : assignedElsewhereNote}
 
                   {/* زر نقاش المشروع */}
+                  {manageable && (
                   <button
                     type="button"
                     onClick={() => {
@@ -835,6 +861,7 @@ export default function SupervisorPage() {
                     <MessageSquare className="w-3.5 h-3.5 text-[#2499F2]" />
                     <span>{isRtl ? 'نقاش الفريق' : 'Chat'}</span>
                   </button>
+                  )}
                 </div>
               </div>
             );
