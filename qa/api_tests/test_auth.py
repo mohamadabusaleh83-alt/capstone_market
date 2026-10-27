@@ -217,7 +217,8 @@ def test_password_change_too_short_400(client):
     body, h = _fresh_user(client)
     r = client.put("/users/me/password", headers=h,
                    json={"current_password": body["password"], "new_password": "12"})
-    assert r.status_code == 400
+    # 422 since I-20 (schema min_length) - any 4xx rejection is correct
+    assert r.status_code in (400, 422)
 
 
 def test_password_change_missing_fields_422(client):
