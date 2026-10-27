@@ -772,7 +772,18 @@ def create_project(
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
-    
+
+    # إشعار المشرفين بوجود مشروع جديد بانتظار الاعتماد
+    if db_project.status == "pending":
+        for sup in db.query(models.User).filter(models.User.role == "supervisor").all():
+            create_notification(
+                db=db,
+                user_id=sup.id,
+                title="مشروع جديد بانتظار الاعتماد ⏳",
+                message=f"قام {current_user.full_name} بطرح مشروع جديد: {db_project.title}. يرجى مراجعته واعتماده أو رفضه.",
+                link="/supervisor"
+            )
+
     return format_project_item(db_project, db)
 
 
@@ -968,15 +979,31 @@ def update_project_status(
     if new_status == "academically_approved":
         new_status = "approved"
 
+    previous_status = project.status
     project.status = new_status
     if status_update and status_update.feedback is not None:
         project.supervisor_feedback = status_update.feedback.strip()
     if is_supervisor_or_admin:
         project.supervisor_id = current_user.id
-        project.supervisor_name = current_user.full_name
 
     db.commit()
     db.refresh(project)
+
+    # إشعار مالك المشروع بقرار المشرف
+    if new_status != previous_status and project.created_by and project.created_by != current_user.id:
+        status_titles = {
+            "approved": "تم اعتماد مشروعك ✅",
+            "rejected": "تم رفض مشروعك",
+            "pending": "أُعيد مشروعك إلى قيد المراجعة",
+        }
+        feedback_note = f" ملاحظات المشرف: {project.supervisor_feedback}" if project.supervisor_feedback else ""
+        create_notification(
+            db=db,
+            user_id=project.created_by,
+            title=status_titles[new_status],
+            message=f"قام المشرف الأكاديمي {current_user.full_name} بتحديث حالة مشروع: {project.title}.{feedback_note}",
+            link=f"/projects/{project.id}"
+        )
     return format_project_item(project, db)
 
 
@@ -1380,6 +1407,21 @@ def update_application_status_alias(
 # مسارات الرسائل والشات التفاعلي (Project Messages)
 # ==========================================
 
+def project_chat_participants(project: models.Project, db: Session) -> set:
+    """معرّفات كل من يحق له المشاركة في شات المشروع (دون الأدمن غير المشارك)"""
+    ids = {
+        a.student_id for a in db.query(models.Application.student_id).filter(
+            models.Application.project_id == project.id,
+            models.Application.status.in_(APPROVED_MEMBER_STATUSES)
+        ).all()
+    }
+    if project.created_by:
+        ids.add(project.created_by)
+    if project.supervisor_id:
+        ids.add(project.supervisor_id)
+    return ids
+
+
 def check_project_access(project: models.Project, user: models.User, db: Session) -> bool:
     """الوصول لشات المشروع: الأدمن، مالك المشروع، المشرف المسند إليه، والأعضاء المعتمدون أكاديمياً فقط"""
     if (user.role or "").lower() == "admin":
@@ -1428,11 +1470,11 @@ def create_project_message(
     db.commit()
     db.refresh(new_msg)
 
-    # توليد إشعار فوري لصاحب المشروع عند إرسال رسالة جديدة
-    if project.created_by and project.created_by != current_user.id:
+    # إشعار جميع المشاركين في الشات (الأعضاء المعتمدون، المالك، المشرف المسند) باستثناء المرسل
+    for user_id in project_chat_participants(project, db) - {current_user.id}:
         create_notification(
             db=db,
-            user_id=project.created_by,
+            user_id=user_id,
             title="رسالة جديدة في شات المشروع",
             message=f"أرسل {current_user.full_name} رسالة في مشروع {project.title}: '{text_content[:60]}'",
             link=f"/projects/{project.id}"
