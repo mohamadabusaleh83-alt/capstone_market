@@ -83,9 +83,19 @@ export default function App() {
                 }
               >
                 <Route path="/my-projects" element={<MyProjectsPage />} />
-                <Route path="/collaboration-requests" element={<CollaborationRequestsPage />} />
                 <Route path="/opportunities" element={<OpportunitiesPage />} />
                 <Route path="/cv" element={<StudentCvPage />} />
+              </Route>
+
+              {/* طلبات التعاون: يرسلها الطالب وتستقبلها الشركة */}
+              <Route
+                element={
+                  <ProtectedRoute allowedRoles={['student', 'company', 'partner', 'business', 'admin']}>
+                    <MainLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/collaboration-requests" element={<CollaborationRequestsPage />} />
               </Route>
 
               {/* 3. مسارات دور الشركة (Company Routes) - محمي بدور الشركة والشركاء والإدارة */}

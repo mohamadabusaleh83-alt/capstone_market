@@ -10,7 +10,7 @@ const ROUTES = {
 };
 const ALLOWED = {
   student: [...ROUTES.shared, ...ROUTES.student],
-  company: [...ROUTES.shared, ...ROUTES.company],
+  company: [...ROUTES.shared, ...ROUTES.company, '/collaboration-requests'],
   supervisor: [...ROUTES.shared, ...ROUTES.supervisor],
   admin: [...ROUTES.shared, ...ROUTES.student, ...ROUTES.company, ...ROUTES.supervisor],
 };
