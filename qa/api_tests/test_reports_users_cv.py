@@ -45,11 +45,15 @@ def test_report_unknown_project_404(api):
 
 
 def test_student_cannot_see_other_students_reports(api, ids):
+    """Reports from a project the viewer is not a member of stay hidden. (Phase 2: earlier tests make
+    the two QA students teammates, and teammates now legitimately see each other's reports, so the
+    check is scoped to this project instead of "student2 sees nothing of student".)"""
     pid = api.make_project("company")
     api.make_member("student", pid)
-    api.make_report("student", pid)
+    rep = api.make_report("student", pid)
     rows = api.call("student2", "GET", f"/reports/?student_id={ids['student']}").json()
-    assert rows == []
+    assert rep not in [r["id"] for r in rows]
+    assert api.call("student2", "GET", f"/reports/{rep}/file").status_code == 403
 
 
 def test_teammates_see_each_others_reports(api, ids):
@@ -215,3 +219,42 @@ def test_cv_upload_old_files_cleaned(api, ids):
 def test_cv_upload_allowed_for_non_students(api):
     r = upload(api, "company", "cv.pdf", b"%PDF-1.4\n")
     assert r.status_code == 403, "companies/supervisors can upload a CV (creates a StudentProfile for them)"
+
+
+
+# ---------------- Phase 2 (I-05): report files ----------------
+
+def test_report_file_upload_link_and_permissions(api, client):
+    pid = api.make_project("company")
+    api.make_member("student", pid)
+    up = api.call("student", "POST", "/reports/upload", files={"file": ("r.pdf", io.BytesIO(b"%PDF-1.4 qa"), "application/pdf")})
+    assert up.status_code == 200, up.text
+    key = up.json()["file_key"]
+    r = api.call("student", "POST", "/reports/", json={"project_id": pid, "title": "QA file report", "file_key": key})
+    assert r.status_code == 201 and r.json()["has_file"] is True
+    rep = r.json()["id"]
+    for role in ("student", "company", "supervisor", "admin"):
+        res = api.call(role, "GET", f"/reports/{rep}/file")
+        assert res.status_code == 200, (role, res.status_code)
+    link = api.call("student", "GET", f"/reports/{rep}/file").json()["url"]
+    assert client.get(link).content.startswith(b"%PDF-")
+    assert api.call("company2", "GET", f"/reports/{rep}/file").status_code == 403
+    assert api.call("anon", "GET", f"/reports/{rep}/file").status_code == 401
+
+
+def test_report_file_rejects_bad_content_and_foreign_keys(api):
+    pid = api.make_project("company")
+    api.make_member("student", pid)
+    bad = api.call("student", "POST", "/reports/upload", files={"file": ("x.pdf", io.BytesIO(b"<html>"), "application/pdf")})
+    assert bad.status_code == 400
+    assert api.call("company", "POST", "/reports/upload", files={"file": ("r.pdf", io.BytesIO(b"%PDF-1.4"), "application/pdf")}).status_code == 403
+    r = api.call("student", "POST", "/reports/", json={"project_id": pid, "title": "x", "file_key": "reports/999999/stolen.pdf"})
+    assert r.status_code == 400, "student attached another user's stored file"
+
+
+def test_report_can_review_flag(api):
+    pid = api.make_project("company")
+    api.make_member("student", pid)
+    rep = api.make_report("student", pid)
+    flag = lambda role: [r for r in api.call(role, "GET", "/reports/").json() if r["id"] == rep][0]["can_review"]
+    assert flag("company") is True and flag("supervisor") is True and flag("student") is False

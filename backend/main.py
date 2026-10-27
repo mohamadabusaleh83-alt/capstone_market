@@ -45,6 +45,7 @@ with engine.connect() as conn:
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS cv_key VARCHAR(255)",
         "ALTER TABLE applications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         "ALTER TABLE applications ADD COLUMN IF NOT EXISTS feedback TEXT",
+        "ALTER TABLE reports ADD COLUMN IF NOT EXISTS file_key VARCHAR(255)",
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_student_app ON applications (project_id, student_id)",
         "CREATE TABLE IF NOT EXISTS reports (id SERIAL PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE, student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, title VARCHAR(200) NOT NULL, description TEXT, file_url VARCHAR(255), status VARCHAR(30) DEFAULT 'pending', supervisor_feedback TEXT, grade VARCHAR(50), deadline_date VARCHAR(50), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
     ]:
@@ -1587,16 +1588,35 @@ def mark_all_notifications_as_read(
 # مسارات مراحل التسليم والتقارير الأكاديمية (Reports & Deliverables)
 # ==========================================
 
-def format_report_item(r: models.Report, db: Session):
-    """تنسيق وتزويد سجل التقرير ببيانات الطالب واسم المشروع الحقيقي"""
+REPORT_MAX_BYTES = 10 * 1024 * 1024
+
+
+def can_review_report(project: Optional[models.Project], user: models.User) -> bool:
+    """مراجعة التقرير: مالك المشروع، المشرف المسند إليه، أو الأدمن"""
+    if (user.role or "").lower() == "admin":
+        return True
+    return bool(project) and user.id in (project.created_by, project.supervisor_id)
+
+
+def can_view_report(report: models.Report, project: Optional[models.Project], user: models.User, db: Session) -> bool:
+    role = (user.role or "").lower()
+    if role in ("supervisor", "admin") or report.student_id == user.id:
+        return True
+    if project and project.created_by == user.id:
+        return True
+    return role == "student" and is_approved_member(report.project_id, user.id, db)
+
+
+def format_report_item(r: models.Report, db: Session, viewer: Optional[models.User] = None):
+    """تنسيق سجل التقرير ببيانات الطالب والمشروع وصلاحية المراجعة للمستخدم الحالي"""
     if not r:
         return None
-    if not getattr(r, "student_name", None):
-        st = db.query(models.User).filter(models.User.id == r.student_id).first()
-        r.student_name = st.full_name if st else f"طالب #{r.student_id}"
-    if not getattr(r, "project_title", None):
-        pj = db.query(models.Project).filter(models.Project.id == r.project_id).first()
-        r.project_title = pj.title if pj else f"مشروع #{r.project_id}"
+    st = db.query(models.User).filter(models.User.id == r.student_id).first()
+    pj = db.query(models.Project).filter(models.Project.id == r.project_id).first()
+    r.student_name = st.full_name if st else f"طالب #{r.student_id}"
+    r.project_title = pj.title if pj else f"مشروع #{r.project_id}"
+    r.has_file = bool(r.file_key)
+    r.can_review = bool(viewer) and can_review_report(pj, viewer)
     return r
 
 
@@ -1609,22 +1629,23 @@ def get_reports(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """جلب قائمة التقارير ومراحل التسليم مع الفلترة بحسب المشروع أو الطالب أو الحالة"""
+    """جلب التقارير المسموح للمستخدم برؤيتها مع الفلترة بحسب المشروع أو الطالب أو الحالة"""
     user_role = (current_user.role or "").lower()
     query = db.query(models.Report)
 
     if user_role == "student":
-        accepted_proj_ids = [
+        # تقاريره وتقارير زملائه في المشاريع المعتمد فيها (academically_approved أو accepted القديمة)
+        member_proj_ids = [
             a.project_id for a in db.query(models.Application.project_id).filter(
                 models.Application.student_id == current_user.id,
-                models.Application.status == "accepted"
+                models.Application.status.in_(APPROVED_MEMBER_STATUSES)
             ).all()
         ]
         query = query.filter(
-            (models.Report.student_id == current_user.id) | 
-            (models.Report.project_id.in_(accepted_proj_ids))
+            (models.Report.student_id == current_user.id) |
+            (models.Report.project_id.in_(member_proj_ids))
         )
-    elif user_role in ["partner", "company", "business"]:
+    elif user_role in COMPANY_ROLES:
         company_projects = db.query(models.Project.id).filter(models.Project.created_by == current_user.id).all()
         p_ids = [p[0] for p in company_projects]
         query = query.filter(models.Report.project_id.in_(p_ids))
@@ -1637,7 +1658,48 @@ def get_reports(
         query = query.filter(models.Report.status == status.strip().lower())
 
     reports = query.order_by(models.Report.id.desc()).all()
-    return [format_report_item(r, db) for r in reports]
+    return [format_report_item(r, db, current_user) for r in reports]
+
+
+@app.post("/reports/upload")
+@app.post("/api/reports/upload")
+async def upload_report_file(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_user)
+):
+    """رفع ملف تقرير (PDF/DOCX/PPTX/ZIP/DOC حتى 10 ميغابايت) إلى التخزين الخاص، يعيد file_key لاستخدامه في POST /reports/"""
+    if (current_user.role or "").lower() != "student":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="رفع ملفات التقارير متاح للطلاب فقط")
+    data = await read_upload_limited(file, REPORT_MAX_BYTES)
+    ext = os.path.splitext((file.filename or "").lower())[1]
+    allowed = storage.REPORT_TYPES.get(ext)
+    if not allowed or not data.startswith(allowed[1]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="صيغة الملف غير مدعومة. الصيغ المسموحة: PDF, DOCX, PPTX, ZIP, DOC"
+        )
+    key = f"reports/{current_user.id}/{uuid.uuid4().hex}{ext}"
+    store_file_or_503(key, data, allowed[0])
+    return {"file_key": key, "filename": file.filename}
+
+
+@app.get("/reports/{id}/file")
+@app.get("/api/reports/{id}/file")
+def get_report_file_link(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """رابط تنزيل مؤقت لملف التقرير لمن يحق له رؤية التقرير"""
+    report = db.query(models.Report).filter(models.Report.id == id).first()
+    if not report:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="التقرير المطلوب غير موجود")
+    project = db.query(models.Project).filter(models.Project.id == report.project_id).first()
+    if not can_view_report(report, project, current_user, db):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="ليس لديك الصلاحية للاطلاع على هذا التقرير")
+    if not report.file_key:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="لا يوجد ملف مرفوع لهذا التقرير")
+    return {"url": signed_url_or_503(report.file_key), "expires_in": storage.SIGNED_URL_TTL_SECONDS}
 
 
 @app.post("/reports/", response_model=schemas.ReportResponse, status_code=status.HTTP_201_CREATED)
@@ -1651,7 +1713,7 @@ def submit_report(
     project = db.query(models.Project).filter(models.Project.id == report_in.project_id).first()
     if not project:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="المشروع المرتبط بهذا التقرير غير موجود"
         )
 
@@ -1661,12 +1723,17 @@ def submit_report(
             detail="لا يمكنك رفع تقرير إلا لمشروع أنت عضو معتمد فيه"
         )
 
+    # الملف المرفوع يجب أن يكون ملف هذا الطالب نفسه
+    if report_in.file_key and not report_in.file_key.startswith(f"reports/{current_user.id}/"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="ملف التقرير غير صالح")
+
     new_report = models.Report(
         project_id=report_in.project_id,
         student_id=current_user.id,
-        title=report_in.title.strip(),
+        title=report_in.title,
         description=report_in.description.strip() if report_in.description else None,
-        file_url=report_in.file_url.strip() if report_in.file_url else None,
+        file_url=report_in.file_url,
+        file_key=report_in.file_key,
         deadline_date=report_in.deadline_date,
         status="pending"
     )
@@ -1674,17 +1741,17 @@ def submit_report(
     db.commit()
     db.refresh(new_report)
 
-    target_user_id = project.supervisor_id or project.created_by
-    if target_user_id:
+    # إشعار المشرف المسند ومالك المشروع
+    for user_id in {project.supervisor_id, project.created_by} - {None, current_user.id}:
         create_notification(
             db=db,
-            user_id=target_user_id,
+            user_id=user_id,
             title="تسليم تقرير جديد 📄",
             message=f"قام الطالب {current_user.full_name} برفع تقرير جديد '{new_report.title}' لمشروع '{project.title}'",
             link="/reports"
         )
 
-    return format_report_item(new_report, db)
+    return format_report_item(new_report, db, current_user)
 
 
 @app.put("/reports/{id}/status", response_model=schemas.ReportResponse)
@@ -1743,7 +1810,7 @@ def update_report_status(
         link="/reports"
     )
 
-    return format_report_item(report, db)
+    return format_report_item(report, db, current_user)
 
 
 # ==========================================

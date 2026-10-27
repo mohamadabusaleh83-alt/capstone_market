@@ -193,27 +193,40 @@ test('full marketplace flow through the UI', async ({ page, request }) => {
     const link = page.getByRole('link', { name: /Reports/i }).first();
     if (await link.count()) { await link.click(); await settle(page); }
     const landed = new URL(page.url()).pathname;
-    const uploadBtn = page.getByRole('button', { name: /Submit|Upload|رفع|تسليم/i });
-    await page.screenshot({ path: shotName('flow', '8_student_reports') });
     const before = (await api(request, 'student', 'GET', '/reports/')).body.length;
-    if (!(await uploadBtn.count())) throw new Error(`no report-upload control reachable (Reports link -> ${landed})`);
-    await uploadBtn.first().click();
-    await page.locator('input[placeholder^="https://docs.google.com"]').fill('https://example.com/qa-report.pdf');
-    await page.locator('form button[type="submit"]').last().click();
-    await settle(page, 1000);
-    const after = (await api(request, 'student', 'GET', '/reports/')).body.length;
-    if (after <= before) throw new Error('report not created');
+    const form = page.locator('form').filter({ has: page.getByRole('button', { name: /Submit report/i }) });
+    if (!(await form.count())) throw new Error(`no report form reachable (Reports link -> ${landed})`);
+    await form.locator('input').first().fill(`QA E2E report ${RUN}`);
+    await form.locator('textarea').fill('Milestone 1 deliverable');
+    await form.locator('input[placeholder^="https://docs.google.com"]').fill('https://example.com/qa-report.pdf');
+    await form.getByRole('button', { name: /Submit report/i }).click();
+    await settle(page, 1200);
+    await page.screenshot({ path: shotName('flow', '8_student_reports') });
+    const after = (await api(request, 'student', 'GET', '/reports/')).body;
+    if (after.length <= before) throw new Error('report not created');
+    ctx.rep = after.find((r) => r.title === `QA E2E report ${RUN}`)?.id;
+    return `report ${ctx.rep} via ${landed}`;
   });
 
   await step('9 supervisor reviews a report from the UI', async () => {
-    const rep = await api(request, 'student', 'POST', '/reports/', { project_id: ctx.pid, title: `QA E2E report ${RUN}` });
-    ctx.rep = rep.body?.id;
+    if (!ctx.rep) {
+      const rep = await api(request, 'student', 'POST', '/reports/', { project_id: ctx.pid, title: `QA E2E report ${RUN}` });
+      ctx.rep = rep.body?.id;
+    }
     await openAs(page, request, 'supervisor', '/supervisor/reports', { lang: 'en' });
     await expect(page.getByText(`QA E2E report ${RUN}`)).toBeVisible();
-    const controls = page.locator('div').filter({ hasText: `QA E2E report ${RUN}` })
-      .getByRole('button', { name: /Approve|Needs Changes|Grade|اعتماد|تعديل/i });
-    await page.screenshot({ path: shotName('flow', '9_supervisor_reports') });
+    const cardEl = page.getByText(`QA E2E report ${RUN}`).first()
+      .locator('xpath=ancestor::*[.//button[normalize-space(.)="Approve"]][1]');
+    const controls = cardEl.getByRole('button', { name: /^(Approve|Needs changes|Reject)$/ });
     if (!(await controls.count())) throw new Error('report is listed but there is no approve/grade/feedback control');
+    await cardEl.getByLabel('Grade').fill('A');
+    await cardEl.getByLabel('Feedback for the student').fill('Well done');
+    await cardEl.getByRole('button', { name: /^Approve$/ }).click();
+    await settle(page, 1200);
+    await page.screenshot({ path: shotName('flow', '9_supervisor_reports') });
+    const r = (await api(request, 'student', 'GET', '/reports/')).body.find((x) => x.id === ctx.rep);
+    if (r?.status !== 'approved' || r?.grade !== 'A') throw new Error(`report status ${r?.status} grade ${r?.grade}`);
+    return 'approved with grade A';
   });
 
   await step('10 data persists after full reload (company dashboard)', async () => {

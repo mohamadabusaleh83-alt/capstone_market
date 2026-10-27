@@ -4,7 +4,6 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ToastContainer from '../components/ToastContainer';
 import ChatModal from '../components/ChatModal';
-import SubmitReportModal from '../components/SubmitReportModal';
 import SkillsModal from '../components/SkillsModal';
 import CreateProjectModal from '../components/CreateProjectModal';
 import ApplyModal from '../components/ApplyModal';
@@ -64,7 +63,6 @@ export default function MainLayout() {
       {/* Global Modals & Notifications */}
       <ToastContainer />
       <ChatModal />
-      <SubmitReportModal />
       <SkillsModal />
       <CreateProjectModal />
       <ApplyModal />

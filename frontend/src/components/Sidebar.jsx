@@ -167,6 +167,13 @@ export default function Sidebar() {
               </span>
             </NavLink>
 
+            <NavLink to="/reports" onClick={closeSidebarOnMobile} className={navLinkClass}>
+              <div className="flex items-center gap-2.5">
+                <FileText className="w-4 h-4 text-cyan-500" />
+                <span>{isRtl ? 'التقارير ومراحل التسليم' : 'Reports & Deliverables'}</span>
+              </div>
+            </NavLink>
+
             <NavLink to="/opportunities" onClick={closeSidebarOnMobile} className={navLinkClass}>
               <div className="flex items-center gap-2.5">
                 <Sparkles className="w-4 h-4 text-amber-500" />
@@ -203,6 +210,13 @@ export default function Sidebar() {
               <div className="flex items-center gap-2.5">
                 <Briefcase className="w-4 h-4 text-[#2499F2]" />
                 <span>{isRtl ? 'فرص التعاون المنشورة' : 'Posted Opportunities'}</span>
+              </div>
+            </NavLink>
+
+            <NavLink to="/reports" onClick={closeSidebarOnMobile} className={navLinkClass}>
+              <div className="flex items-center gap-2.5">
+                <FileText className="w-4 h-4 text-cyan-500" />
+                <span>{isRtl ? 'التقارير ومراحل التسليم' : 'Reports & Deliverables'}</span>
               </div>
             </NavLink>
 

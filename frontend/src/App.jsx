@@ -69,6 +69,8 @@ export default function App() {
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                {/* التقارير: الطالب يسلّم، المالك والمشرف يراجعان (الخادم يحدد الصلاحيات لكل تقرير) */}
+                <Route path="/reports" element={<ReportsPage />} />
               </Route>
 
               {/* 2. مسارات دور الطالب (Student Routes) - محمي بدور الطالب والإدارة */}
@@ -114,7 +116,6 @@ export default function App() {
                 <Route path="/manage/students" element={<ManageStudentsPage />} />
                 <Route path="/manage/companies" element={<ManageCompaniesPage />} />
                 <Route path="/manage/collaborations" element={<ManageCollaborationsPage />} />
-                <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/supervisor/reports" element={<ReportsPage />} />
                 <Route path="/manage/logs" element={<ActivityLogsPage />} />
                 <Route path="/teams" element={<TeamsHubPage />} />

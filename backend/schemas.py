@@ -177,12 +177,35 @@ class ApplicationResponse(BaseModel):
 # نماذج مراحل التسليم والتقارير الأكاديمية (Report / Deliverable Schemas)
 # ==========================================
 
+def _http_url_or_none(v):
+    """روابط خارجية بصيغة http/https فقط (تُعرض كروابط قابلة للنقر في الواجهة)"""
+    if v is None:
+        return None
+    v = v.strip()
+    if not v:
+        return None
+    if not (v.lower().startswith("http://") or v.lower().startswith("https://")):
+        raise ValueError("must be an http(s) URL")
+    return v
+
+
 class ReportCreate(BaseModel):
     project_id: int
-    title: str = Field(max_length=200)
+    title: str = Field(min_length=1, max_length=200)
     description: Optional[str] = Field(default=None, max_length=10000)
     file_url: Optional[str] = Field(default=None, max_length=255)
+    file_key: Optional[str] = Field(default=None, max_length=255)
     deadline_date: Optional[str] = Field(default=None, max_length=50)
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def strip_title(cls, v):
+        return v.strip() if isinstance(v, str) else v
+
+    @field_validator("file_url")
+    @classmethod
+    def check_file_url(cls, v):
+        return _http_url_or_none(v)
 
 
 class ReportStatusUpdate(BaseModel):
@@ -202,6 +225,8 @@ class ReportResponse(BaseModel):
     title: str
     description: Optional[str] = None
     file_url: Optional[str] = None
+    has_file: bool = False
+    can_review: bool = False
     status: str
     supervisor_feedback: Optional[str] = None
     grade: Optional[str] = None

@@ -21,7 +21,8 @@ import {
   MessageSquare,
   FolderKanban,
   Compass,
-  RefreshCw
+  RefreshCw,
+  Clock
 } from 'lucide-react';
 
 export default function MyProjectsPage() {

@@ -83,6 +83,8 @@ class Report(Base):
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
     file_url = Column(String(255), nullable=True)
+    # ملف التقرير المرفوع في التخزين الخاص (يُنزّل عبر رابط موقّع)
+    file_key = Column(String(255), nullable=True)
     status = Column(String(30), default="pending")  # pending, approved, needs_changes
     supervisor_feedback = Column(Text, nullable=True)
     grade = Column(String(50), nullable=True)

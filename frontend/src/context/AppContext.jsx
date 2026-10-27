@@ -337,7 +337,6 @@ export function AppProvider({ children }) {
 
   // التقارير والمتابعة الأكاديمية (بيانات حية من قاعدة البيانات 100%)
   const [reportsTimeline, setReportsTimeline] = useState([]);
-  const [submitReportModal, setSubmitReportModal] = useState(null);
 
   // دليل الطلاب المتاحين (بيانات حية من قاعدة البيانات 100%)
   const [studentsList, setStudentsList] = useState([]);
@@ -465,6 +464,8 @@ export function AppProvider({ children }) {
             deadlineDay: r.deadline_date ? new Date(r.deadline_date).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US', { weekday: 'long' }) : '',
             status: r.status,
             submissionLink: r.file_url || '',
+            hasFile: Boolean(r.has_file),
+            canReview: Boolean(r.can_review),
             submittedAt: r.created_at ? new Date(r.created_at).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US') : '',
             supervisorFeedback: r.supervisor_feedback || '',
             grade: r.grade || ''
@@ -917,24 +918,25 @@ export function AppProvider({ children }) {
   }, [apiFetch, fetchProjects, fetchApplications, fetchNotifications, translateErrorMessage, isRtl, showToast, t]);
 
   // ==========================================
-  // تسليم تقرير الطالب وحفظه بقاعدة البيانات
+  // تسليم تقرير الطالب وحفظه بقاعدة البيانات (مشروع صريح فقط - لا قيمة افتراضية)
   // ==========================================
-  const submitReport = useCallback(async (reportData, url) => {
+  const uploadReportFile = useCallback(async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
     try {
-      let body;
-      if (typeof reportData === 'object' && reportData !== null) {
-        body = reportData;
-      } else {
-        const existing = reportsTimeline.find((r) => r.id === reportData);
-        body = {
-          project_id: existing?.project_id || myProject?.id || 1,
-          title: existing?.title || (isRtl ? `تقرير تسليم مرحلي #${reportData}` : `Milestone Deliverable #${reportData}`),
-          description: existing?.description || null,
-          file_url: url || existing?.submissionLink || null,
-          deadline_date: existing?.deadlineDate || null
-        };
-      }
+      const res = await apiFetch('/reports/upload', { method: 'POST', body: formData });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.file_key) throw new Error(data.detail || t('reports.upload_failed'));
+      return data.file_key;
+    } catch (err) {
+      showToast(`${isRtl ? 'خطأ' : 'Error'}: ${err.message}`, 'error');
+      return null;
+    }
+  }, [apiFetch, isRtl, showToast, t]);
 
+  const submitReport = useCallback(async (body) => {
+    try {
+      if (!body?.project_id) throw new Error(isRtl ? 'لا يوجد مشروع معتمد لتسليم التقرير' : 'No approved project to submit to');
       const res = await apiFetch('/reports/', {
         method: 'POST',
         body: JSON.stringify(body)
@@ -942,18 +944,18 @@ export function AppProvider({ children }) {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || (isRtl ? 'تعذر تسليم التقرير' : 'Failed to submit report'));
+        const detail = Array.isArray(errData.detail) ? errData.detail.map((d) => d.msg).join(', ') : errData.detail;
+        throw new Error(detail || (isRtl ? 'تعذر تسليم التقرير' : 'Failed to submit report'));
       }
 
       await fetchReports();
-      setSubmitReportModal(null);
       showToast(t('toasts.report_submitted') || (isRtl ? 'تم تسليم التقرير بنجاح!' : 'Report submitted successfully!'), 'success');
       return true;
     } catch (err) {
       showToast(`${isRtl ? 'خطأ' : 'Error'}: ${err.message}`, 'error');
       throw err;
     }
-  }, [apiFetch, fetchReports, reportsTimeline, myProject, isRtl, showToast, t]);
+  }, [apiFetch, fetchReports, isRtl, showToast, t]);
 
   // ==========================================
   // تحديث حالة تقرير الطالب من قبل المشرف
@@ -1120,9 +1122,8 @@ export function AppProvider({ children }) {
         updateReportStatus,
         myProject,
         fetchMyProject,
-        submitReportModal,
-        setSubmitReportModal,
         submitReport,
+        uploadReportFile,
         studentsList,
         setStudentsList,
         fetchStudents,
