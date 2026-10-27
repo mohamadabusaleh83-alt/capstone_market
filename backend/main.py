@@ -882,6 +882,7 @@ PROJECT_CONTENT_FIELDS = {"title", "description", "required_skills", "category"}
 
 
 @app.put("/projects/{id}", response_model=schemas.ProjectResponse)
+@app.put("/api/projects/{id}", response_model=schemas.ProjectResponse)
 def update_project(
     id: int, 
     updated_project: schemas.ProjectSupervisorUpdate,
@@ -955,6 +956,7 @@ def update_project(
 
 @app.put("/projects/{project_id}/status", response_model=schemas.ProjectResponse)
 @app.put("/projects/{project_id}/approve", response_model=schemas.ProjectResponse)
+@app.put("/api/projects/{project_id}/status", response_model=schemas.ProjectResponse)
 def update_project_status(
     project_id: int,
     status_update: Optional[schemas.ProjectStatusUpdate] = None,
@@ -1025,6 +1027,7 @@ def update_project_status(
 
 
 @app.delete("/projects/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/api/projects/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_project(
     id: int, 
     db: Session = Depends(get_db), 
@@ -1451,6 +1454,7 @@ def check_project_access(project: models.Project, user: models.User, db: Session
 
 
 @app.post("/projects/{project_id}/messages", response_model=schemas.MessageResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/api/projects/{project_id}/messages", response_model=schemas.MessageResponse, status_code=status.HTTP_201_CREATED)
 def create_project_message(
     project_id: int,
     msg_in: schemas.MessageCreate,
@@ -1509,6 +1513,7 @@ def create_project_message(
 
 
 @app.get("/projects/{project_id}/messages", response_model=List[schemas.MessageResponse])
+@app.get("/api/projects/{project_id}/messages", response_model=List[schemas.MessageResponse])
 def get_project_messages(
     project_id: int,
     db: Session = Depends(get_db),
@@ -1554,6 +1559,7 @@ def get_project_messages(
 
 @app.get("/notifications", response_model=List[schemas.NotificationResponse])
 @app.get("/notifications/", response_model=List[schemas.NotificationResponse])
+@app.get("/api/notifications", response_model=List[schemas.NotificationResponse])
 def get_user_notifications(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
@@ -1565,6 +1571,7 @@ def get_user_notifications(
 
 
 @app.put("/notifications/{id}/read", response_model=schemas.NotificationResponse)
+@app.put("/api/notifications/{id}/read", response_model=schemas.NotificationResponse)
 def mark_notification_as_read(
     id: int,
     db: Session = Depends(get_db),
@@ -1587,6 +1594,7 @@ def mark_notification_as_read(
 
 
 @app.put("/notifications/read-all", status_code=status.HTTP_200_OK)
+@app.put("/api/notifications/read-all", status_code=status.HTTP_200_OK)
 def mark_all_notifications_as_read(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
