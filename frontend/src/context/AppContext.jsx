@@ -643,11 +643,20 @@ export function AppProvider({ children }) {
     refreshAllData();
   }, [refreshAllData]);
 
+  // استطلاع الإشعارات كل 30 ثانية فقط عندما يكون التبويب ظاهراً، مع تحديث فوري عند العودة إليه (I-59)
   useEffect(() => {
-    if (currentUser) {
-      const interval = setInterval(fetchNotifications, 30000);
-      return () => clearInterval(interval);
-    }
+    if (!currentUser) return undefined;
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchNotifications();
+    }, 30000);
+    const onVisible = () => {
+      if (!document.hidden) fetchNotifications();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [currentUser, fetchNotifications]);
 
   // الطالب "حر" إذا لم يكن عضواً معتمداً في أي مشروع (من بيانات الطلبات الحقيقية)
