@@ -96,7 +96,10 @@ def test_favorites_round_trip_and_isolation(api):
 
 
 def test_settings_round_trip(api):
-    assert api.call("student2", "GET", "/users/me/settings").json() == {"email_alerts": True, "milestone_reminders": True, "partnership_offers": True}
+    # self-contained: the QA databases are reused between runs
+    defaults = {"email_alerts": True, "milestone_reminders": True, "partnership_offers": True}
     body = {"email_alerts": False, "milestone_reminders": True, "partnership_offers": False}
     assert api.call("student2", "PUT", "/users/me/settings", json=body).json() == body
     assert api.call("student2", "GET", "/users/me/settings").json() == body
+    assert api.call("student2", "PUT", "/users/me/settings", json=defaults).json() == defaults
+    assert api.call("anon", "GET", "/users/me/settings").status_code == 401
