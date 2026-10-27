@@ -331,7 +331,10 @@
     "status_pending": "قيد المراجعة",
     "accept_btn": "قبول",
     "reject_btn": "رفض",
-    "open_chat_title": "فتح شات المشروع"
+    "open_chat_title": "فتح شات المشروع",
+    "status_nominated": "مرشح - بانتظار الاعتماد الأكاديمي",
+    "status_approved": "معتمد أكاديمياً",
+    "cv_btn": "السيرة الذاتية"
   },
   "skills_modal": {
     "title": "تعديل مهاراتي البرمجية",

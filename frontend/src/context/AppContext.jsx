@@ -300,6 +300,16 @@ export function AppProvider({ children }) {
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
+  // المشروع الذي فُتحت نافذة الطلبات من أجله (null = كل الطلبات)
+  const [applicationsModalProjectId, setApplicationsModalProjectId] = useState(null);
+  const openApplicationsModal = useCallback((projectId = null) => {
+    setApplicationsModalProjectId(projectId);
+    setShowApplicationsModal(true);
+  }, []);
+  const closeApplicationsModal = useCallback(() => {
+    setShowApplicationsModal(false);
+    setApplicationsModalProjectId(null);
+  }, []);
   const [showSkillsModal, setShowSkillsModal] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
 
@@ -1102,6 +1112,9 @@ export function AppProvider({ children }) {
         setSelectedProject,
         showApplicationsModal,
         setShowApplicationsModal,
+        applicationsModalProjectId,
+        openApplicationsModal,
+        closeApplicationsModal,
         showSkillsModal,
         setShowSkillsModal,
         isOnboardingModalOpen,

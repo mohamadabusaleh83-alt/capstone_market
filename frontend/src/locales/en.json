@@ -331,7 +331,10 @@
     "status_pending": "Pending Review",
     "accept_btn": "Accept",
     "reject_btn": "Reject",
-    "open_chat_title": "Open Project Chat"
+    "open_chat_title": "Open Project Chat",
+    "status_nominated": "Nominated - awaiting academic approval",
+    "status_approved": "Academically approved",
+    "cv_btn": "CV"
   },
   "skills_modal": {
     "title": "Edit Technical Skills",

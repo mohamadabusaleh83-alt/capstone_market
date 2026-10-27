@@ -38,7 +38,7 @@ export default function DashboardPage() {
     fetchProjects,
     applications = [],
     setIsCreateModalOpen,
-    setShowApplicationsModal,
+    openApplicationsModal,
     setShowSkillsModal,
     setIsOnboardingModalOpen,
     setActiveChatProject,
@@ -1045,7 +1045,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
-                        onClick={() => setShowApplicationsModal(true)}
+                        onClick={() => openApplicationsModal(app.project_id)}
                         className="bg-slate-100 hover:bg-slate-200 dark:bg-[#152550] dark:hover:bg-[#182b5c] text-xs font-bold px-3 py-1.5 rounded-lg text-slate-800 dark:text-white transition cursor-pointer"
                       >
                         {isRtl ? 'مراجعة الطلب' : 'Review'}
@@ -1337,7 +1337,7 @@ export default function DashboardPage() {
                     <div className="pt-3 border-t border-slate-300/80 dark:border-white/5 flex items-center justify-between gap-2">
                       <button
                         type="button"
-                        onClick={() => setShowApplicationsModal(true)}
+                        onClick={() => openApplicationsModal(p.id)}
                         className="bg-slate-100 hover:bg-slate-200 dark:bg-[#152550] dark:hover:bg-[#182b5c] text-slate-800 dark:text-white text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer active:scale-95 border border-slate-300/80 dark:border-[#2499F2]/20 font-bold"
                       >
                         <Users className="w-3.5 h-3.5 text-[#2499F2] dark:text-[#28C8C0]" />

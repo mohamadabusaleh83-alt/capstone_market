@@ -21,7 +21,7 @@ export default function ProjectCard({ project }) {
     setSelectedProject,
     setIsApplyModalOpen,
     setActiveChatProject,
-    setShowApplicationsModal,
+    openApplicationsModal,
     translateMajor,
     translateDifficulty,
     isRtl
@@ -225,7 +225,7 @@ export default function ProjectCard({ project }) {
         ) : (
           <button
             type="button"
-            onClick={() => setShowApplicationsModal(true)}
+            onClick={() => openApplicationsModal(project.id)}
             className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-[#152550] hover:bg-slate-200 dark:hover:bg-[#182b5c] text-slate-800 dark:text-slate-200 transition flex items-center justify-center gap-1.5 cursor-pointer border border-slate-300/80 dark:border-[#2499F2]/20 active:scale-95 shadow-sm"
           >
             <Users className="w-3.5 h-3.5 text-[#2499F2] dark:text-[#28C8C0]" />

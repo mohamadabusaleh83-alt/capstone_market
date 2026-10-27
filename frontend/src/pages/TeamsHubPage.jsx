@@ -23,7 +23,7 @@ export default function TeamsHubPage() {
     rawProjects,
     applications,
     showToast,
-    setShowApplicationsModal,
+    openApplicationsModal,
     translateMajor,
     isRtl
   } = useApp();
@@ -60,7 +60,7 @@ export default function TeamsHubPage() {
 
             <button
               type="button"
-              onClick={() => setShowApplicationsModal(true)}
+              onClick={() => openApplicationsModal(null)}
               className="bg-gradient-to-r from-[#2499F2] to-[#28C8C0] hover:from-[#1D7BC3] hover:to-[#20aba3] text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-md shadow-[#2499F2]/25 active:scale-95"
             >
               <CheckCircle className="w-4 h-4" />
