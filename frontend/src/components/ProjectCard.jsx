@@ -25,6 +25,15 @@ export default function ProjectCard({ project }) {
   } = useApp() || {};
 
   const isFav = Array.isArray(favorites) && favorites.includes(project.id);
+  // الشات متاح فقط لمن يملك الوصول على الخادم: الأدمن، المالك، المشرف المسند، والأعضاء المعتمدون (I-44)
+  const canChat = Boolean(currentUser) && (
+    currentUser.role === 'admin' ||
+    project.created_by === currentUser.id ||
+    project.supervisor_id === currentUser.id ||
+    applications.some((a) => a.project_id === project.id && a.student_id === currentUser.id &&
+      ['academically_approved', 'accepted'].includes(a.status))
+  );
+
   const isAlreadyApplied = applications.some(
     (a) => a.project_id === project.id && a.student_id === currentUser?.id
   );
@@ -218,15 +227,17 @@ export default function ProjectCard({ project }) {
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={() => setActiveChatProject(project)}
-          title={t('projects.chat_tooltip')}
-          className="p-2.5 rounded-xl bg-slate-100 dark:bg-[#152550] hover:bg-[#2499F2] dark:hover:bg-[#2499F2] text-slate-800 dark:text-slate-300 hover:text-white transition-all duration-200 cursor-pointer border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-[#2499F2] dark:hover:border-[#2499F2] shadow-sm active:scale-90"
-          aria-label={t('projects.chat_tooltip')}
-        >
-          <MessageSquare className="w-4 h-4" />
-        </button>
+        {canChat && (
+          <button
+            type="button"
+            onClick={() => setActiveChatProject(project)}
+            title={t('projects.chat_tooltip')}
+            className="p-2.5 rounded-xl bg-slate-100 dark:bg-[#152550] hover:bg-[#2499F2] dark:hover:bg-[#2499F2] text-slate-800 dark:text-slate-300 hover:text-white transition-all duration-200 cursor-pointer border border-slate-300/80 dark:border-[#2499F2]/20 hover:border-[#2499F2] dark:hover:border-[#2499F2] shadow-sm active:scale-90"
+            aria-label={t('projects.chat_tooltip')}
+          >
+            <MessageSquare className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </div>
   );
