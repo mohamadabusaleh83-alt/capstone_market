@@ -31,8 +31,8 @@ export default function Navbar() {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <header className="h-16 bg-white/95 dark:bg-[#101E42]/95 backdrop-blur-md border-b border-slate-200/60 dark:border-white/5 sticky top-0 z-40 px-4 sm:px-6 flex items-center justify-between shadow-xs transition-colors duration-200">
-      <div className="flex items-center gap-3">
+    <header className="h-16 bg-white/95 dark:bg-[#101E42]/95 backdrop-blur-md border-b border-slate-200/60 dark:border-white/5 sticky top-0 z-40 px-3 sm:px-6 flex items-center justify-between gap-2 shadow-xs transition-colors duration-200">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {currentUser && (
           <button
             type="button"
@@ -53,7 +53,7 @@ export default function Navbar() {
           <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-[#0B152E] border border-slate-200 dark:border-[#2499F2]/30 flex items-center justify-center shadow-md shadow-[#2499F2]/10 dark:shadow-[#2499F2]/20 overflow-hidden shrink-0 group-hover:border-[#2499F2]/60 transition-colors">
             <img src="/logo.svg" alt={t('nav.platform_title')} className="w-7 h-7 object-contain" />
           </div>
-          <div>
+          <div className="hidden sm:block">
             <span className="font-black text-sm sm:text-base text-slate-900 dark:text-white tracking-wide block leading-tight group-hover:text-[#2499F2] dark:group-hover:text-[#28C8C0] transition-colors">
               {t('nav.platform_title')}
             </span>
@@ -64,7 +64,7 @@ export default function Navbar() {
         </Link>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
         {/* زر تبديل الوضع الليلي / النهاري (Theme Toggle) */}
         <ThemeToggle />
 
@@ -97,7 +97,7 @@ export default function Navbar() {
               <div
                 className={`absolute ${
                   isRtl ? 'left-0' : 'right-0'
-                } mt-2 w-80 sm:w-96 bg-white/95 dark:bg-[#101E42]/98 backdrop-blur-xl border border-slate-200 dark:border-[#2499F2]/30 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150`}
+                } mt-2 w-[calc(100vw-1.5rem)] max-w-80 sm:w-96 sm:max-w-none bg-white/95 dark:bg-[#101E42]/98 backdrop-blur-xl border border-slate-200 dark:border-[#2499F2]/30 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150`}
                 dir={isRtl ? 'rtl' : 'ltr'}
               >
                 <div className="p-3.5 bg-slate-50 dark:bg-[#0B152E] border-b border-slate-200 dark:border-[#2499F2]/20 flex items-center justify-between">
@@ -173,7 +173,7 @@ export default function Navbar() {
 
         {/* كبسولة بروفايل موحدة وأنيقة (أيقونة مستخدم صغيرة + الاسم + شارة الدور بلون تركوازي هادئ) */}
         {currentUser && (
-          <div className="flex items-center gap-2 bg-slate-100 dark:bg-[#152550] border border-slate-200 dark:border-[#2499F2]/20 px-3 py-1.5 rounded-full shadow-xs">
+          <div className="hidden sm:flex items-center gap-2 bg-slate-100 dark:bg-[#152550] border border-slate-200 dark:border-[#2499F2]/20 px-3 py-1.5 rounded-full shadow-xs">
             <UserCheck className="w-3.5 h-3.5 text-[#28C8C0] shrink-0" />
             <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate max-w-[110px] sm:max-w-[160px]">
               {currentUser.name}
