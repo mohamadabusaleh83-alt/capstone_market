@@ -69,8 +69,19 @@ if IS_PRODUCTION:
         raise RuntimeError(error_msg)
 
     SECRET_KEY = raw_secret
+elif raw_secret:
+    SECRET_KEY = raw_secret
+elif os.getenv("DEV_INSECURE_KEY", "").strip() == "1":
+    # opt-in only, for local development: tokens are signed with a key that is public in the repo
+    logger.warning("DEV_INSECURE_KEY=1: signing tokens with the public development key. Never use this in a deployment.")
+    SECRET_KEY = DEV_DEFAULT_SECRET
 else:
-    SECRET_KEY = raw_secret or DEV_DEFAULT_SECRET
+    error_msg = (
+        "SECRET_KEY is not set. Set SECRET_KEY (a random string of at least 32 characters), "
+        "or for local development only set DEV_INSECURE_KEY=1 to use the public development key."
+    )
+    logger.critical(error_msg)
+    raise RuntimeError(error_msg)
 
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))

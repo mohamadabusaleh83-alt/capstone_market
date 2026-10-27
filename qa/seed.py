@@ -27,6 +27,8 @@ host = urlparse(DB_URL).hostname or ""
 if not DB_URL.startswith("sqlite") and host not in ("localhost", "127.0.0.1"):
     sys.exit(f"Refusing to seed a non-local database (host={host!r}).")
 os.environ["DATABASE_URL"] = DB_URL
+# the seed only hashes passwords (never signs tokens), so the dev key opt-in is safe here (I-41)
+os.environ.setdefault("DEV_INSECURE_KEY", "1")
 
 BACKEND = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "backend")
 sys.path.insert(0, os.path.abspath(BACKEND))
