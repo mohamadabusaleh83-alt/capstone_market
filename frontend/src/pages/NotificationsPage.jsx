@@ -16,6 +16,8 @@ export default function NotificationsPage() {
   const {
     isRtl,
     notifications,
+    notificationsTotal,
+    loadMoreNotifications,
     handleMarkNotificationRead,
     handleMarkAllNotificationsRead
   } = useApp();
@@ -199,6 +201,17 @@ export default function NotificationsPage() {
               </div>
             </div>
           ))
+        )}
+        {notifications.length < notificationsTotal && (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={loadMoreNotifications}
+              className="px-5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-[#101E42] border border-slate-300 dark:border-[#2499F2]/30 text-slate-800 dark:text-white cursor-pointer"
+            >
+              {t('common.load_more')}
+            </button>
+          </div>
         )}
       </div>
     </div>

@@ -5,7 +5,8 @@ import logging
 from typing import List, Optional
 from datetime import datetime
 
-from fastapi import FastAPI, Depends, HTTPException, Query, Request, status, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, Query, Request, Response, status, UploadFile, File
+from sqlalchemy import func as sa_func
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -785,6 +786,31 @@ def clean_skills(skills_str: Optional[str]) -> str:
     return ", ".join(normalized)
 
 
+PAGE_MAX_LIMIT = 200
+
+
+def format_projects(projects: List[models.Project], db: Session) -> List[models.Project]:
+    """تنسيق قائمة مشاريع باستعلامين مجمّعين للمقاعد وأسماء المشرفين بدلاً من استعلامات لكل مشروع"""
+    ids = [p.id for p in projects]
+    counts = dict(
+        db.query(models.Application.project_id, sa_func.count(models.Application.id)).filter(
+            models.Application.project_id.in_(ids),
+            models.Application.status.in_(["accepted", "academically_approved", "company_accepted"])
+        ).group_by(models.Application.project_id).all()
+    ) if ids else {}
+    people_ids = {p.supervisor_id for p in projects if p.supervisor_id} | {p.created_by for p in projects if p.created_by}
+    people = {u.id: u for u in db.query(models.User).filter(models.User.id.in_(people_ids)).all()} if people_ids else {}
+    for p in projects:
+        p.current_members = counts.get(p.id, 0)
+        p.available_seats = max(0, (p.max_members or 4) - p.current_members)
+        sup = people.get(p.supervisor_id)
+        p.supervisor_name = sup.full_name if sup else None
+        creator = people.get(p.created_by)
+        if not p.company_name and creator and (creator.role or "").lower() in COMPANY_ROLES:
+            p.company_name = creator.full_name
+    return projects
+
+
 def format_project_item(p: models.Project, db: Session):
     p.current_members = get_project_accepted_members(p.id, db)
     p.available_seats = max(0, (p.max_members or 4) - p.current_members)
@@ -888,20 +914,25 @@ def get_my_assigned_project(
 @app.get("/projects/", response_model=List[schemas.ProjectResponse])
 @app.get("/api/projects/", response_model=List[schemas.ProjectResponse])
 def get_projects(
+    response: Response,
     status: Optional[str] = None,
     created_by: Optional[int] = None,
+    limit: Optional[int] = Query(None, ge=1, le=PAGE_MAX_LIMIT),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: Optional[models.User] = Depends(get_optional_user)
 ):
-    """جلب المشاريع المسموح للمستخدم برؤيتها (حسب دوره) مع المقاعد المحجوزة والمتاحة ودعم الفلترة"""
+    """جلب المشاريع المسموح للمستخدم برؤيتها مع المقاعد، ودعم الفلترة والتقسيم (limit/offset + X-Total-Count)"""
     query = visible_projects_query(db.query(models.Project), current_user)
     if status:
         query = query.filter(models.Project.status == status.strip().lower())
     if created_by:
         query = query.filter(models.Project.created_by == created_by)
-    projects = query.order_by(models.Project.id.desc()).all()
-
-    return [format_project_item(p, db) for p in projects]
+    response.headers["X-Total-Count"] = str(query.count())
+    query = query.order_by(models.Project.id.desc()).offset(offset)
+    if limit:
+        query = query.limit(limit)
+    return format_projects(query.all(), db)
 
 
 @app.get("/projects/{id}", response_model=schemas.ProjectResponse)
@@ -1643,13 +1674,16 @@ def get_project_messages(
 @app.get("/notifications/", response_model=List[schemas.NotificationResponse])
 @app.get("/api/notifications", response_model=List[schemas.NotificationResponse])
 def get_user_notifications(
+    response: Response,
+    limit: int = Query(50, ge=1, le=PAGE_MAX_LIMIT),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """جلب إشعارات المستخدم الحالي مرتبة حسب الأحدث تنازلياً، بلغة الطلب"""
-    rows = db.query(models.Notification).filter(
-        models.Notification.user_id == current_user.id
-    ).order_by(models.Notification.created_at.desc()).limit(50).all()
+    """جلب إشعارات المستخدم الحالي (الأحدث أولاً) بلغة الطلب، مع التقسيم limit/offset و X-Total-Count"""
+    query = db.query(models.Notification).filter(models.Notification.user_id == current_user.id)
+    response.headers["X-Total-Count"] = str(query.count())
+    rows = query.order_by(models.Notification.created_at.desc(), models.Notification.id.desc()).offset(offset).limit(limit).all()
     return [localize_notification(n) for n in rows]
 
 

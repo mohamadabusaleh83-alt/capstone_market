@@ -14,7 +14,9 @@
     "all": "All",
     "switch_theme": "Toggle Theme",
     "switch_light": "Switch to Light Mode",
-    "switch_dark": "Switch to Dark Mode"
+    "switch_dark": "Switch to Dark Mode",
+    "show_more": "Show more ({{count}} left)",
+    "load_more": "Load more"
   },
   "roles": {
     "student": "Graduate Student",

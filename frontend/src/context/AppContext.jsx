@@ -342,6 +342,8 @@ export function AppProvider({ children }) {
   // الإشعارات الحية (Live Notifications)
   // ==========================================
   const [notifications, setNotifications] = useState([]);
+  const [notificationsLimit, setNotificationsLimit] = useState(50);
+  const [notificationsTotal, setNotificationsTotal] = useState(0);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
@@ -376,13 +378,24 @@ export function AppProvider({ children }) {
     try {
       // التوكن يحدد المشاريع المرئية (الزائر/الطالب: المعتمدة فقط، الشركة: + مشاريعها، المشرف: الكل)
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const res = await fetch(`${API_URL}/projects/`, {
-        signal: controller.signal,
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
+      // تحميل المشاريع على صفحات (limit/offset) حتى اكتمال العدد في X-Total-Count
+      const PAGE = 200;
+      let data = [];
+      let res = null;
+      for (let page = 0; page < 25; page += 1) {
+        res = await fetch(`${API_URL}/projects/?limit=${PAGE}&offset=${page * PAGE}`, {
+          signal: controller.signal,
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (!res.ok) break;
+        const chunk = await res.json();
+        if (!Array.isArray(chunk)) break;
+        data = data.concat(chunk);
+        const total = Number(res.headers.get('X-Total-Count'));
+        if (chunk.length < PAGE || (total && data.length >= total)) break;
+      }
       clearTimeout(timeoutId);
-      if (res.ok) {
-        const data = await res.json();
+      if (res && res.ok) {
         if (Array.isArray(data)) {
           const formatted = data.map((p) => {
             const rawSkillList = p.required_skills
@@ -546,17 +559,22 @@ export function AppProvider({ children }) {
 
     setIsLoadingNotifications(true);
     try {
-      const res = await apiFetch('/notifications');
+      const res = await apiFetch(`/notifications?limit=${notificationsLimit}&offset=0`);
       if (res.ok) {
         const data = await res.json();
         setNotifications(Array.isArray(data) ? data : []);
+        setNotificationsTotal(Number(res.headers.get('X-Total-Count')) || (Array.isArray(data) ? data.length : 0));
       }
     } catch {
       // Ignored
     } finally {
       setIsLoadingNotifications(false);
     }
-  }, [apiFetch]);
+  }, [apiFetch, notificationsLimit]);
+
+  const loadMoreNotifications = useCallback(() => {
+    setNotificationsLimit((n) => Math.min(n + 50, 200));
+  }, []);
 
   const fetchUserProfile = useCallback(async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -1131,6 +1149,8 @@ export function AppProvider({ children }) {
         isNotificationsOpen,
         setIsNotificationsOpen,
         fetchNotifications,
+        notificationsTotal,
+        loadMoreNotifications,
         handleMarkNotificationRead,
         handleMarkAllNotificationsRead,
         reportsTimeline,

@@ -246,6 +246,22 @@ export default function SupervisorPage() {
     return localProjects.filter((p) => p.status === 'pending');
   }, [localProjects]);
 
+  // عرض تدريجي للقوائم الطويلة (24 عنصراً في كل مرة)
+  const PAGE_SIZE = 24;
+  const [pendingVisible, setPendingVisible] = useState(PAGE_SIZE);
+  const [listVisible, setListVisible] = useState(PAGE_SIZE);
+  const showMoreButton = (remaining, onClick) => (
+    <div className="flex justify-center pt-2">
+      <button
+        type="button"
+        onClick={onClick}
+        className="px-5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-[#101E42] border border-slate-300 dark:border-[#2499F2]/30 text-slate-800 dark:text-white cursor-pointer"
+      >
+        {t('common.show_more', { count: remaining })}
+      </button>
+    </div>
+  );
+
   const filteredProjects = useMemo(() => {
     return localProjects.filter((p) => {
       const matchesFilter = reviewFilterStatus === 'all' || p.status === reviewFilterStatus;
@@ -562,8 +578,9 @@ export default function SupervisorPage() {
                 </p>
               </div>
             ) : (
+              <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {pendingProjectsList.map((project) => (
+                {pendingProjectsList.slice(0, pendingVisible).map((project) => (
                   <div
                     key={project.id}
                     className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-[#152550]/60 border border-amber-300/80 dark:border-amber-500/30 flex flex-col justify-between space-y-4 hover:border-amber-400 transition shadow-sm"
@@ -628,6 +645,8 @@ export default function SupervisorPage() {
                   </div>
                 ))}
               </div>
+              {pendingProjectsList.length > pendingVisible && showMoreButton(pendingProjectsList.length - pendingVisible, () => setPendingVisible((n) => n + PAGE_SIZE))}
+              </>
             )}
           </div>
         )}
@@ -740,8 +759,9 @@ export default function SupervisorPage() {
           </button>
         </div>
       ) : (
+        <>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredProjects.map((project) => {
+          {filteredProjects.slice(0, listVisible).map((project) => {
             const isApproved = project.status === 'approved';
             const isRejected = project.status === 'rejected';
             const isPending = !isApproved && !isRejected;
@@ -864,6 +884,8 @@ export default function SupervisorPage() {
             );
           })}
         </div>
+        {filteredProjects.length > listVisible && showMoreButton(filteredProjects.length - listVisible, () => setListVisible((n) => n + PAGE_SIZE))}
+        </>
       )}
     </div>
   );
