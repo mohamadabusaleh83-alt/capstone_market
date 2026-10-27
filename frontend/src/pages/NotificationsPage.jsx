@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import {
@@ -13,6 +13,7 @@ import {
 
 export default function NotificationsPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const {
     isRtl,
     notifications,
@@ -145,7 +146,10 @@ export default function NotificationsPage() {
           filteredNotifications.map((notif) => (
             <div
               key={notif.id}
-              onClick={() => handleMarkNotificationRead(notif.id)}
+              onClick={() => {
+                if (!notif.is_read) handleMarkNotificationRead(notif.id);
+                if (notif.link) navigate(notif.link);
+              }}
               className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 flex items-start gap-4 cursor-pointer relative overflow-hidden group ${
                 notif.is_read
                   ? 'bg-white/80 dark:bg-[#101E42]/60 border-slate-200 dark:border-white/5 opacity-80 hover:opacity-100'

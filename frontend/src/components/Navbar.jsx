@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
@@ -27,6 +27,16 @@ export default function Navbar() {
   } = useApp();
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // الإشعار يُعلَّم كمقروء ويفتح الصفحة المرتبطة به (I-33)
+  const openNotification = (n) => {
+    if (!n.is_read) handleMarkNotificationRead(n.id);
+    if (n.link) {
+      setIsNotificationsOpen(false);
+      navigate(n.link);
+    }
+  };
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -138,7 +148,7 @@ export default function Navbar() {
                     notifications.map((n) => (
                       <div
                         key={n.id}
-                        onClick={() => !n.is_read && handleMarkNotificationRead(n.id)}
+                        onClick={() => openNotification(n)}
                         className={`p-3 text-xs transition cursor-pointer flex items-start gap-2.5 ${
                           n.is_read
                             ? 'bg-white/60 dark:bg-[#101E42]/60 hover:bg-slate-50 dark:hover:bg-[#152550]/60 opacity-75'
