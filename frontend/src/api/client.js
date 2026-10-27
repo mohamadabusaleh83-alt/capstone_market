@@ -1,9 +1,16 @@
-// عنوان الباك إند API: يدعم السيرفر المحلي تلقائياً عند التشغيل على localhost
-const rawApiUrl = import.meta.env.VITE_API_URL || (
-  typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://127.0.0.1:8000'
-    : 'https://capstone-market.onrender.com'
-);
+// عنوان الباك إند API من VITE_API_URL. بدونه: السيرفر المحلي على localhost، وخادم الإنتاج فقط للنطاق
+// الإنتاجي نفسه - أي نشر تجريبي/معاينة بلا VITE_API_URL لا يتصل بالإنتاج بصمت (I-46)
+const PRODUCTION_HOST = 'capstone-market.vercel.app';
+function resolveApiUrl() {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window === 'undefined') return '';
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') return 'http://127.0.0.1:8000';
+  if (host === PRODUCTION_HOST) return 'https://capstone-market.onrender.com';
+  console.error('VITE_API_URL is not set for this deployment; API calls are disabled.');
+  return 'http://invalid.localhost';
+}
+const rawApiUrl = resolveApiUrl();
 export const API_URL = rawApiUrl.replace(/\/+$/, '');
 
 export const ACADEMIC_MAJORS = [
