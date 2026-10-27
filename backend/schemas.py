@@ -80,17 +80,24 @@ class ProjectCreate(BaseModel):
     max_members: Optional[int] = 4
     category: Optional[str] = Field(default=None, max_length=100)
     stipend: Optional[str] = Field(default=None, max_length=100)
+    # مقبول للتوافق مع الواجهة لكنه يُتجاهل: اسم الشركة يُشتق دائماً من حساب منشئ المشروع
     company_name: Optional[str] = Field(default=None, max_length=150)
 
 
-class ProjectUpdate(BaseModel):
+class ProjectOwnerUpdate(BaseModel):
+    """ما يمكن لمالك المشروع تعديله. أي حقل آخر (supervisor_id، company_name، status...) يُرفض بـ 422"""
+    model_config = ConfigDict(extra="forbid")
+
     title: Optional[str] = Field(default=None, max_length=150)
     description: Optional[str] = Field(default=None, max_length=10000)
     required_skills: Optional[str] = Field(default=None, max_length=1000)
-    max_members: Optional[int] = None
+    max_members: Optional[int] = Field(default=None, ge=1)
     category: Optional[str] = Field(default=None, max_length=100)
     stipend: Optional[str] = Field(default=None, max_length=100)
-    company_name: Optional[str] = Field(default=None, max_length=150)
+
+
+class ProjectSupervisorUpdate(ProjectOwnerUpdate):
+    """المشرف والأدمن: حقول المالك + إسناد المشرف والملاحظات الأكاديمية"""
     supervisor_id: Optional[int] = None
     supervisor_feedback: Optional[str] = Field(default=None, max_length=5000)
 

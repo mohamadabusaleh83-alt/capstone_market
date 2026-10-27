@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from sqlalchemy import text, or_
 
@@ -614,9 +615,8 @@ def create_project(
     initial_status = "approved" if user_role in ["supervisor", "admin"] else "pending"
     sanitized_skills = clean_skills(project.required_skills)
 
-    comp_name = project.company_name
-    if not comp_name and user_role in ["partner", "company", "business"]:
-        comp_name = current_user.full_name
+    # اسم الشركة يُشتق دائماً من حساب المنشئ (يُتجاهل company_name المرسل لمنع انتحال اسم شركة أخرى)
+    comp_name = current_user.full_name if user_role in COMPANY_ROLES else None
 
     sup_id = current_user.id if user_role == "supervisor" else None
 
@@ -712,14 +712,18 @@ def get_project(
     return format_project_item(project, db)
 
 
+# تعديل هذه الحقول على مشروع معتمد يعيده لقيد المراجعة الأكاديمية
+PROJECT_CONTENT_FIELDS = {"title", "description", "required_skills", "category"}
+
+
 @app.put("/projects/{id}", response_model=schemas.ProjectResponse)
 def update_project(
     id: int, 
-    updated_project: schemas.ProjectUpdate, 
+    updated_project: schemas.ProjectSupervisorUpdate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """تعديل مشروع - مسموح فقط لمالك المشروع أو المشرف أو الأدمن"""
+    """تعديل مشروع: المالك يعدّل المحتوى فقط (ProjectOwnerUpdate)، والمشرف/الأدمن يضيف إسناد المشرف والملاحظات"""
     project = db.query(models.Project).filter(models.Project.id == id).first()
     if not project:
         raise HTTPException(
@@ -736,16 +740,52 @@ def update_project(
             detail="ليس لديك الصلاحية لتعديل هذا المشروع، فقط المالك أو المشرف يمكنه ذلك"
         )
 
-    update_data = updated_project.dict(exclude_unset=True)
+    update_data = updated_project.model_dump(exclude_unset=True)
+    if not is_supervisor_or_admin:
+        # المالك يُقيَّد بمخطط المالك: أي حقل خاص بالمشرف يُرفض
+        try:
+            update_data = schemas.ProjectOwnerUpdate(**update_data).model_dump(exclude_unset=True)
+        except ValidationError as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=[{"loc": list(err["loc"]), "msg": err["msg"]} for err in e.errors()]
+            )
+
+    update_data = {k: v for k, v in update_data.items() if v is not None}
+
+    if "required_skills" in update_data:
+        update_data["required_skills"] = clean_skills(update_data["required_skills"])
+
+    if "max_members" in update_data:
+        current_members = get_project_accepted_members(project.id, db)
+        if update_data["max_members"] < current_members:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"لا يمكن تقليل عدد المقاعد إلى أقل من عدد الأعضاء الحاليين ({current_members})"
+            )
+
+    if "supervisor_id" in update_data:
+        sup = db.query(models.User).filter(models.User.id == update_data["supervisor_id"]).first()
+        if not sup or (sup.role or "").lower() not in ("supervisor", "admin"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="المشرف المحدد غير موجود أو ليس مشرفاً أكاديمياً"
+            )
+
+    content_changed = any(
+        key in PROJECT_CONTENT_FIELDS and getattr(project, key) != value
+        for key, value in update_data.items()
+    )
     for key, value in update_data.items():
-        if value is not None:
-            setattr(project, key, value)
+        setattr(project, key, value)
+
+    # تعديل محتوى مشروع معتمد من قِبل مالكه يتطلب إعادة الاعتماد الأكاديمي
+    if content_changed and not is_supervisor_or_admin and project.status == "approved":
+        project.status = "pending"
 
     db.commit()
     db.refresh(project)
-    project.current_members = get_project_accepted_members(project.id, db)
-    project.available_seats = max(0, (project.max_members or 4) - project.current_members)
-    return project
+    return format_project_item(project, db)
 
 
 @app.put("/projects/{project_id}/status", response_model=schemas.ProjectResponse)
