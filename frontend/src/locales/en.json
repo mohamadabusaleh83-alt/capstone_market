@@ -17,7 +17,11 @@
     "switch_dark": "Switch to Dark Mode",
     "show_more": "Show more ({{count}} left)",
     "load_more": "Load more",
-    "verifying_permissions": "Verifying your permissions..."
+    "verifying_permissions": "Verifying your permissions...",
+    "close_menu": "Close menu",
+    "just_now": "Just now",
+    "applicants": "{{count}} applicants",
+    "students": "{{count}} students"
   },
   "roles": {
     "student": "Graduate Student",
@@ -404,5 +408,22 @@
     "confirm_delete": "Delete {{name}}'s account? Their applications, reports and messages are deleted too.",
     "load_failed": "Could not load users",
     "action_failed": "The action failed"
+  },
+  "errors": {
+    "network": "Could not reach the server, retrying...",
+    "session_expired": "Your session has expired, please sign in again.",
+    "login_failed": "Incorrect email or password.",
+    "profile_failed": "Could not load your account details.",
+    "register_failed": "Could not create the account, please check your details.",
+    "register_success": "Account created! Signing you in..."
+  },
+  "credits": {
+    "brand": "Graduation Projects Market",
+    "rights": "All rights reserved",
+    "developed_by": "Developed by:",
+    "developer_name": "Mohamad Abu Saleh",
+    "developer_title": "Platform engineering & front-end development (Full-Stack / Frontend Developer)",
+    "developer_alt": "Mohamad Abu Saleh - platform developer",
+    "mission_quote": "An academic and entrepreneurial platform that lets university students showcase their graduation projects and technical innovations, bridging academic research and the job market by opening sponsorship and investment opportunities for companies in one unified, interactive workspace."
   }
 }

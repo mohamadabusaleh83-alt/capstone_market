@@ -184,7 +184,7 @@ export default function NotificationsPage() {
                     <span>
                       {notif.created_at
                         ? new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        : 'الآن'}
+                        : t('common.just_now')}
                     </span>
                   </span>
                 </div>

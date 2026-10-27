@@ -106,7 +106,7 @@ export default function AboutPage() {
 
           {/* النص التعريفي القصير والرسالة */}
           <p className="text-base sm:text-lg md:text-xl text-slate-700 dark:text-slate-200 leading-relaxed font-medium">
-            "منصة أكاديمية وريادية تهدف إلى تمكين طلبة الجامعات من عرض مشاريع تخرجهم وابتكاراتهم التقنية، وسد الفجوة بين الأبحاث الأكاديمية وسوق العمل من خلال إتاحة فرص الرعاية والاستثمار للشركات والجهات المهتمة في بيئة عمل موحدة وتفاعلية."
+            &quot;{t('credits.mission_quote')}&quot;
           </p>
 
           {/* مؤشرات الأثر والقيمة */}
@@ -269,7 +269,7 @@ export default function AboutPage() {
             <div className="relative mx-auto mb-1">
               <img
                 src="/developer.jpg"
-                alt="محمد أبو صالح - مطور وهندسة المنصة"
+                alt={t('credits.developer_alt')}
                 className="w-28 h-28 sm:w-32 sm:h-32 rounded-full mx-auto object-cover object-top border-2 border-[#28C8C0] ring-4 ring-[#28C8C0]/20 shadow-xl transition-transform duration-300 hover:scale-105"
                 loading="eager"
               />
@@ -284,7 +284,7 @@ export default function AboutPage() {
             {/* الاسم والدور البرمجي */}
             <div className="space-y-2">
               <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-wide flex items-center justify-center gap-2 flex-wrap">
-                <span>محمد أبو صالح</span>
+                <span>{t('credits.developer_name')}</span>
                 <span className="text-slate-300 text-sm sm:text-lg font-medium font-sans">
                   (Mohamad Abu Saleh)
                 </span>
@@ -292,7 +292,7 @@ export default function AboutPage() {
 
               <p className="text-xs sm:text-sm md:text-base font-semibold text-[#28C8C0] inline-flex items-center justify-center gap-1.5 flex-wrap">
                 <Terminal className="w-4 h-4 text-[#77DCC1] shrink-0" />
-                <span>هندسة وتطوير واجهات ونظم المنصة (Full-Stack / Frontend Developer)</span>
+                <span>{t('credits.developer_title')}</span>
               </p>
 
               <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto pt-1 leading-relaxed">

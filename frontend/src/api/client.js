@@ -1,3 +1,5 @@
+import i18n from '../i18n';
+
 // عنوان الباك إند API من VITE_API_URL. بدونه: السيرفر المحلي على localhost، وخادم الإنتاج فقط للنطاق
 // الإنتاجي نفسه - أي نشر تجريبي/معاينة بلا VITE_API_URL لا يتصل بالإنتاج بصمت (I-46)
 const PRODUCTION_HOST = 'capstone-market.vercel.app';
@@ -40,9 +42,9 @@ export function isAbortError(err) {
 
 // دالة تحويل رسائل الأخطاء التقنية المزعجة إلى نص عربي واضح وسلس للمستخدم
 export function formatFriendlyError(err) {
-  if (!err) return 'تعذر الاتصال بالسيرفر، جاري المحاولة...';
+  if (!err) return i18n.t('errors.network');
   if (isAbortError(err)) {
-    return 'تعذر الاتصال بالسيرفر، جاري المحاولة...';
+    return i18n.t('errors.network');
   }
   const msg = typeof err === 'string' ? err : (err.message || '');
   const name = typeof err === 'object' && err?.name ? err.name : '';
@@ -53,9 +55,14 @@ export function formatFriendlyError(err) {
     msg.toLowerCase().includes('networkerror') ||
     msg.toLowerCase().includes('load failed')
   ) {
-    return 'تعذر الاتصال بالسيرفر، جاري المحاولة...';
+    return i18n.t('errors.network');
   }
-  return msg || 'تعذر الاتصال بالسيرفر، جاري المحاولة...';
+  return msg || i18n.t('errors.network');
+}
+
+// لغة الواجهة الحالية للخادم: رسائل الأخطاء والإشعارات تُعاد بها (I-28)
+export function acceptLanguage() {
+  return { 'Accept-Language': i18n.language === 'en' ? 'en' : 'ar' };
 }
 
 export async function apiFetch(endpoint, options = {}, onUnauthorized = null) {
@@ -64,6 +71,7 @@ export async function apiFetch(endpoint, options = {}, onUnauthorized = null) {
   const headers = {
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...acceptLanguage(),
     ...options.headers
   };
 
@@ -93,7 +101,7 @@ export async function apiFetch(endpoint, options = {}, onUnauthorized = null) {
         localStorage.removeItem('app_user_role');
         window.location.href = '/login';
       }
-      throw new Error('انتهت صلاحية جلسة الدخول، يرجى تسجيل الدخول مجدداً.');
+      throw new Error(i18n.t('errors.session_expired'));
     }
 
     return response;
@@ -101,7 +109,7 @@ export async function apiFetch(endpoint, options = {}, onUnauthorized = null) {
     if (timeoutId) clearTimeout(timeoutId);
 
     if (isAbortError(err)) {
-      const friendlyErr = new Error('تعذر الاتصال بالسيرفر، جاري المحاولة...');
+      const friendlyErr = new Error(i18n.t('errors.network'));
       friendlyErr.name = 'AbortError';
       friendlyErr.originalError = err;
       throw friendlyErr;

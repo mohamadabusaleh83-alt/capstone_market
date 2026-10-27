@@ -183,7 +183,7 @@ export default function ManageProjectsPage() {
                     {project.title}
                   </td>
                   <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">
-                    {project.major || 'هندسة النظم وتكنولوجيا المعلومات'}
+                    {project.major || '—'}
                   </td>
                   <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200 font-semibold flex items-center gap-1.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />

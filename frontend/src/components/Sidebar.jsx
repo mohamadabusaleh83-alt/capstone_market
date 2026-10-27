@@ -428,7 +428,7 @@ export default function Sidebar() {
                 </div>
                 <div className="min-w-0">
                   <span className="font-black text-xs text-white tracking-wide block leading-tight truncate">
-                    سوق مشاريع التخرج
+                    {t('credits.brand')}
                   </span>
                   <span className="text-[10px] text-[#28C8C0] font-sans font-semibold block truncate">
                     Capstone Market
@@ -441,8 +441,8 @@ export default function Sidebar() {
                 type="button"
                 onClick={closeSidebarOnMobile}
                 className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700 transition cursor-pointer active:scale-95 shrink-0"
-                aria-label="إغلاق القائمة"
-                title="إغلاق القائمة"
+                aria-label={t('common.close_menu')}
+                title={t('common.close_menu')}
               >
                 <X className="w-5 h-5" />
               </button>

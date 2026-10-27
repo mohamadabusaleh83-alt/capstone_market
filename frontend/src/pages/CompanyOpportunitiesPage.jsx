@@ -8,7 +8,6 @@ import {
   Briefcase,
   Plus,
   Users,
-  Eye,
   CheckCircle2,
   Sparkles,
   ChevronRight,
@@ -39,14 +38,13 @@ export default function CompanyOpportunitiesPage() {
         id: p.id,
         title: p.title,
         description: p.description,
-        stipend: p.stipend || (isRtl ? 'حزمة دعم ورعاية وتدريب' : 'Sponsorship & Training'),
+        stipend: p.stipend || '—',
         status: p.status === 'rejected' ? 'rejected' : 'active',
         applicantsCount: pApps.length,
-        viewsCount: (p.current_members || 0) * 8 + 12,
         createdDate: p.created_at ? new Date(p.created_at).toISOString().split('T')[0] : '—'
       };
     });
-  }, [rawProjects, applications, currentUser, isRtl]);
+  }, [rawProjects, applications, currentUser]);
 
   const handleCreateOpportunity = async (e) => {
     e.preventDefault();
@@ -58,11 +56,8 @@ export default function CompanyOpportunitiesPage() {
         method: 'POST',
         body: JSON.stringify({
           title: newTitle.trim(),
-          description: newDescription.trim() || 'فرصة تدريب ورعاية لمشاريع التخرج',
-          required_skills: 'React, Python, FastAPI',
-          category: 'أنظمة المعلومات الحاسوبية (CIS)',
-          stipend: newStipend.trim() || 'مكافأة ورعاية مميزة',
-          company_name: currentUser?.name || currentUser?.full_name || 'شركة شريكة',
+          description: newDescription.trim(),
+          stipend: newStipend.trim() || null,
           max_members: 4
         })
       });
@@ -160,10 +155,6 @@ export default function CompanyOpportunitiesPage() {
                 </span>
 
                 <div className="flex items-center gap-3 text-xs text-slate-500">
-                  <span className="flex items-center gap-1">
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>{op.viewsCount} مشاهدة</span>
-                  </span>
                 </div>
               </div>
 
@@ -181,7 +172,7 @@ export default function CompanyOpportunitiesPage() {
                   <span>{op.stipend}</span>
                 </span>
                 <span className="text-xs text-[#2499F2] font-bold">
-                  {op.applicantsCount} متقدمين
+                  {t('common.applicants', { count: op.applicantsCount })}
                 </span>
               </div>
             </div>

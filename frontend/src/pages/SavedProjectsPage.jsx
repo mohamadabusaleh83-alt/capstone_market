@@ -134,7 +134,7 @@ export default function SavedProjectsPage() {
               <div className="pt-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 text-xs text-slate-500">
                   <Users className="w-3.5 h-3.5 text-[#2499F2]" />
-                  <span>{project.currentMembers || 2} طلاب</span>
+                  <span>{t('common.students', { count: project.currentMembers ?? 0 })}</span>
                 </div>
 
                 <Link

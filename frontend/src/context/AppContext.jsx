@@ -78,6 +78,7 @@ export function AppProvider({ children }) {
       if (typeof document !== 'undefined') {
         updateDocumentDirection(lng);
       }
+
     };
     i18n.on('languageChanged', handleLangChange);
     return () => {
@@ -509,7 +510,7 @@ export function AppProvider({ children }) {
             email: u.email,
             major: u.major || '',
             course: u.course || '',
-            role: 'طالب خريج',
+            role: t('roles.student'),
             skills: u.skills ? u.skills.split(',').map((s) => s.trim()).filter(Boolean) : [],
             bio: u.bio || '',
             portfolioUrl: u.portfolio_url || '',
@@ -522,7 +523,7 @@ export function AppProvider({ children }) {
     } catch (_err) {
       // Ignored
     }
-  }, [apiFetch, currentUser?.role]);
+  }, [apiFetch, currentUser?.role, t]);
 
   const fetchApplications = useCallback(async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -562,6 +563,13 @@ export function AppProvider({ children }) {
       setIsLoadingNotifications(false);
     }
   }, [apiFetch, notificationsLimit]);
+
+  // الإشعارات تُعاد من الخادم بلغة الطلب، فنعيد جلبها عند تغيير اللغة (I-28)
+  useEffect(() => {
+    const onLanguageChanged = () => fetchNotifications();
+    i18n.on('languageChanged', onLanguageChanged);
+    return () => i18n.off('languageChanged', onLanguageChanged);
+  }, [i18n, fetchNotifications]);
 
   const loadMoreNotifications = useCallback(() => {
     setNotificationsLimit((n) => Math.min(n + 50, 200));

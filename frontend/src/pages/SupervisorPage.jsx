@@ -476,7 +476,7 @@ export default function SupervisorPage() {
                           </div>
                           <div>
                             <h3 className="font-bold text-sm text-slate-900 dark:text-white leading-tight">
-                              {app.student_name || `طالب #${app.student_id}`}
+                              {app.student_name || `#${app.student_id}`}
                             </h3>
                             <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
                               {app.student_email}
@@ -502,7 +502,7 @@ export default function SupervisorPage() {
                           <span className="text-slate-500 dark:text-slate-400">{isRtl ? 'الشركة الراعية:' : 'Company:'}</span>
                           <span className="font-bold text-[#2499F2] flex items-center gap-1">
                             <Building2 className="w-3.5 h-3.5" />
-                            <span>{app.company_name || 'شركة معتمدة'}</span>
+                            <span>{app.company_name || '—'}</span>
                           </span>
                         </div>
                         {app.student_major && (

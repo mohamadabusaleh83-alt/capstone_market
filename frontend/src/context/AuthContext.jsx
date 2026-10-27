@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { API_URL, apiFetch, isAbortError, formatFriendlyError } from '../api/client';
+import { API_URL, apiFetch, isAbortError, formatFriendlyError, acceptLanguage } from '../api/client';
+import i18n from '../i18n';
 
 const AuthContext = createContext(null);
 
@@ -65,7 +66,7 @@ export function AuthProvider({ children }) {
       };
 
       fetch(`${API_URL}/me`, {
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { 'Authorization': `Bearer ${token}`, ...acceptLanguage() },
         signal: controller.signal
       })
         .then(async (res) => {
@@ -73,12 +74,7 @@ export function AuthProvider({ children }) {
           if (res.ok) {
             const data = await res.json();
             const normalizedRole = (data.role === 'partner' || data.role === 'business') ? 'company' : data.role;
-            const titleByRole = {
-              student: 'طالب خريج',
-              supervisor: 'مشرف أكاديمي',
-              company: 'شريك تجاري / شركة',
-              admin: 'مسؤول النظام'
-            };
+            const titleByRole = { student: i18n.t('roles.student'), supervisor: i18n.t('roles.supervisor'), company: i18n.t('roles.company'), admin: i18n.t('roles.admin') };
 
             const userObj = {
               id: data.id,
@@ -128,7 +124,7 @@ export function AuthProvider({ children }) {
 
       const loginRes = await fetch(`${API_URL}/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...acceptLanguage() },
         body: loginParams.toString(),
         signal: controller.signal
       });
@@ -137,7 +133,7 @@ export function AuthProvider({ children }) {
 
       if (!loginRes.ok) {
         const errData = await loginRes.json().catch(() => ({}));
-        throw new Error(errData.detail || 'البريد الإلكتروني أو كلمة المرور غير صحيحة.');
+        throw new Error(errData.detail || i18n.t('errors.login_failed'));
       }
 
       const tokenData = await loginRes.json();
@@ -148,24 +144,19 @@ export function AuthProvider({ children }) {
       meTimeoutId = setTimeout(() => meController.abort(), 10000);
 
       const meRes = await fetch(`${API_URL}/me`, {
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { 'Authorization': `Bearer ${token}`, ...acceptLanguage() },
         signal: meController.signal
       });
 
       clearTimeout(meTimeoutId);
 
       if (!meRes.ok) {
-        throw new Error('فشل جلب بيانات وصلاحيات المستخدم.');
+        throw new Error(i18n.t('errors.profile_failed'));
       }
 
       const userData = await meRes.json();
       const normalizedRole = (userData.role === 'partner' || userData.role === 'business') ? 'company' : userData.role;
-      const titleByRole = {
-        student: 'طالب خريج',
-        supervisor: 'مشرف أكاديمي',
-        company: 'شريك تجاري / شركة',
-        admin: 'مسؤول النظام'
-      };
+      const titleByRole = { student: i18n.t('roles.student'), supervisor: i18n.t('roles.supervisor'), company: i18n.t('roles.company'), admin: i18n.t('roles.admin') };
 
       const userObj = {
         id: userData.id,
@@ -206,7 +197,7 @@ export function AuthProvider({ children }) {
 
       const regRes = await fetch(`${API_URL}/users/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...acceptLanguage() },
         body: JSON.stringify({
           full_name: fullName || email.split('@')[0],
           email,
@@ -220,10 +211,10 @@ export function AuthProvider({ children }) {
 
       if (!regRes.ok) {
         const errData = await regRes.json().catch(() => ({}));
-        throw new Error(errData.detail || 'تعذر إنشاء الحساب، يرجى التأكد من البيانات.');
+        throw new Error(errData.detail || i18n.t('errors.register_failed'));
       }
 
-      setAuthSuccess('تم إنشاء الحساب بنجاح! جاري تسجيل الدخول...');
+      setAuthSuccess(i18n.t('errors.register_success'));
       return await login(email, password);
     } catch (err) {
       const friendlyMsg = formatFriendlyError(err);
