@@ -11,17 +11,21 @@ import { openAs, settle, watch, shotName, writeResult, api } from './helpers.js'
 
 const PAGES = {
   anon: ['/login', '/about'],
-  student: ['/dashboard', '/projects', '/my-projects', '/collaboration-requests', '/opportunities', '/cv',
+  student: ['/dashboard', '/projects', '/my-projects', '/reports', '/collaboration-requests', '/opportunities', '/cv',
     '/notifications', '/profile', '/settings', '/about'],
-  company: ['/dashboard', '/projects', '/company/opportunities', '/saved-projects', '/company/partnerships',
-    '/notifications', '/profile', '/settings'],
+  company: ['/dashboard', '/projects', '/company/opportunities', '/collaboration-requests', '/reports', '/saved-projects',
+    '/company/partnerships', '/notifications', '/profile', '/settings'],
   supervisor: ['/dashboard', '/supervisor', '/supervisor/reviews', '/manage/projects', '/manage/students',
     '/manage/companies', '/manage/collaborations', '/teams', '/supervisor/reports', '/manage/logs', '/projects',
     '/notifications', '/profile', '/settings'],
-  admin: ['/dashboard', '/projects', '/supervisor', '/manage/projects', '/settings'],
+  admin: ['/dashboard', '/admin/users', '/supervisor', '/manage/projects', '/manage/students', '/manage/companies',
+    '/manage/collaborations', '/teams', '/supervisor/reports', '/manage/logs', '/projects', '/notifications', '/profile',
+    '/settings'],
 };
 
 const ARABIC = /[؀-ۿ]/;
+// the language toggle names the language it switches TO, so it is Arabic in English mode by design
+const SWITCH_LABELS = new Set(['العربية', 'ع', 'عربي']);
 
 // very long pages (e.g. /projects renders every project, no pagination) can exceed the screenshot budget
 async function shot(page, file, rec) {
@@ -68,40 +72,34 @@ test('crawl every page per role', async ({ page, request }) => {
       const rec = { role, route };
       const log = watch(page);
 
-      // Arabic / light / desktop
+      // 8 variants per page covering every pair of {ar,en} x {light,dark} x {375,768,1280}
+      const VARIANTS = [
+        ['ar', 'light', 1280], ['ar', 'dark', 1280], ['en', 'light', 1280], ['en', 'dark', 1280],
+        ['ar', 'light', 375], ['en', 'dark', 375], ['ar', 'dark', 768], ['en', 'light', 768],
+      ];
+      rec.variants = {};
       await page.setViewportSize({ width: 1280, height: 800 });
       await openAs(page, request, role === 'anon' ? null : role, route, { lang: 'ar', theme: 'light' });
       rec.landed = new URL(page.url()).pathname;
-      let f = await pageFacts(page);
-      rec.ar = { dir: f.dir, lang: f.lang, title: f.title, dark: f.dark, hScroll1280: f.hScroll };
-      await shot(page, shotName(role, route, 'ar-light-1280'), rec);
-
-      // Dark theme
-      await page.evaluate(() => localStorage.setItem('app_theme', 'dark'));
-      await page.reload(); await settle(page, 600);
-      f = await pageFacts(page);
-      rec.darkClassApplied = f.dark;
-      await shot(page, shotName(role, route, 'ar-dark-1280'), rec);
-
-      // English (light)
-      await page.evaluate(() => { localStorage.setItem('app_language', 'en'); localStorage.setItem('app_theme', 'light'); });
-      await page.reload(); await settle(page, 600);
-      f = await pageFacts(page);
-      const arabicLines = [...new Set(f.text.split('\n').map((l) => l.trim()).filter((l) => ARABIC.test(l) && !isDbLine(l)))];
-      rec.en = { dir: f.dir, lang: f.lang, title: f.title, lightAfterToggle: !f.dark, arabicLeft: arabicLines.length,
-        samples: arabicLines.slice(0, 6) };
-      await shot(page, shotName(role, route, 'en-light-1280'), rec);
-
-      // Responsive (Arabic, light)
-      await page.evaluate(() => { localStorage.setItem('app_language', 'ar'); });
-      rec.responsive = {};
-      for (const w of [375, 768]) {
-        await page.setViewportSize({ width: w, height: w === 375 ? 812 : 1024 });
-        await page.reload(); await settle(page, 600);
-        f = await pageFacts(page);
-        rec.responsive[w] = { hScroll: f.hScroll, offenders: f.offenders };
-        await shot(page, shotName(role, route, `ar-light-${w}`), rec);
+      for (const [lang, theme, width] of VARIANTS) {
+        await page.setViewportSize({ width, height: width === 375 ? 812 : width === 768 ? 1024 : 800 });
+        await page.evaluate(([l, th]) => { localStorage.setItem('app_language', l); localStorage.setItem('app_theme', th); }, [lang, theme]);
+        await page.reload(); await settle(page, 500);
+        const f = await pageFacts(page);
+        const v = { dir: f.dir, lang: f.lang, title: f.title, dark: f.dark, hScroll: f.hScroll, offenders: f.offenders };
+        if (lang === 'en') {
+          const arabicLines = [...new Set(f.text.split(String.fromCharCode(10)).map((l) => l.trim()).filter((l) => ARABIC.test(l) && !isDbLine(l) && !SWITCH_LABELS.has(l)))];
+          v.arabicLeft = arabicLines.length;
+          v.samples = arabicLines.slice(0, 6);
+        }
+        rec.variants[`${lang}-${theme}-${width}`] = v;
+        await shot(page, shotName(role, route, `${lang}-${theme}-${width}`), rec);
       }
+      // keep the summary fields the report reads
+      rec.ar = rec.variants['ar-light-1280'];
+      rec.en = { ...rec.variants['en-light-1280'], lightAfterToggle: !rec.variants['en-light-1280'].dark };
+      rec.darkClassApplied = rec.variants['ar-dark-1280'].dark && rec.variants['en-dark-1280'].dark;
+      rec.responsive = { 375: rec.variants['ar-light-375'], 768: rec.variants['ar-dark-768'] };
 
       rec.console = [...new Set(log.console)];
       rec.pageErrors = log.pageErrors;
@@ -117,14 +115,17 @@ test('crawl every page per role', async ({ page, request }) => {
 
   const problems = [];
   for (const r of results) {
-    if (r.ar.dir !== 'rtl' || r.ar.lang !== 'ar') problems.push(`${r.role} ${r.route}: ar dir/lang=${r.ar.dir}/${r.ar.lang}`);
-    if (r.en.dir !== 'ltr' || r.en.lang !== 'en') problems.push(`${r.role} ${r.route}: en dir/lang=${r.en.dir}/${r.en.lang}`);
-    if (ARABIC.test(r.en.title)) problems.push(`${r.role} ${r.route}: English mode title "${r.en.title}"`);
-    if (!r.darkClassApplied || !r.en.lightAfterToggle) problems.push(`${r.role} ${r.route}: theme toggle not applied`);
-    if (r.en.arabicLeft) problems.push(`${r.role} ${r.route}: ${r.en.arabicLeft} untranslated Arabic strings`);
-    for (const w of [375, 768]) if (r.responsive[w].hScroll > 0) problems.push(`${r.role} ${r.route}: horizontal scroll ${r.responsive[w].hScroll}px @${w}`);
-    if (r.console.length || r.pageErrors.length) problems.push(`${r.role} ${r.route}: ${r.console.length} console errors`);
+    for (const [k, v] of Object.entries(r.variants)) {
+      const [lang, theme] = k.split('-');
+      if (v.dir !== (lang === 'ar' ? 'rtl' : 'ltr') || v.lang !== lang) problems.push(`${r.role} ${r.route} ${k}: dir/lang=${v.dir}/${v.lang}`);
+      if (lang === 'en' && ARABIC.test(v.title)) problems.push(`${r.role} ${r.route} ${k}: English title "${v.title}"`);
+      if (v.dark !== (theme === 'dark')) problems.push(`${r.role} ${r.route} ${k}: theme not applied`);
+      if (v.hScroll > 0) problems.push(`${r.role} ${r.route} ${k}: horizontal scroll ${v.hScroll}px ${v.offenders.join(' ')}`);
+      if (v.arabicLeft) problems.push(`${r.role} ${r.route} ${k}: ${v.arabicLeft} Arabic strings: ${v.samples.join(' | ')}`);
+    }
+    if (r.console.length || r.pageErrors.length) problems.push(`${r.role} ${r.route}: console ${[...r.console, ...r.pageErrors].join(' | ').slice(0, 200)}`);
     if (r.http.length) problems.push(`${r.role} ${r.route}: HTTP errors ${r.http.join(', ')}`);
   }
+  writeResult('crawl_problems', problems);
   expect.soft(problems, problems.join('\n')).toEqual([]);
 });

@@ -251,7 +251,7 @@ export default function SettingsPage() {
                     {isRtl ? 'لغة الواجهة (Interface Language)' : 'Interface Language'}
                   </div>
                   <div className="text-[11px] text-slate-500 font-mono">
-                    {currentLang === 'ar' ? 'العربية (Arabic)' : 'English (الإنجليزية)'}
+                    {currentLang === 'ar' ? 'العربية (Arabic)' : 'English'}
                   </div>
                 </div>
               </div>
