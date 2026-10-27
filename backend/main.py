@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text, or_
 
 import models
+import ratelimit
 import schemas
 import utils
 from database import engine, get_db
@@ -284,23 +285,41 @@ def home():
 # مسارات التوثيق والمستخدمين (Auth & Users)
 # ==========================================
 
+def too_many_requests(retry_after: int) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail="محاولات كثيرة جداً، يرجى المحاولة لاحقاً",
+        headers={"Retry-After": str(retry_after)},
+    )
+
+
 @app.post("/login", response_model=schemas.Token)
 def login(
+    request: Request,
     user_credentials: OAuth2PasswordRequestForm = Depends(), 
     db: Session = Depends(get_db)
 ):
-    """تسجيل الدخول وتوليد رمز الوصول JWT"""
+    """تسجيل الدخول وتوليد رمز الوصول JWT، مع تحديد معدل المحاولات لكل IP ولكل حساب"""
+    clean_username = user_credentials.username.strip().lower()
+    ip = ratelimit.client_ip(request)
+    for limiter, key in ((ratelimit.LOGIN_IP_LIMITER, ip), (ratelimit.LOGIN_ACCOUNT_LIMITER, clean_username)):
+        wait = limiter.retry_after(key)
+        if wait:
+            raise too_many_requests(wait)
+    ratelimit.LOGIN_IP_LIMITER.hit(ip)
+
     try:
-        clean_username = user_credentials.username.strip().lower()
         user = db.query(models.User).filter(models.User.email == clean_username).first()
 
         if not user or not utils.verify_password(user_credentials.password, user.password_hash):
+            ratelimit.LOGIN_ACCOUNT_LIMITER.hit(clean_username)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="البريد الإلكتروني أو كلمة المرور غير صحيحة",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
+        ratelimit.LOGIN_ACCOUNT_LIMITER.reset(clean_username)
         access_token = issue_token(user)
 
         return {"access_token": access_token, "token_type": "bearer"}
@@ -336,8 +355,13 @@ def get_me(current_user: models.User = Depends(get_current_user)):
 
 
 @app.post("/users/", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    """إنشاء حساب مستخدم جديد مع حماية أمنية لمنع التصعيد الذاتي للصلاحيات"""
+def create_user(user: schemas.UserCreate, request: Request, db: Session = Depends(get_db)):
+    """إنشاء حساب مستخدم جديد مع حماية أمنية لمنع التصعيد الذاتي للصلاحيات وتحديد معدل التسجيل لكل IP"""
+    ip = ratelimit.client_ip(request)
+    wait = ratelimit.REGISTER_IP_LIMITER.retry_after(ip)
+    if wait:
+        raise too_many_requests(wait)
+    ratelimit.REGISTER_IP_LIMITER.hit(ip)
     try:
         clean_email = user.email.strip().lower()
         db_user = db.query(models.User).filter(models.User.email == clean_email).first()

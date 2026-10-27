@@ -122,8 +122,13 @@ def test_login_json_body_rejected(client):
 
 
 def test_login_rate_limited(client):
-    codes = [login(client, ACCOUNTS["student2"], f"bad{i}").status_code for i in range(25)]
-    assert 429 in codes, f"25 consecutive bad logins, no throttling (codes={set(codes)})"
+    """Per-account lockout after repeated failures. (Phase 2: uses a throwaway account - the original
+    used qa_student2, which the now-working lockout would block for the rest of the run.)"""
+    r, body = register(client)
+    codes = [login(client, body["email"], f"bad{i}").status_code for i in range(8)]
+    assert 429 in codes, f"8 consecutive bad logins, no throttling (codes={codes})"
+    locked = login(client, body["email"], body["password"])
+    assert locked.status_code == 429 and locked.headers.get("retry-after"), "correct password accepted during lockout"
 
 
 # ---------------- tokens ----------------
