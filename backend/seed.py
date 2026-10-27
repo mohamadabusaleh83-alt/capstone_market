@@ -1,7 +1,11 @@
 """
-Seed script for Capstone Market Platform.
-Inserts or updates the official academic supervisor and default demo accounts in the database.
+Seed script for Capstone Market Platform - LOCAL DEVELOPMENT ONLY.
+Inserts the default demo accounts (with well-known passwords) into the database.
+
+It is never called by the API. Run it by hand:  python seed.py
+It refuses to run when ENVIRONMENT=production/prod or RENDER=true.
 """
+import os
 import sys
 import logging
 from sqlalchemy.orm import Session
@@ -78,8 +82,18 @@ def seed_user(db: Session, user_data: dict) -> models.User:
     return user
 
 
+def is_production_environment() -> bool:
+    return (
+        os.getenv("RENDER", "").lower() == "true"
+        or os.getenv("ENVIRONMENT", "").lower() in ("production", "prod")
+    )
+
+
 def seed_default_users(db: Session = None):
-    """تهيئة كافة الحسابات الافتراضية مع ضمان وجود حساب المشرف الأكاديمي والمشاريع المعتمدة والتقارير في الـ Database"""
+    """تهيئة الحسابات التجريبية للتطوير المحلي فقط - يرفض العمل في بيئة الإنتاج"""
+    if is_production_environment():
+        raise RuntimeError("seed.py is for local development only and refuses to run in production.")
+
     owns_session = False
     if db is None:
         db = SessionLocal()
@@ -179,6 +193,8 @@ def seed_default_users(db: Session = None):
 
 
 if __name__ == "__main__":
+    if is_production_environment():
+        sys.exit("Refusing to seed: ENVIRONMENT=production or RENDER=true. seed.py is for local development only.")
     print("Seeding default accounts into database...")
     seed_default_users()
     print("Seeding completed successfully!")

@@ -15,8 +15,7 @@ from sqlalchemy import text
 import models
 import schemas
 import utils
-from database import engine, get_db, SessionLocal
-from seed import seed_default_users
+from database import engine, get_db
 
 logger = logging.getLogger("capstone_api")
 
@@ -50,12 +49,7 @@ with engine.connect() as conn:
         except Exception as e:
             logger.debug(f"DB check ({stmt}): {e}")
 
-# ضمان تهيئة حساب المشرف الأكاديمي الرسمي والحسابات الأساسية في قاعدة البيانات
-try:
-    with SessionLocal() as db:
-        seed_default_users(db)
-except Exception as e:
-    logger.warning(f"Error seeding default accounts on startup: {e}")
+# ملاحظة أمنية: لا يتم إنشاء أي حسابات تجريبية عند الإقلاع. للتطوير المحلي فقط: python seed.py
 
 app = FastAPI(
     title="Capstone Platform API",
