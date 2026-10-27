@@ -177,6 +177,18 @@ def require_role(allowed_roles: List[str]):
     return role_checker
 
 
+APPROVED_MEMBER_STATUSES = ["academically_approved", "accepted"]  # "accepted" = بيانات قديمة
+
+
+def is_approved_member(project_id: int, user_id: int, db: Session) -> bool:
+    """هل المستخدم عضو معتمد أكاديمياً في المشروع"""
+    return db.query(models.Application).filter(
+        models.Application.project_id == project_id,
+        models.Application.student_id == user_id,
+        models.Application.status.in_(APPROVED_MEMBER_STATUSES)
+    ).first() is not None
+
+
 def get_project_accepted_members(project_id: int, db: Session) -> int:
     """حساب عدد المقاعد المشغولة حالياً (الطلبات المقبولة أو المرشحة) لمشروع محدد"""
     return db.query(models.Application).filter(
@@ -1379,6 +1391,12 @@ def submit_report(
             detail="المشروع المرتبط بهذا التقرير غير موجود"
         )
 
+    if not is_approved_member(project.id, current_user.id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="لا يمكنك رفع تقرير إلا لمشروع أنت عضو معتمد فيه"
+        )
+
     new_report = models.Report(
         project_id=report_in.project_id,
         student_id=current_user.id,
@@ -1419,6 +1437,17 @@ def update_report_status(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
             detail="التقرير المطلوب غير موجود"
+        )
+
+    # المراجعة لمالك المشروع أو المشرف المسند إليه أو الأدمن فقط
+    project = db.query(models.Project).filter(models.Project.id == report.project_id).first()
+    is_admin = (current_user.role or "").lower() == "admin"
+    is_owner = bool(project) and project.created_by == current_user.id
+    is_assigned_supervisor = bool(project) and project.supervisor_id == current_user.id
+    if not (is_admin or is_owner or is_assigned_supervisor):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ليس لديك الصلاحية لمراجعة هذا التقرير، فقط مالك المشروع أو مشرفه أو الأدمن"
         )
 
     st = status_update.status.strip().lower()
