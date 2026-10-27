@@ -247,7 +247,7 @@ export default function Sidebar() {
         )}
 
         {/* 3. مسارات دور المشرف الأكاديمي والإدارة (Supervisor & Management) */}
-        {currentUser.role === 'supervisor' && (
+        {(currentUser.role === 'supervisor' || currentUser.role === 'admin') && (
           <div className="space-y-1">
             <NavLink to="/dashboard" onClick={closeSidebarOnMobile} className={navLinkClass}>
               <div className="flex items-center gap-2.5">
@@ -316,6 +316,14 @@ export default function Sidebar() {
                 <span>{isRtl ? 'سجل العمليات والنشاطات' : 'Activity Audit Log'}</span>
               </div>
             </NavLink>
+            {currentUser.role === 'admin' && (
+              <NavLink to="/admin/users" onClick={closeSidebarOnMobile} className={navLinkClass}>
+                <div className="flex items-center gap-2.5">
+                  <Users className="w-4 h-4 text-[#2499F2]" />
+                  <span>{isRtl ? 'المستخدمون والحسابات' : 'Users & Accounts'}</span>
+                </div>
+              </NavLink>
+            )}
           </div>
         )}
       </div>
