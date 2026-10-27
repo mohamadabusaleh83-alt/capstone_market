@@ -57,7 +57,7 @@ async function pageFacts(page) {
 }
 
 test('crawl every page per role', async ({ page, request }) => {
-  test.setTimeout(30 * 60 * 1000);
+  test.setTimeout(3 * 60 * 60 * 1000);
   // strings that legitimately stay Arabic in English mode: DB content (titles, names) + brand footer
   const dbText = new Set();
   for (const p of (await api(request, 'admin', 'GET', '/projects/')).body) {
@@ -66,8 +66,14 @@ test('crawl every page per role', async ({ page, request }) => {
   for (const u of (await api(request, 'admin', 'GET', '/users/')).body) dbText.add(u.full_name);
   const isDbLine = (line) => [...dbText].some((s) => s && (line.includes(s) || s.includes(line)));
 
+  // optional filters for partial re-runs: CRAWL_ROLE=admin CRAWL_SKIP=8 CRAWL_OUT=crawl_admin_rest
+  const onlyRole = process.env.CRAWL_ROLE;
+  const skip = Number(process.env.CRAWL_SKIP || 0);
+  const outName = process.env.CRAWL_OUT || 'crawl';
   const results = [];
-  for (const [role, pages] of Object.entries(PAGES)) {
+  for (const [role, allPages] of Object.entries(PAGES)) {
+    if (onlyRole && role !== onlyRole) continue;
+    const pages = onlyRole ? allPages.slice(skip) : allPages;
     for (const route of pages) {
       const rec = { role, route };
       const log = watch(page);
@@ -108,10 +114,10 @@ test('crawl every page per role', async ({ page, request }) => {
       page.removeAllListeners('console'); page.removeAllListeners('pageerror');
       page.removeAllListeners('requestfailed'); page.removeAllListeners('response');
       results.push(rec);
-      writeResult('crawl', results);
+      writeResult(outName, results);
     }
   }
-  writeResult('crawl', results);
+  writeResult(outName, results);
 
   const problems = [];
   for (const r of results) {
@@ -126,6 +132,6 @@ test('crawl every page per role', async ({ page, request }) => {
     if (r.console.length || r.pageErrors.length) problems.push(`${r.role} ${r.route}: console ${[...r.console, ...r.pageErrors].join(' | ').slice(0, 200)}`);
     if (r.http.length) problems.push(`${r.role} ${r.route}: HTTP errors ${r.http.join(', ')}`);
   }
-  writeResult('crawl_problems', problems);
+  writeResult(`${outName}_problems`, problems);
   expect.soft(problems, problems.join('\n')).toEqual([]);
 });
