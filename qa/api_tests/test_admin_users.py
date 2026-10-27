@@ -78,3 +78,25 @@ def test_delete_student_keeps_projects_and_cleans_their_rows(api, client):
 def test_admin_cannot_disable_or_delete_self(api, ids):
     assert api.call("admin", "PATCH", f"/admin/users/{ids['admin']}", json={"is_active": False}).status_code == 400
     assert api.call("admin", "DELETE", f"/admin/users/{ids['admin']}").status_code == 400
+
+
+# ---------------- I-30: favorites and settings live on the server ----------------
+
+def test_favorites_round_trip_and_isolation(api):
+    pid = api.make_project("company")
+    assert api.call("student", "PUT", f"/users/me/favorites/{pid}").status_code == 204
+    assert api.call("student", "PUT", f"/users/me/favorites/{pid}").status_code == 204   # idempotent
+    assert pid in api.call("student", "GET", "/users/me/favorites").json()
+    assert pid not in api.call("student2", "GET", "/users/me/favorites").json()
+    hidden = api.make_project("company2", status="pending")
+    assert api.call("student", "PUT", f"/users/me/favorites/{hidden}").status_code == 404
+    assert api.call("student", "DELETE", f"/users/me/favorites/{pid}").status_code == 204
+    assert pid not in api.call("student", "GET", "/users/me/favorites").json()
+    assert api.call("anon", "GET", "/users/me/favorites").status_code == 401
+
+
+def test_settings_round_trip(api):
+    assert api.call("student2", "GET", "/users/me/settings").json() == {"email_alerts": True, "milestone_reminders": True, "partnership_offers": True}
+    body = {"email_alerts": False, "milestone_reminders": True, "partnership_offers": False}
+    assert api.call("student2", "PUT", "/users/me/settings", json=body).json() == body
+    assert api.call("student2", "GET", "/users/me/settings").json() == body

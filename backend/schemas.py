@@ -113,6 +113,13 @@ class AdminPasswordReset(BaseModel):
     new_password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
 
 
+class UserSettings(BaseModel):
+    """تفضيلات الإشعارات المحفوظة في الخادم"""
+    email_alerts: bool = True
+    milestone_reminders: bool = True
+    partnership_offers: bool = True
+
+
 class UserSkillsUpdate(BaseModel):
     skills: str = Field(max_length=1000)
 

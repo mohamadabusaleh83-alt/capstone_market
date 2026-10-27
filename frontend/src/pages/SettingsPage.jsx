@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -32,6 +32,23 @@ export default function SettingsPage() {
   const [milestoneReminders, setMilestoneReminders] = useState(true);
   const [partnershipOffers, setPartnershipOffers] = useState(true);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  // تفضيلات الإشعارات محفوظة في الخادم (I-30)
+  useEffect(() => {
+    let active = true;
+    apiFetch('/users/me/settings')
+      .then(async (res) => {
+        if (!res.ok || !active) return;
+        const data = await res.json();
+        setEmailAlerts(Boolean(data.email_alerts));
+        setMilestoneReminders(Boolean(data.milestone_reminders));
+        setPartnershipOffers(Boolean(data.partnership_offers));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [apiFetch]);
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
@@ -73,8 +90,21 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSavePreferences = () => {
-    showToast(isRtl ? 'تم حفظ تفضيلات المنصة والإشعارات بنجاح' : 'Preferences saved successfully', 'success');
+  const handleSavePreferences = async () => {
+    try {
+      const res = await apiFetch('/users/me/settings', {
+        method: 'PUT',
+        body: JSON.stringify({
+          email_alerts: emailAlerts,
+          milestone_reminders: milestoneReminders,
+          partnership_offers: partnershipOffers
+        })
+      });
+      if (!res.ok) throw new Error('settings');
+      showToast(isRtl ? 'تم حفظ تفضيلات المنصة والإشعارات بنجاح' : 'Preferences saved successfully', 'success');
+    } catch {
+      showToast(isRtl ? 'تعذر حفظ التفضيلات' : 'Could not save preferences', 'error');
+    }
   };
 
   return (

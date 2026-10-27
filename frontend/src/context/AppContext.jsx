@@ -133,41 +133,52 @@ export function AppProvider({ children }) {
 
   const currentUserId = currentUser?.id;
 
-  // المفضلة - معزولة بنسبة 100% لكل مستخدم
-  const [favorites, setFavorites] = useState(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const user = localStorage.getItem('app_user_role');
-      const userId = user ? JSON.parse(user).id : 'guest';
-      const saved = localStorage.getItem(`favorites_${userId}`);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  // المفضلة محفوظة في الخادم لكل مستخدم (I-30) - تظهر على كل الأجهزة
+  const [favorites, setFavorites] = useState([]);
 
-  useEffect(() => {
+  const fetchFavorites = useCallback(async () => {
     if (!currentUserId) {
       setFavorites([]);
       return;
     }
     try {
-      const saved = localStorage.getItem(`favorites_${currentUserId}`);
-      setFavorites(saved ? JSON.parse(saved) : []);
-    } catch {
-      setFavorites([]);
-    }
-  }, [currentUserId]);
-
-  const toggleFavorite = useCallback((id) => {
-    setFavorites((prev) => {
-      const next = prev.includes(id) ? prev.filter((favId) => favId !== id) : [...prev, id];
-      if (typeof window !== 'undefined' && currentUserId) {
-        localStorage.setItem(`favorites_${currentUserId}`, JSON.stringify(next));
+      const res = await apiFetch('/users/me/favorites');
+      if (!res.ok) return;
+      let ids = await res.json();
+      // ترحيل لمرة واحدة للمفضلة التي حُفظت سابقاً في هذا المتصفح فقط
+      const key = `favorites_${currentUserId}`;
+      let local = [];
+      try {
+        local = JSON.parse(localStorage.getItem(key) || '[]');
+      } catch {
+        local = [];
       }
-      return next;
-    });
-  }, [currentUserId]);
+      for (const id of local.filter((x) => !ids.includes(x))) {
+        const put = await apiFetch(`/users/me/favorites/${id}`, { method: 'PUT' });
+        if (put.ok) ids = [...ids, id];
+      }
+      localStorage.removeItem(key);
+      setFavorites(ids);
+    } catch {
+      // keep the current list on network errors
+    }
+  }, [apiFetch, currentUserId]);
+
+  useEffect(() => {
+    fetchFavorites();
+  }, [fetchFavorites]);
+
+  const toggleFavorite = useCallback(async (id) => {
+    const isFavorite = favorites.includes(id);
+    setFavorites((prev) => (isFavorite ? prev.filter((x) => x !== id) : [...prev, id]));
+    try {
+      const res = await apiFetch(`/users/me/favorites/${id}`, { method: isFavorite ? 'DELETE' : 'PUT' });
+      if (!res.ok) throw new Error('favorite');
+    } catch {
+      setFavorites((prev) => (isFavorite ? [...prev, id] : prev.filter((x) => x !== id)));
+      showToast(isRtl ? 'تعذر تحديث المفضلة' : 'Could not update favorites', 'error');
+    }
+  }, [favorites, apiFetch, showToast, isRtl]);
 
   // مهارات الطالب - معزولة بنسبة 100% (الحساب الجديد يبدأ بـ 0 مهارات ونظيفة تماماً)
   const [userSkills, setUserSkills] = useState(() => {

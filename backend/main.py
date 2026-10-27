@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import uuid
 import logging
 from typing import List, Optional
@@ -44,6 +45,7 @@ with engine.connect() as conn:
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS website VARCHAR(255)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS industry VARCHAR(150)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS settings TEXT",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS bio TEXT",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS portfolio_url VARCHAR(255)",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS course VARCHAR(100)",
@@ -2153,3 +2155,62 @@ def admin_delete_user(
     db.commit()
     storage.delete(cv_key)
     return None
+
+
+# ==========================================
+# المفضلة والإعدادات (محفوظة في الخادم) - I-30
+# ==========================================
+
+@app.get("/users/me/favorites", response_model=List[int])
+@app.get("/api/users/me/favorites", response_model=List[int])
+def list_my_favorites(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """معرّفات المشاريع المفضلة للمستخدم الحالي"""
+    rows = db.query(models.Favorite.project_id).filter(models.Favorite.user_id == current_user.id).order_by(models.Favorite.id).all()
+    return [r[0] for r in rows]
+
+
+@app.put("/users/me/favorites/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.put("/api/users/me/favorites/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+def add_my_favorite(project_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """إضافة مشروع للمفضلة (عملية متكررة آمنة) - فقط لمشروع يحق للمستخدم رؤيته"""
+    visible = visible_projects_query(db.query(models.Project), current_user).filter(models.Project.id == project_id).first()
+    if not visible:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="المشروع المطلوب غير موجود")
+    exists = db.query(models.Favorite).filter(models.Favorite.user_id == current_user.id, models.Favorite.project_id == project_id).first()
+    if not exists:
+        db.add(models.Favorite(user_id=current_user.id, project_id=project_id))
+        db.commit()
+    return None
+
+
+@app.delete("/users/me/favorites/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/api/users/me/favorites/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_my_favorite(project_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db.query(models.Favorite).filter(models.Favorite.user_id == current_user.id, models.Favorite.project_id == project_id).delete(synchronize_session=False)
+    db.commit()
+    return None
+
+
+def read_user_settings(user: models.User) -> schemas.UserSettings:
+    try:
+        return schemas.UserSettings(**json.loads(user.settings)) if user.settings else schemas.UserSettings()
+    except (ValueError, TypeError):
+        return schemas.UserSettings()
+
+
+@app.get("/users/me/settings", response_model=schemas.UserSettings)
+@app.get("/api/users/me/settings", response_model=schemas.UserSettings)
+def get_my_settings(current_user: models.User = Depends(get_current_user)):
+    return read_user_settings(current_user)
+
+
+@app.put("/users/me/settings", response_model=schemas.UserSettings)
+@app.put("/api/users/me/settings", response_model=schemas.UserSettings)
+def update_my_settings(
+    settings_in: schemas.UserSettings,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    current_user.settings = settings_in.model_dump_json()
+    db.commit()
+    return settings_in

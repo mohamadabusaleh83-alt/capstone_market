@@ -20,6 +20,8 @@ class User(Base):
     token_version = Column(Integer, nullable=False, default=0, server_default="0")
     # الحسابات المعطلة لا تستطيع الدخول وتُرفض توكناتها (I-47)
     is_active = Column(Boolean, nullable=False, default=True, server_default="true")
+    # تفضيلات الإشعارات وغيرها بصيغة JSON (I-30)
+    settings = Column(Text, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     profile = relationship("StudentProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -148,3 +150,14 @@ class Notification(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     user = relationship("User", back_populates="notifications")
+
+
+class Favorite(Base):
+    """المشاريع المفضلة لكل مستخدم - محفوظة في الخادم لتظهر على كل الأجهزة (I-30)"""
+    __tablename__ = "favorites"
+    __table_args__ = (UniqueConstraint("user_id", "project_id", name="uq_favorite_user_project"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())

@@ -7,22 +7,27 @@ const SRC = path.resolve(QA_DIR, '..', 'frontend', 'src');
 
 test.describe('data that lives only in localStorage', () => {
   test('favorites survive a login on another device', async ({ browser, request }) => {
+    // Phase 3 (I-30): favorites are stored on the server; the test now checks the API and a second
+    // browser context instead of localStorage keys.
+    const before = (await api(request, 'student', 'GET', '/users/me/favorites')).body;
+    for (const id of before) await api(request, 'student', 'DELETE', `/users/me/favorites/${id}`);
     const a = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     const pa = await a.newPage();
     await openAs(pa, request, 'student', '/projects', { lang: 'en' });
     await pa.locator('button[aria-label*="avorite"], button[title*="avorite"], button[title*="المفضلة"]').first().click();
-    const keys = await pa.evaluate(() => Object.keys(localStorage));
-    const fav = await pa.evaluate(() => Object.entries(localStorage).filter(([k]) => k.startsWith('favorites_')));
+    await settle(pa, 800);
+    const localKeys = await pa.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('favorites_')));
     await a.close();
+    const server = (await api(request, 'student', 'GET', '/users/me/favorites')).body;
 
     const b = await browser.newContext(); // "another device": fresh storage
     const pb = await b.newPage();
     await openAs(pb, request, 'student', '/projects?tab=favorites', { lang: 'en' });
-    const favAfter = await pb.evaluate(() => Object.entries(localStorage).filter(([k]) => k.startsWith('favorites_')));
+    const cards = await pb.locator('h3, h4').count();
     await b.close();
-    writeResult('favorites_device', { keysOnDeviceA: keys, favOnA: fav, favOnB: favAfter });
-    expect(fav.length, 'favorite click did not store anything').toBeGreaterThan(0);
-    expect(favAfter.length, 'favorites are localStorage-only: lost on a new device').toBeGreaterThan(0);
+    writeResult('favorites_device', { server, localKeys, cardsOnDeviceB: cards });
+    expect(server.length, 'favorite click did not reach the server').toBe(1);
+    expect(localKeys, 'favorites still kept in localStorage').toEqual([]);
   });
 
   test('skills and academic CV come back from the API on a new device', async ({ browser, request }) => {
