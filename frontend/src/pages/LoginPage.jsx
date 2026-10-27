@@ -118,14 +118,16 @@ export default function LoginPage() {
         <div className="flex items-center gap-3">
           <Link
             to="/about"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-[#2499F2] dark:hover:text-[#28C8C0] px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 hover:border-[#2499F2]/30 transition"
+            aria-label={t('auth.back_to_home', 'العودة للرئيسية')}
+            className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-[#2499F2] dark:hover:text-[#28C8C0] px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 hover:border-[#2499F2]/30 transition"
           >
             {isRtl ? (
               <ArrowRight className="w-3.5 h-3.5 text-[#28C8C0]" />
             ) : (
               <ArrowLeft className="w-3.5 h-3.5 text-[#28C8C0]" />
             )}
-            <span>{t('auth.back_to_home', 'العودة للرئيسية')}</span>
+            {/* على الهاتف: أيقونة فقط حتى لا يلتف النص على عدة أسطر */}
+            <span className="hidden sm:inline">{t('auth.back_to_home', 'العودة للرئيسية')}</span>
           </Link>
           <ThemeToggle />
           <LanguageSwitcher />
