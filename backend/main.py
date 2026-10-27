@@ -816,21 +816,34 @@ def format_application_item(app_item: models.Application, db: Session):
 def apply_to_project(
     application: schemas.ApplicationCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role(["student"]))
+    current_user: models.User = Depends(get_current_user)
 ):
     """تقديم طلب انضمام لمشروع بواسطة الطالب الحالي مع فحص المقاعد ومنع التقديم المتكرر"""
+    # التقديم للطلاب فقط (require_role يمرّر الأدمن دائماً، لذا نفحص الدور صراحةً)
+    if (current_user.role or "").lower() != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="التقديم على المشاريع متاح للطلاب فقط"
+        )
+
     project = db.query(models.Project).filter(models.Project.id == application.project_id).first()
     if not project:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="المشروع المطلوب غير موجود"
         )
 
-    # التحقق من أن المشروع معتمد
-    if project.status == "rejected":
+    # التقديم على المشاريع المعتمدة فقط
+    if project.status != "approved":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="لا يمكن التقديم على مشروع تم رفضه من قبل المشرف الأكاديمي"
+            detail="لا يمكن التقديم إلا على مشروع معتمد من المشرف الأكاديمي"
+        )
+
+    if project.created_by == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="لا يمكنك التقديم على مشروع قمت بإنشائه"
         )
 
     # التحقق من توفر مقاعد شاغرة في المشروع
