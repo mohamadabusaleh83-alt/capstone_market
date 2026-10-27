@@ -541,10 +541,10 @@ def change_my_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="كلمة المرور الحالية غير صحيحة"
         )
-    if len(pwd_data.new_password.strip()) < 6:
+    if len(pwd_data.new_password.strip()) < schemas.PASSWORD_MIN_LENGTH:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="يجب أن تتكون كلمة المرور الجديدة من 6 خانات على الأقل"
+            detail="يجب أن تتكون كلمة المرور الجديدة من 8 خانات على الأقل"
         )
     current_user.password_hash = utils.hash_password(pwd_data.new_password.strip())
     # إبطال كل التوكنات القديمة وإصدار توكن جديد للجلسة الحالية

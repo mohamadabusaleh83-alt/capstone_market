@@ -39,8 +39,8 @@ export default function SettingsPage() {
       showToast(isRtl ? 'كلمة المرور الجديدة غير متطابقة!' : 'New passwords do not match!', 'error');
       return;
     }
-    if (newPassword.length < 6) {
-      showToast(isRtl ? 'يجب أن لا تقل كلمة المرور عن 6 خانات' : 'Password must be at least 6 characters', 'error');
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      showToast(isRtl ? 'يجب أن تتكون كلمة المرور من 8 إلى 128 حرفاً' : 'Password must be 8 to 128 characters', 'error');
       return;
     }
 

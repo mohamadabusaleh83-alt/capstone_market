@@ -58,8 +58,12 @@ export default function LoginPage() {
         setAuthError(t('auth.password_mismatch', 'كلمة المرور وتأكيدها غير متطابقين'));
         return;
       }
-      if (authPassword.length < 6) {
-        setAuthError(isRtl ? 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل' : 'Password must be at least 6 characters');
+      if (authPassword.length < 8 || authPassword.length > 128) {
+        setAuthError(isRtl ? 'يجب أن تتكون كلمة المرور من 8 إلى 128 حرفاً' : 'Password must be 8 to 128 characters');
+        return;
+      }
+      if (authFullName.trim().length < 2) {
+        setAuthError(isRtl ? 'يرجى إدخال الاسم الكامل (حرفان على الأقل)' : 'Please enter your full name (at least 2 characters)');
         return;
       }
     }

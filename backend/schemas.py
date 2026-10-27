@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, EmailStr, ConfigDict, Field
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 
 
 # ==========================================
@@ -8,11 +8,20 @@ from pydantic import BaseModel, EmailStr, ConfigDict, Field
 # ==========================================
 
 # الحدود القصوى تطابق أطوال أعمدة قاعدة البيانات حتى تُرفض المدخلات الطويلة بـ 422 بدلاً من خطأ 500
+PASSWORD_MIN_LENGTH = 8
+PASSWORD_MAX_LENGTH = 128
+
+
 class UserCreate(BaseModel):
-    full_name: str = Field(max_length=100)
+    full_name: str = Field(min_length=2, max_length=100)
     email: EmailStr = Field(max_length=120)
-    password: str = Field(max_length=128)
+    password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
     role: Optional[str] = Field(default="student", max_length=20)
+
+    @field_validator("full_name", mode="before")
+    @classmethod
+    def strip_full_name(cls, v):
+        return v.strip() if isinstance(v, str) else v
 
 
 class UserResponse(BaseModel):
@@ -66,7 +75,7 @@ class UserSkillsUpdate(BaseModel):
 
 class PasswordChangeRequest(BaseModel):
     current_password: str = Field(max_length=128)
-    new_password: str = Field(max_length=128)
+    new_password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
 
 
 # ==========================================
