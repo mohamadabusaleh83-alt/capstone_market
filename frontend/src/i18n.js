@@ -13,6 +13,8 @@ export const updateDocumentDirection = (lang) => {
   const isRtl = lang === 'ar';
   document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
   document.documentElement.lang = lang;
+  // عنوان الصفحة يتبع اللغة (I-27)
+  document.title = isRtl ? 'منصة مشاريع التخرج | Capstone Market' : 'Capstone Market | Graduation Projects Platform';
   
   if (isRtl) {
     document.documentElement.classList.add('font-arabic');

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { updateDocumentDirection } from '../i18n';
 import { useAuth } from './AuthContext';
 import { useTheme } from './ThemeContext';
 import { API_URL, INITIAL_FALLBACK_PROJECTS } from '../api/client';
@@ -75,8 +76,7 @@ export function AppProvider({ children }) {
     const handleLangChange = (lng) => {
       setCurrentLang(lng);
       if (typeof document !== 'undefined') {
-        document.documentElement.dir = lng === 'ar' ? 'rtl' : 'ltr';
-        document.documentElement.lang = lng;
+        updateDocumentDirection(lng);
       }
     };
     i18n.on('languageChanged', handleLangChange);
