@@ -108,7 +108,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         pwd_bytes = plain_password.encode("utf-8")[:72]
         return bcrypt.checkpw(pwd_bytes, hashed_password.encode("utf-8"))
     except Exception as e:
-        print(f"Error in verify_password: {e}")
+        logger.warning("verify_password failed: %s", type(e).__name__)
         return False
 
 
