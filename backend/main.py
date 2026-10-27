@@ -62,8 +62,8 @@ app = FastAPI(
     version="1.1.0"
 )
 
-# إعداد CORS للنطاقات المصرح لها
-ALLOWED_ORIGIN_REGEX = re.compile(r"https://.*\.vercel\.app")
+# إعداد CORS: الواجهة الإنتاجية وخوادم التطوير المحلية فقط، ويمكن إضافة نطاقات عبر ALLOWED_ORIGINS
+# (لا يوجد نمط عام مثل *.vercel.app: أي موقع على vercel.app كان مسموحاً)
 origins = [
     "https://capstone-market.vercel.app",
     "http://localhost:5173",
@@ -82,7 +82,6 @@ if env_origins:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=ALLOWED_ORIGIN_REGEX.pattern,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -95,7 +94,7 @@ os.makedirs(uploads_dir, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 def is_allowed_origin(origin: Optional[str]) -> bool:
-    return bool(origin) and (origin in origins or bool(ALLOWED_ORIGIN_REGEX.fullmatch(origin)))
+    return bool(origin) and origin in origins
 
 
 # معرّف فريد لكل طلب يُعاد في الترويسة X-Request-ID ويُسجّل مع أي خطأ لتسهيل التتبع
