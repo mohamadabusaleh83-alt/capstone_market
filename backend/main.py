@@ -460,10 +460,10 @@ def public_portfolio_url(profile: Optional[models.StudentProfile]) -> Optional[s
 
 
 @app.get("/users/me/profile", response_model=schemas.UserProfileResponse)
-@app.get("/profile", response_model=schemas.UserProfileResponse)
-@app.get("/users/me", response_model=schemas.UserProfileResponse)
-@app.get("/api/users/me", response_model=schemas.UserProfileResponse)
-@app.get("/api/users/me/profile", response_model=schemas.UserProfileResponse)
+@app.get("/profile", response_model=schemas.UserProfileResponse, include_in_schema=False)
+@app.get("/users/me", response_model=schemas.UserProfileResponse, include_in_schema=False)
+@app.get("/api/users/me", response_model=schemas.UserProfileResponse, include_in_schema=False)
+@app.get("/api/users/me/profile", response_model=schemas.UserProfileResponse, include_in_schema=False)
 def get_my_profile(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -473,10 +473,10 @@ def get_my_profile(
 
 
 @app.put("/users/me/profile", response_model=schemas.UserProfileResponse)
-@app.put("/profile", response_model=schemas.UserProfileResponse)
-@app.put("/users/me", response_model=schemas.UserProfileResponse)
-@app.put("/api/users/me", response_model=schemas.UserProfileResponse)
-@app.put("/api/users/me/profile", response_model=schemas.UserProfileResponse)
+@app.put("/profile", response_model=schemas.UserProfileResponse, include_in_schema=False)
+@app.put("/users/me", response_model=schemas.UserProfileResponse, include_in_schema=False)
+@app.put("/api/users/me", response_model=schemas.UserProfileResponse, include_in_schema=False)
+@app.put("/api/users/me/profile", response_model=schemas.UserProfileResponse, include_in_schema=False)
 def update_my_profile(
     profile_data: schemas.UserProfileUpdate,
     current_user: models.User = Depends(get_current_user),
