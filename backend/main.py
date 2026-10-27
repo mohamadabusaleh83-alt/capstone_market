@@ -722,9 +722,8 @@ def clean_skills(skills_str: Optional[str]) -> str:
     """تطهير وتوحيد مسميات المهارات والتقنيات المدخلة ومنع أي رموز مشوهة"""
     if not skills_str:
         return ""
-    import re
-    cleaned = re.sub(r'<spl', ', SQL', skills_str, flags=re.IGNORECASE)
-    parts = [s.strip().strip("'\"<>") for s in cleaned.split(',') if s.strip()]
+    # الفاصل هو الفاصلة؛ "<" يُعامل كفاصل أيضاً لأن بيانات قديمة خُزنت بصيغة "python<spl"
+    parts = [s.strip().strip("'\"<>") for s in re.split(r"[,<]", skills_str) if s.strip().strip("'\"<>")]
     normalized = []
     canonical_map = {
         'spl': 'SQL', 'sql': 'SQL',
@@ -1860,7 +1859,7 @@ def get_platform_analytics(db: Session = Depends(get_db)):
     skill_counts = {}
     for (skills_str,) in projects:
         if skills_str:
-            for s in skills_str.split(','):
+            for s in re.split(r"[,<]", skills_str):
                 s_clean = s.strip()
                 if s_clean:
                     skill_counts[s_clean] = skill_counts.get(s_clean, 0) + 1

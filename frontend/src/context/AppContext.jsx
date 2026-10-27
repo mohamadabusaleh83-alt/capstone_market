@@ -16,7 +16,7 @@ const CANONICAL_SKILL_MAP = {
 
 function normalizeSkill(s) {
   if (!s || typeof s !== 'string') return '';
-  const clean = s.trim().replace(/^['"<]+|['">]+$/g, '').replace(/<spl/gi, 'SQL');
+  const clean = s.trim().replace(/^['"<]+|['">]+$/g, '');
   const lower = clean.toLowerCase();
   if (!lower) return '';
   return CANONICAL_SKILL_MAP[lower] || (clean.charAt(0).toUpperCase() + clean.slice(1));
@@ -386,7 +386,7 @@ export function AppProvider({ children }) {
         if (Array.isArray(data)) {
           const formatted = data.map((p, idx) => {
             const rawSkillList = p.required_skills
-              ? p.required_skills.replace(/<spl/gi, ', SQL').split(',').map((s) => normalizeSkill(s)).filter(Boolean)
+              ? p.required_skills.split(/[,<]/).map((s) => normalizeSkill(s)).filter(Boolean)
               : ['Python', 'SQL', 'FastAPI', 'React'];
             const projectSkills = Array.from(new Set(rawSkillList));
 
