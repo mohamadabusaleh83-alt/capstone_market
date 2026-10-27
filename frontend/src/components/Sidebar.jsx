@@ -50,16 +50,7 @@ export default function Sidebar() {
     ? appFavorites
     : (Array.isArray(appSavedProjects) ? appSavedProjects : (currentUser?.saved_projects || []));
 
-  if (!currentUser) return null;
-
-  const pendingCount = applications.filter((app) => app.status === 'pending').length;
-  const pendingProjectsCount = rawProjects.filter((p) => p.status === 'pending').length;
-  const myApplicationsCount = applications.filter((a) => a.student_id === currentUser?.id).length;
-
-  const closeSidebarOnMobile = () => {
-    setIsSidebarOpen(false);
-  };
-
+  // (قبل أي return مبكر: ترتيب الـ hooks يجب أن يبقى ثابتاً)
   // منع تمرير محتوى الصفحة الخلفية أثناء فتح القائمة على الهواتف
   useEffect(() => {
     if (isSidebarOpen) {
@@ -71,6 +62,16 @@ export default function Sidebar() {
       document.body.style.overflow = 'unset';
     };
   }, [isSidebarOpen]);
+
+  if (!currentUser) return null;
+
+  const pendingCount = applications.filter((app) => app.status === 'pending').length;
+  const pendingProjectsCount = rawProjects.filter((p) => p.status === 'pending').length;
+  const myApplicationsCount = applications.filter((a) => a.student_id === currentUser?.id).length;
+
+  const closeSidebarOnMobile = () => {
+    setIsSidebarOpen(false);
+  };
 
   const handleLogout = () => {
     closeSidebarOnMobile();
