@@ -815,10 +815,12 @@ def format_application_item(app_item: models.Application, db: Session):
     project = db.query(models.Project).filter(models.Project.id == app_item.project_id).first()
     app_item.student_name = student.full_name if student else f"طالب #{app_item.student_id}"
     app_item.student_email = student.email if student else None
-    app_item.student_major = getattr(student, "major", None)
-    app_item.student_skills = getattr(student, "skills", None)
-    app_item.student_bio = getattr(student, "bio", None)
-    app_item.student_portfolio_url = getattr(student, "portfolio_url", None)
+    # بيانات التخصص والنبذة والسيرة الذاتية محفوظة في StudentProfile وليس في جدول المستخدمين
+    profile = student.profile if student else None
+    app_item.student_major = profile.major if profile else None
+    app_item.student_skills = (student.skills or (profile.skills if profile else None)) if student else None
+    app_item.student_bio = profile.bio if profile else None
+    app_item.student_portfolio_url = profile.portfolio_url if profile else None
     app_item.project_title = project.title if project else f"مشروع #{app_item.project_id}"
     app_item.company_name = (getattr(project, "company_name", None) or "شركة شريكة") if project else "شركة شريكة"
     app_item.feedback = getattr(app_item, "feedback", None)
