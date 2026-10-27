@@ -1188,19 +1188,14 @@ def update_application_status_alias(
 # ==========================================
 
 def check_project_access(project: models.Project, user: models.User, db: Session) -> bool:
-    """التحقق من أحقية المستخدم في الوصول لشات المشروع (المالك، المشرف، أو طالب لديه طلب بالمشروع)"""
-    user_role = (user.role or "").lower()
-    if user_role in ["supervisor", "admin"]:
+    """الوصول لشات المشروع: الأدمن، مالك المشروع، المشرف المسند إليه، والأعضاء المعتمدون أكاديمياً فقط"""
+    if (user.role or "").lower() == "admin":
         return True
     if project.created_by == user.id:
         return True
-    app = db.query(models.Application).filter(
-        models.Application.project_id == project.id,
-        models.Application.student_id == user.id
-    ).first()
-    if app:
+    if project.supervisor_id and project.supervisor_id == user.id:
         return True
-    return False
+    return is_approved_member(project.id, user.id, db)
 
 
 @app.post("/projects/{project_id}/messages", response_model=schemas.MessageResponse, status_code=status.HTTP_201_CREATED)
