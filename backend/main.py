@@ -925,6 +925,50 @@ def get_project_applications(
     return [format_application_item(a, db) for a in apps]
 
 
+# ==========================================
+# آلة حالات طلبات الانضمام (Application State Machine)
+# ==========================================
+
+COMPANY_ROLES = {"company", "partner", "business"}
+
+# الحالات التي تحجز مقعداً في المشروع
+SEAT_STATUSES = {"company_accepted", "academically_approved"}
+
+# توحيد الحالات القديمة أو المرادفة إلى مجموعة الحالات الرسمية
+LEGACY_STATUS_MAP = {
+    "pending": "applied",
+    "pending_academic_approval": "company_accepted",
+    "accepted": "academically_approved",
+    "approved": "academically_approved",
+}
+
+# الانتقالات المسموحة لكل طرف: {الحالة الحالية: {الحالات الجديدة المسموحة}}
+OWNER_TRANSITIONS = {
+    "applied": {"company_accepted", "rejected"},
+    "company_accepted": {"rejected"},
+}
+SUPERVISOR_TRANSITIONS = {
+    "applied": {"academically_approved", "rejected"},
+    "company_accepted": {"academically_approved", "rejected"},
+    "academically_approved": {"rejected"},
+}
+
+
+def normalize_application_status(value: Optional[str]) -> str:
+    value = (value or "").strip().lower()
+    return LEGACY_STATUS_MAP.get(value, value)
+
+
+def get_application_actor(project: Optional[models.Project], user: models.User) -> Optional[str]:
+    """تحديد صفة المستخدم في قرار الطلب: supervisor (مشرف/أدمن) أو owner (الشركة المالكة) أو None"""
+    user_role = (user.role or "").lower()
+    if user_role in ("supervisor", "admin"):
+        return "supervisor"
+    if project and project.created_by == user.id and user_role in COMPANY_ROLES:
+        return "owner"
+    return None
+
+
 @app.put("/applications/{id}/status", response_model=schemas.ApplicationResponse)
 @app.put("/api/applications/{id}/status", response_model=schemas.ApplicationResponse)
 def update_application_status(
@@ -934,168 +978,137 @@ def update_application_status(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """تحديث حالة الطلب (قبول/رفض) من الشركة أو المشرف مع حماية سعة المقاعد (PUT /applications/{id}/status)"""
+    """تحديث حالة الطلب عبر آلة حالات صريحة:
+    - الشركة المالكة: ترشيح (company_accepted) أو رفض فقط، وعلى مشاريعها فقط
+    - المشرف/الأدمن: اعتماد أكاديمي (academically_approved) أو رفض، مع فحص سعة المقاعد
+    - الطالب: لا يغيّر حالة أي طلب
+    """
     application = db.query(models.Application).filter(models.Application.id == id).first()
     if not application:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="طلب الانضمام غير موجود"
         )
 
     project = db.query(models.Project).filter(models.Project.id == application.project_id).first()
-    is_owner = project and project.created_by == current_user.id
-    is_supervisor_or_admin = (current_user.role or "").lower() in ["supervisor", "admin"]
-
-    if not (is_owner or is_supervisor_or_admin):
+    actor = get_application_actor(project, current_user)
+    if actor is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="ليس لديك الصلاحية لتغيير حالة هذا الطلب، فقط مالك المشروع أو المشرف يمكنه ذلك"
+            detail="ليس لديك الصلاحية لتغيير حالة هذا الطلب، فقط الشركة المالكة للمشروع أو المشرف الأكاديمي"
         )
 
-    new_status = None
-    feedback_text = None
-    if status_update:
-        if status_update.status:
-            new_status = status_update.status.strip().lower()
-        if status_update.feedback:
-            feedback_text = status_update.feedback.strip()
-    elif status_query:
-        new_status = status_query.strip().lower()
-
-    if not new_status:
+    requested = (status_update.status if status_update and status_update.status else status_query) or ""
+    feedback_text = status_update.feedback.strip() if status_update and status_update.feedback else None
+    if not requested.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="يرجى إرسال الحالة الجديدة للطلب"
         )
 
-    valid_statuses = [
-        "applied", "pending", "company_accepted", 
-        "pending_academic_approval", "academically_approved", 
-        "accepted", "rejected"
-    ]
-    if new_status not in valid_statuses:
+    # "accepted" يعني ترشيحاً عند الشركة واعتماداً أكاديمياً عند المشرف (للتوافق مع الواجهة الحالية)
+    if actor == "owner" and requested.strip().lower() == "accepted":
+        new_status = "company_accepted"
+    else:
+        new_status = normalize_application_status(requested)
+    current_status = normalize_application_status(application.status)
+
+    transitions = OWNER_TRANSITIONS if actor == "owner" else SUPERVISOR_TRANSITIONS
+    if new_status == current_status:
+        return format_application_item(application, db)
+    if new_status not in transitions.get(current_status, set()):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail=f"الحالة غير صالحة. الحالات المقبولة هي: {', '.join(valid_statuses)}"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"انتقال غير مسموح من الحالة '{current_status}' إلى '{new_status}'"
         )
 
-    student = db.query(models.User).filter(models.User.id == application.student_id).first()
-    proj_title = project.title if project else "المشروع"
+    if new_status == "academically_approved" and (not project or project.status != "approved"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="لا يمكن اعتماد الطلب أكاديمياً قبل اعتماد المشروع نفسه"
+        )
 
-    # تدفق الحالات حسب صلاحية المستخدم (شركة راعية أم مشرف أكاديمي)
-    if is_owner and not is_supervisor_or_admin:
-        # قرارات الشركة الراعية: ترشيح صناعي أو رفض
-        if new_status in ["accepted", "company_accepted", "pending_academic_approval"]:
-            current_accepted = get_project_accepted_members(application.project_id, db)
-            max_cap = project.max_members if (project and project.max_members) else 4
-            if current_accepted >= max_cap and application.status not in ["company_accepted", "accepted", "academically_approved"]:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"لا يمكن ترشيح الطلب، المقاعد مكتملة للمشروع ({current_accepted}/{max_cap})"
-                )
-            application.status = "company_accepted"
-            if feedback_text:
-                application.feedback = feedback_text
-
-            # إشعار الطالب بالترشيح الصناعي
-            create_notification(
-                db=db,
-                user_id=application.student_id,
-                title="ترشيح صناعي من الشركة! 🌟",
-                message=f"قامت الشركة باختيارك وترشيحك لمشروع: {proj_title}. الطلب الآن بانتظار الاعتماد الأكاديمي النهائي من المشرف.",
-                link=f"/projects/{application.project_id}"
+    # فحص السعة عند أي انتقال يحجز مقعداً جديداً (للشركة والمشرف على حد سواء)
+    if new_status in SEAT_STATUSES and current_status not in SEAT_STATUSES:
+        current_accepted = get_project_accepted_members(application.project_id, db)
+        max_cap = project.max_members if (project and project.max_members) else 4
+        if current_accepted >= max_cap:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"لا يمكن قبول الطلب، المقاعد مكتملة للمشروع ({current_accepted}/{max_cap})"
             )
 
-            # إشعار المشرفين بوجود ترشيح بانتظار الاعتماد الأكاديمي
-            supervisors = db.query(models.User).filter(models.User.role.in_(["supervisor", "admin"])).all()
-            for sup in supervisors:
-                create_notification(
-                    db=db,
-                    user_id=sup.id,
-                    title="طلب اعتماد أكاديمي معلق ⏳",
-                    message=f"قامت الشركة بترشيح الطالب {student.full_name if student else ''} لمشروع: {proj_title}. يرجى المراجعة والاعتماد الأكاديمي.",
-                    link="/supervisor"
-                )
-        elif new_status == "rejected":
-            application.status = "rejected"
-            if feedback_text:
-                application.feedback = feedback_text
-            create_notification(
-                db=db,
-                user_id=application.student_id,
-                title="تحديث حالة طلب الانضمام",
-                message=f"نعتذر، لم يتم اختيار طلبك لمشروع: {proj_title}. {f'ملاحظات: {feedback_text}' if feedback_text else ''}",
-                link="/browse"
-            )
-        else:
-            application.status = new_status
-            if feedback_text:
-                application.feedback = feedback_text
-
-    elif is_supervisor_or_admin:
-        # قرارات المشرف الأكاديمي: اعتماد أكاديمي نهائي وتفعيل مساحة العمل أو رفض
-        if new_status in ["accepted", "academically_approved", "approved"]:
-            application.status = "academically_approved"
-            if feedback_text:
-                application.feedback = feedback_text
-
-            # تفعيل المشروع وتعيين المشرف الحالي رسمياً
-            if project:
-                project.status = "approved"
-                project.supervisor_id = current_user.id
-                project.supervisor_name = current_user.full_name
-                if feedback_text:
-                    project.supervisor_feedback = feedback_text
-
-            # إشعار فوري للطالب بتفعيل مساحة العمل رسمياً
-            create_notification(
-                db=db,
-                user_id=application.student_id,
-                title="تم الاعتماد الأكاديمي رسمياً! 🎓",
-                message=f"اعتمد المشرف الأكاديمي {current_user.full_name} انضمامك لمشروع: {proj_title}. تم تفعيل مساحة العمل ومتابعة التقارير رسمياً!",
-                link="/workspace"
-            )
-
-            # إشعار الشركة بالاعتماد النهائي
-            if project and project.created_by:
-                create_notification(
-                    db=db,
-                    user_id=project.created_by,
-                    title="تم الاعتماد الأكاديمي للمشروع",
-                    message=f"اعتمد المشرف الأكاديمي {current_user.full_name} مشروع: {proj_title} والطالب {student.full_name if student else ''} رسمياً.",
-                    link=f"/projects/{project.id}"
-                )
-
-        elif new_status == "rejected":
-            application.status = "rejected"
-            if feedback_text:
-                application.feedback = feedback_text
-                if project:
-                    project.supervisor_feedback = feedback_text
-
-            create_notification(
-                db=db,
-                user_id=application.student_id,
-                title="قرار المشرف الأكاديمي بخصوص المشروع",
-                message=f"لم يتم الاعتماد الأكاديمي لطلبك في مشروع: {proj_title}. {f'ملاحظات المشرف: {feedback_text}' if feedback_text else ''}",
-                link="/browse"
-            )
-
-            if project and project.created_by:
-                create_notification(
-                    db=db,
-                    user_id=project.created_by,
-                    title="قرار الاعتماد الأكاديمي",
-                    message=f"رفض المشرف الأكاديمي الاعتماد لمشروع: {proj_title}. {f'الملاحظات: {feedback_text}' if feedback_text else ''}",
-                    link=f"/projects/{project.id}"
-                )
-        else:
-            application.status = new_status
-            if feedback_text:
-                application.feedback = feedback_text
-
+    application.status = new_status
+    if feedback_text:
+        application.feedback = feedback_text
+    # المشرف الذي يعتمد أول طالب يصبح المشرف المسند للمشروع (دون تغيير حالة المشروع)
+    if new_status == "academically_approved" and project and not project.supervisor_id:
+        project.supervisor_id = current_user.id
     db.commit()
     db.refresh(application)
+
+    student = db.query(models.User).filter(models.User.id == application.student_id).first()
+    student_name = student.full_name if student else ""
+    proj_title = project.title if project else "المشروع"
+    feedback_note = f"ملاحظات: {feedback_text}" if feedback_text else ""
+
+    if new_status == "company_accepted":
+        create_notification(
+            db=db,
+            user_id=application.student_id,
+            title="ترشيح صناعي من الشركة! 🌟",
+            message=f"قامت الشركة باختيارك وترشيحك لمشروع: {proj_title}. الطلب الآن بانتظار الاعتماد الأكاديمي النهائي من المشرف.",
+            link=f"/projects/{application.project_id}"
+        )
+        for sup in db.query(models.User).filter(models.User.role.in_(["supervisor", "admin"])).all():
+            create_notification(
+                db=db,
+                user_id=sup.id,
+                title="طلب اعتماد أكاديمي معلق ⏳",
+                message=f"قامت الشركة بترشيح الطالب {student_name} لمشروع: {proj_title}. يرجى المراجعة والاعتماد الأكاديمي.",
+                link="/supervisor"
+            )
+    elif new_status == "academically_approved":
+        create_notification(
+            db=db,
+            user_id=application.student_id,
+            title="تم الاعتماد الأكاديمي رسمياً! 🎓",
+            message=f"اعتمد المشرف الأكاديمي {current_user.full_name} انضمامك لمشروع: {proj_title}. تم تفعيل مساحة العمل ومتابعة التقارير رسمياً!",
+            link="/workspace"
+        )
+        if project and project.created_by and project.created_by != current_user.id:
+            create_notification(
+                db=db,
+                user_id=project.created_by,
+                title="تم الاعتماد الأكاديمي للمشروع",
+                message=f"اعتمد المشرف الأكاديمي {current_user.full_name} مشروع: {proj_title} والطالب {student_name} رسمياً.",
+                link=f"/projects/{project.id}"
+            )
+    elif new_status == "rejected" and actor == "owner":
+        create_notification(
+            db=db,
+            user_id=application.student_id,
+            title="تحديث حالة طلب الانضمام",
+            message=f"نعتذر، لم يتم اختيار طلبك لمشروع: {proj_title}. {feedback_note}",
+            link="/browse"
+        )
+    elif new_status == "rejected":
+        create_notification(
+            db=db,
+            user_id=application.student_id,
+            title="قرار المشرف الأكاديمي بخصوص المشروع",
+            message=f"لم يتم الاعتماد الأكاديمي لطلبك في مشروع: {proj_title}. {feedback_note}",
+            link="/browse"
+        )
+        if project and project.created_by and project.created_by != current_user.id:
+            create_notification(
+                db=db,
+                user_id=project.created_by,
+                title="قرار الاعتماد الأكاديمي",
+                message=f"رفض المشرف الأكاديمي الاعتماد لمشروع: {proj_title}. {feedback_note}",
+                link=f"/projects/{project.id}"
+            )
+
     return format_application_item(application, db)
 
 
