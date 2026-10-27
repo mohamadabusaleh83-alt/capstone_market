@@ -17,7 +17,7 @@ const ALLOWED = {
 const ALL = [...ROUTES.shared, ...ROUTES.student, ...ROUTES.company, ...ROUTES.supervisor];
 
 test.describe('login per role', () => {
-  for (const [role, landing] of [['student', '/dashboard'], ['company', '/dashboard'], ['supervisor', '/dashboard'], ['admin', '/dashboard']]) {
+  for (const [role, landing] of [['student', '/dashboard'], ['company', '/dashboard'], ['supervisor', '/supervisor'], ['admin', '/dashboard']]) {
     test(`UI login: ${role}`, async ({ page }) => {
       const log = watch(page);
       await loginViaUI(page, role);

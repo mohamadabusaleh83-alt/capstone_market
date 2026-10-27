@@ -33,7 +33,9 @@ export default function LoginPage() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname || '/dashboard';
+  // الوجهة المطلوبة قبل تسجيل الدخول إن وُجدت؛ وإلا صفحة البداية المناسبة للدور
+  const from = location.state?.from?.pathname || null;
+  const landingFor = (role) => (role === 'supervisor' ? '/supervisor' : '/dashboard');
 
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
   const [authRole, setAuthRole] = useState('student'); // 'student' | 'company' (supervisor is excluded from public registration)
@@ -46,7 +48,7 @@ export default function LoginPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   if (currentUser) {
-    return <Navigate to={from} replace />;
+    return <Navigate to={from && from !== '/login' ? from : landingFor(currentUser.role)} replace />;
   }
 
   const handleAuthSubmit = async (e) => {
@@ -85,7 +87,7 @@ export default function LoginPage() {
       }
       if (fetchProjects) fetchProjects();
       if (fetchApplications) fetchApplications();
-      const dest = from && from !== '/login' ? from : (userObj?.role === 'supervisor' ? '/supervisor' : '/dashboard');
+      const dest = from && from !== '/login' ? from : landingFor(userObj?.role);
       navigate(dest, { replace: true });
     } catch (err) {
       const friendlyMsg = formatFriendlyError(err);
