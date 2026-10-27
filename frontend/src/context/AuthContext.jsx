@@ -32,6 +32,10 @@ export function AuthProvider({ children }) {
       }
       localStorage.removeItem('token');
       localStorage.removeItem('app_user_role');
+      // لا تبقى قائمة مشاريع المستخدم السابق في هذا التبويب بعد الخروج (I-45)
+      Object.keys(sessionStorage)
+        .filter((k) => k.startsWith('capstone_projects_cache'))
+        .forEach((k) => sessionStorage.removeItem(k));
     }
     setCurrentUser(null);
     setIsRoleVerified(false);
