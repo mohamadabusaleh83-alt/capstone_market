@@ -37,6 +37,7 @@ import ManageStudentsPage from './pages/ManageStudentsPage';
 import ManageCompaniesPage from './pages/ManageCompaniesPage';
 import ManageCollaborationsPage from './pages/ManageCollaborationsPage';
 import ActivityLogsPage from './pages/ActivityLogsPage';
+import AdminUsersPage from './pages/AdminUsersPage';
 
 export default function App() {
   return (
@@ -119,6 +120,17 @@ export default function App() {
                 <Route path="/supervisor/reports" element={<ReportsPage />} />
                 <Route path="/manage/logs" element={<ActivityLogsPage />} />
                 <Route path="/teams" element={<TeamsHubPage />} />
+              </Route>
+
+              {/* 5. إدارة المستخدمين (الأدمن فقط) */}
+              <Route
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <MainLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/admin/users" element={<AdminUsersPage />} />
               </Route>
 
               {/* صفحة 404 لأي مسار غير معرّف داخل التطبيق */}

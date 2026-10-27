@@ -38,6 +38,7 @@ class UserResponse(BaseModel):
     portfolio_url: Optional[str] = None
     course: Optional[str] = None
     university: Optional[str] = None
+    is_active: bool = True
     created_at: Optional[datetime] = None
 
 
@@ -89,6 +90,27 @@ class UserProfileUpdate(BaseModel):
         if not v.lower().startswith(("http://", "https://")):
             raise ValueError("must be an http(s) URL")
         return v
+
+
+class AdminUserCreate(BaseModel):
+    """إنشاء حساب مشرف أكاديمي أو أدمن (للأدمن فقط)"""
+    full_name: str = Field(min_length=2, max_length=100)
+    email: EmailStr = Field(max_length=120)
+    password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
+    role: str = Field(max_length=20)
+
+    @field_validator("full_name", mode="before")
+    @classmethod
+    def strip_full_name(cls, v):
+        return v.strip() if isinstance(v, str) else v
+
+
+class AdminUserUpdate(BaseModel):
+    is_active: bool
+
+
+class AdminPasswordReset(BaseModel):
+    new_password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
 
 
 class UserSkillsUpdate(BaseModel):

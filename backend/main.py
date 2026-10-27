@@ -43,6 +43,7 @@ with engine.connect() as conn:
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS website VARCHAR(255)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS industry VARCHAR(150)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS bio TEXT",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS portfolio_url VARCHAR(255)",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS course VARCHAR(100)",
@@ -182,6 +183,8 @@ def user_from_token(token: Optional[str], db: Session) -> Optional[models.User]:
     if user is None:
         return None
     if int(payload.get("tv", 0) or 0) != (user.token_version or 0):
+        return None
+    if user.is_active is False:
         return None
     return user
 
@@ -370,6 +373,8 @@ def login(
             )
 
         ratelimit.LOGIN_ACCOUNT_LIMITER.reset(clean_username)
+        if user.is_active is False:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="هذا الحساب معطّل، يرجى التواصل مع إدارة المنصة")
         access_token = issue_token(user)
 
         return {"access_token": access_token, "token_type": "bearer"}
@@ -733,6 +738,7 @@ def format_user_item(u: models.User):
         portfolio_url=public_portfolio_url(prof),
         course=prof.course if prof else None,
         university=prof.university if prof else None,
+        is_active=u.is_active is not False,
         created_at=u.created_at
     )
 
@@ -2027,3 +2033,123 @@ def get_platform_analytics(db: Session = Depends(get_db)):
         approved_reports=approved_reports,
         top_skills=top_skills_list
     )
+
+
+# ==========================================
+# إدارة المستخدمين (للأدمن فقط) - I-47
+# ==========================================
+
+def require_admin(current_user: models.User = Depends(get_current_user)) -> models.User:
+    if (current_user.role or "").lower() != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="ليس لديك الصلاحية لتنفيذ هذا الإجراء")
+    return current_user
+
+
+def get_user_or_404(user_id: int, db: Session) -> models.User:
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="المستخدم غير موجود")
+    return user
+
+
+@app.get("/admin/users", response_model=List[schemas.UserResponse])
+@app.get("/api/admin/users", response_model=List[schemas.UserResponse])
+def admin_list_users(
+    response: Response,
+    role: Optional[str] = None,
+    q: Optional[str] = Query(None, max_length=120),
+    limit: int = Query(50, ge=1, le=PAGE_MAX_LIMIT),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(require_admin)
+):
+    """قائمة المستخدمين مع البحث بالاسم/البريد والفلترة بالدور والتقسيم"""
+    query = db.query(models.User)
+    if role:
+        r = role.strip().lower()
+        query = query.filter(models.User.role.in_(list(COMPANY_ROLES)) if r in COMPANY_ROLES else models.User.role == r)
+    if q and q.strip():
+        like = f"%{q.strip().lower()}%"
+        query = query.filter(or_(sa_func.lower(models.User.full_name).like(like), sa_func.lower(models.User.email).like(like)))
+    response.headers["X-Total-Count"] = str(query.count())
+    users = query.order_by(models.User.id.desc()).offset(offset).limit(limit).all()
+    return [format_user_item(u) for u in users]
+
+
+@app.post("/admin/users", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/api/admin/users", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
+def admin_create_user(
+    payload: schemas.AdminUserCreate,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(require_admin)
+):
+    """إنشاء حساب مشرف أكاديمي أو أدمن (لا يمكن إنشاؤهما بالتسجيل الذاتي)"""
+    role = payload.role.strip().lower()
+    if role not in ("supervisor", "admin"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="الدور غير صالح. الأدوار المسموحة: supervisor, admin")
+    email = payload.email.strip().lower()
+    if db.query(models.User).filter(models.User.email == email).first():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="البريد الإلكتروني مسجل مسبقاً لمستخدم آخر")
+    user = models.User(full_name=payload.full_name, email=email, password_hash=utils.hash_password(payload.password),
+                       role=role, skills="")
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return format_user_item(user)
+
+
+@app.patch("/admin/users/{user_id}", response_model=schemas.UserResponse)
+@app.patch("/api/admin/users/{user_id}", response_model=schemas.UserResponse)
+def admin_update_user(
+    user_id: int,
+    payload: schemas.AdminUserUpdate,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(require_admin)
+):
+    """تعطيل أو تفعيل حساب؛ التعطيل يُبطل كل توكنات الحساب"""
+    user = get_user_or_404(user_id, db)
+    if user.id == admin.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="لا يمكنك تعطيل أو حذف حسابك الخاص")
+    if user.is_active != payload.is_active:
+        user.is_active = payload.is_active
+        if not payload.is_active:
+            user.token_version = (user.token_version or 0) + 1
+        db.commit()
+        db.refresh(user)
+    return format_user_item(user)
+
+
+@app.post("/admin/users/{user_id}/reset-password")
+@app.post("/api/admin/users/{user_id}/reset-password")
+def admin_reset_password(
+    user_id: int,
+    payload: schemas.AdminPasswordReset,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(require_admin)
+):
+    """تعيين كلمة مرور جديدة لمستخدم وإبطال جلساته الحالية"""
+    user = get_user_or_404(user_id, db)
+    user.password_hash = utils.hash_password(payload.new_password)
+    user.token_version = (user.token_version or 0) + 1
+    db.commit()
+    return {"message": i18n.tr("تم تحديث كلمة المرور بنجاح")}
+
+
+@app.delete("/admin/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/api/admin/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(require_admin)
+):
+    """حذف حساب. المفاتيح الخارجية في قاعدة البيانات تحذف ملفه وطلباته وتقاريره ورسائله وإشعاراته،
+    وتجعل منشئ/مشرف مشاريعه فارغاً (المشاريع نفسها تبقى)."""
+    user = get_user_or_404(user_id, db)
+    if user.id == admin.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="لا يمكنك تعطيل أو حذف حسابك الخاص")
+    profile = db.query(models.StudentProfile).filter(models.StudentProfile.user_id == user.id).first()
+    cv_key = profile.cv_key if profile else None
+    db.query(models.User).filter(models.User.id == user.id).delete(synchronize_session=False)
+    db.commit()
+    storage.delete(cv_key)
+    return None

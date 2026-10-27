@@ -18,6 +18,8 @@ class User(Base):
     industry = Column(String(150), nullable=True)
     # يزداد عند تسجيل الخروج أو تغيير كلمة المرور فيُبطل كل التوكنات السابقة (I-19)
     token_version = Column(Integer, nullable=False, default=0, server_default="0")
+    # الحسابات المعطلة لا تستطيع الدخول وتُرفض توكناتها (I-47)
+    is_active = Column(Boolean, nullable=False, default=True, server_default="true")
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     profile = relationship("StudentProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
