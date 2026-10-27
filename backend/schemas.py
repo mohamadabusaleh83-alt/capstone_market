@@ -73,6 +73,13 @@ class UserProfileUpdate(BaseModel):
     university: Optional[str] = Field(default=None, max_length=150)
     skills: Optional[str] = Field(default=None, max_length=1000)
 
+    @field_validator("portfolio_url")
+    @classmethod
+    def check_portfolio_url(cls, v):
+        if v is None or not v.strip():
+            return v
+        return _http_url_or_none(v)
+
     @field_validator("website")
     @classmethod
     def check_website(cls, v):
@@ -97,25 +104,33 @@ class PasswordChangeRequest(BaseModel):
 # نماذج المشاريع (Project Schemas)
 # ==========================================
 
+MAX_MEMBERS_LIMIT = 10
+
+
 class ProjectCreate(BaseModel):
-    title: str = Field(max_length=150)
+    title: str = Field(min_length=1, max_length=150)
     description: Optional[str] = Field(default="", max_length=10000)
     required_skills: Optional[str] = Field(default="", max_length=1000)
-    max_members: Optional[int] = 4
+    max_members: Optional[int] = Field(default=4, ge=1, le=MAX_MEMBERS_LIMIT)
     category: Optional[str] = Field(default=None, max_length=100)
     stipend: Optional[str] = Field(default=None, max_length=100)
     # مقبول للتوافق مع الواجهة لكنه يُتجاهل: اسم الشركة يُشتق دائماً من حساب منشئ المشروع
     company_name: Optional[str] = Field(default=None, max_length=150)
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def strip_title(cls, v):
+        return v.strip() if isinstance(v, str) else v
 
 
 class ProjectOwnerUpdate(BaseModel):
     """ما يمكن لمالك المشروع تعديله. أي حقل آخر (supervisor_id، company_name، status...) يُرفض بـ 422"""
     model_config = ConfigDict(extra="forbid")
 
-    title: Optional[str] = Field(default=None, max_length=150)
+    title: Optional[str] = Field(default=None, min_length=1, max_length=150)
     description: Optional[str] = Field(default=None, max_length=10000)
     required_skills: Optional[str] = Field(default=None, max_length=1000)
-    max_members: Optional[int] = Field(default=None, ge=1)
+    max_members: Optional[int] = Field(default=None, ge=1, le=MAX_MEMBERS_LIMIT)
     category: Optional[str] = Field(default=None, max_length=100)
     stipend: Optional[str] = Field(default=None, max_length=100)
 
