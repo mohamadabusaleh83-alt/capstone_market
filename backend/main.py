@@ -38,6 +38,8 @@ with engine.connect() as conn:
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS skills TEXT DEFAULT ''",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS website VARCHAR(255)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS industry VARCHAR(150)",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS bio TEXT",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS portfolio_url VARCHAR(255)",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS course VARCHAR(100)",
@@ -428,6 +430,8 @@ def get_user_profile_response(user: models.User, db: Session) -> schemas.UserPro
         email=user.email,
         role=user.role,
         phone=user.phone,
+        website=user.website,
+        industry=user.industry,
         skills=user.skills or (profile.skills if profile else "") or "",
         major=profile.major if profile else None,
         bio=profile.bio if profile else None,
@@ -475,6 +479,10 @@ def update_my_profile(
         current_user.full_name = profile_data.full_name.strip()
     if profile_data.phone is not None:
         current_user.phone = profile_data.phone.strip()
+    if profile_data.website is not None:
+        current_user.website = profile_data.website.strip() or None
+    if profile_data.industry is not None:
+        current_user.industry = profile_data.industry.strip() or None
     if profile_data.skills is not None:
         sanitized_skills = clean_skills(profile_data.skills)
         current_user.skills = sanitized_skills

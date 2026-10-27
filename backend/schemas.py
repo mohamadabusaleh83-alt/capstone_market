@@ -49,6 +49,8 @@ class UserProfileResponse(BaseModel):
     email: str
     role: str
     phone: Optional[str] = None
+    website: Optional[str] = None
+    industry: Optional[str] = None
     skills: Optional[str] = ""
     major: Optional[str] = None
     bio: Optional[str] = None
@@ -62,12 +64,24 @@ class UserProfileResponse(BaseModel):
 class UserProfileUpdate(BaseModel):
     full_name: Optional[str] = Field(default=None, max_length=100)
     phone: Optional[str] = Field(default=None, max_length=50)
+    website: Optional[str] = Field(default=None, max_length=255)
+    industry: Optional[str] = Field(default=None, max_length=150)
     major: Optional[str] = Field(default=None, max_length=100)
     bio: Optional[str] = Field(default=None, max_length=5000)
     portfolio_url: Optional[str] = Field(default=None, max_length=255)
     course: Optional[str] = Field(default=None, max_length=100)
     university: Optional[str] = Field(default=None, max_length=150)
     skills: Optional[str] = Field(default=None, max_length=1000)
+
+    @field_validator("website")
+    @classmethod
+    def check_website(cls, v):
+        if v is None or not v.strip():
+            return v
+        v = v.strip()
+        if not v.lower().startswith(("http://", "https://")):
+            raise ValueError("must be an http(s) URL")
+        return v
 
 
 class UserSkillsUpdate(BaseModel):

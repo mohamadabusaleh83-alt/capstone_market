@@ -20,22 +20,14 @@ export default function ProfilePage() {
 
   const [fullName, setFullName] = useState(currentUser?.name || '');
   const [email] = useState(currentUser?.email || '');
-  const [phone, setPhone] = useState('+970 599 000 000');
-  const [university, setUniversity] = useState(
-    currentUser?.role === 'supervisor' ? 'جامعة القدس المفتوحة - فرع غزة' : 'جامعة القدس المفتوحة'
-  );
-  const [major, setMajor] = useState(
-    currentUser?.role === 'student' ? 'أنظمة المعلومات الحاسوبية (CIS)' : 'تكنولوجيا المعلومات وهندسة البرمجيات'
-  );
-  const [companyIndustry, setCompanyIndustry] = useState('حلول وتطوير البرمجيات والذكاء الاصطناعي');
-  const [companyWebsite, setCompanyWebsite] = useState('https://alnoor-tech.ps');
-  const [bio, setBio] = useState(
-    currentUser?.role === 'student'
-      ? 'طالب خريج مهتم بتطوير الأنظمة السحابية والذكاء الاصطناعي، وأسعى لبناء مشروع تخرج تطبيقي يحل مشكلة حقيقية لسوق العمل.'
-      : currentUser?.role === 'company'
-      ? 'شركة رائدة في تقديم الحلول البرمجية وتطوير النظم السحابية، ونسعى لاستقطاب المبدعين من مشاريع التخرج ورعايتهم.'
-      : 'أستاذ مشارك ومشرف أكاديمي لمشاريع التخرج، أركز على جودة النظم وأمن المعلومات وتطبيق المعايير الصناعية.'
-  );
+  // كل الحقول فارغة افتراضياً وتُملأ من /users/me/profile فقط (لا بيانات مختلقة)
+  const [phone, setPhone] = useState('');
+  const [university, setUniversity] = useState('');
+  const [major, setMajor] = useState('');
+  const [companyIndustry, setCompanyIndustry] = useState('');
+  const [companyWebsite, setCompanyWebsite] = useState('');
+  const [bio, setBio] = useState('');
+  const [loadError, setLoadError] = useState(false);
 
   const [newSkillInput, setNewSkillInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -48,11 +40,14 @@ export default function ProfilePage() {
           if (res && res.ok) {
             const data = await res.json();
             if (isMounted) {
+              setLoadError(false);
               if (data.full_name) setFullName(data.full_name);
-              if (data.phone) setPhone(data.phone);
-              if (data.university) setUniversity(data.university);
-              if (data.major) setMajor(data.major);
-              if (data.bio) setBio(data.bio);
+              setPhone(data.phone || '');
+              setUniversity(data.university || '');
+              setMajor(data.major || '');
+              setBio(data.bio || '');
+              setCompanyWebsite(data.website || '');
+              setCompanyIndustry(data.industry || '');
               if (data.skills) {
                 const sList = data.skills.split(',').map((s) => s.trim()).filter(Boolean);
                 if (sList.length > 0) setUserSkills(sList);
@@ -60,7 +55,9 @@ export default function ProfilePage() {
             }
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          if (isMounted) setLoadError(true);
+        });
     }
     return () => {
       isMounted = false;
@@ -101,26 +98,27 @@ export default function ProfilePage() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      if (apiFetch) {
-        const res = await apiFetch('/users/me/profile', {
-          method: 'PUT',
-          body: JSON.stringify({
-            full_name: fullName.trim(),
-            phone: phone.trim(),
-            university: university.trim(),
-            major: major.trim(),
-            bio: bio.trim(),
-            skills: userSkills.join(', ')
-          })
-        });
-        if (res && res.ok) {
-          showToast(isRtl ? 'تم حفظ بيانات الملف الشخصي بنجاح في قاعدة البيانات!' : 'Profile updated successfully!', 'success');
-          return;
-        }
+      const isCompany = currentUser?.role === 'company';
+      const res = await apiFetch('/users/me/profile', {
+        method: 'PUT',
+        body: JSON.stringify({
+          full_name: fullName.trim(),
+          phone: phone.trim(),
+          university: university.trim(),
+          major: major.trim(),
+          bio: bio.trim(),
+          skills: userSkills.join(', '),
+          ...(isCompany ? { website: companyWebsite.trim(), industry: companyIndustry.trim() } : {})
+        })
+      });
+      if (!res || !res.ok) {
+        const errData = res ? await res.json().catch(() => ({})) : {};
+        const detail = Array.isArray(errData.detail) ? errData.detail.map((d) => d.msg).join(', ') : errData.detail;
+        throw new Error(detail || (isRtl ? 'تعذر حفظ الملف الشخصي' : 'Could not save the profile'));
       }
-      showToast(isRtl ? 'تم حفظ بيانات الملف الشخصي محلياً بنجاح!' : 'Profile updated successfully!', 'success');
-    } catch {
-      showToast(isRtl ? 'تم حفظ بيانات الملف الشخصي محلياً' : 'Saved locally', 'info');
+      showToast(isRtl ? 'تم حفظ بيانات الملف الشخصي بنجاح' : 'Profile updated successfully!', 'success');
+    } catch (err) {
+      showToast(`${isRtl ? 'خطأ' : 'Error'}: ${err.message}`, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -128,6 +126,11 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200 max-w-5xl mx-auto">
+      {loadError && (
+        <div role="alert" className="p-3 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/30">
+          {isRtl ? 'تعذر تحميل بيانات الملف الشخصي من الخادم. يرجى إعادة المحاولة.' : 'Could not load your profile from the server. Please try again.'}
+        </div>
+      )}
       {/* مسار التنقل والترويسة */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200 dark:border-[#2499F2]/20">
         <div>
