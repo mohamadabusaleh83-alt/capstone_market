@@ -708,3 +708,170 @@ qa/
 ├── backend_server.log, frontend_server.log
 └── .venv/                       local Python env (gitignore it)
 ```
+
+
+---
+
+## 9. Fixes (phases 1-3)
+
+All work was done locally against throw-away PostgreSQL 16 databases (never production or Render), on the branches `fix/phase1-security` → `fix/phase2` → `fix/phase3`, each merged into local `main` after the pre-push gate passed. **Pushing failed (HTTP 403):** the git credentials on this machine (`jo04saleh`) have no write access to `mohamadabusaleh83-alt/capstone_market`, so `main` is merged locally but not on GitHub yet.
+
+### 9.1 Before / after
+
+| Check | Before (commit `8fe1f8b`) | After |
+|---|---|---|
+| API suite (pytest + httpx) | 148 passed / 82 failed (230 tests) | **258 passed / 0 failed (258 tests)** |
+| Permission matrix | 26/34 endpoints, 27 wrong cells | **34/34 endpoints, 0 wrong cells (238 calls)** |
+| E2E full business flow | 11/14 UI steps (report UI missing, students not notified) | **15/15 UI steps, 0 console errors, 0 HTTP errors** |
+| Other E2E specs (auth/routes, storage/meta/i18n, admin) | 11 passed / 16 failed (27) | **27 passed / 0 failed (27)** |
+| Page crawl | 21 of 39 combos, 5 variants: 146-156 px horizontal scroll on every logged-in page at 375 px, Arabic title/footer/notifications in English | **51 role×page combos × 8 variants (408): no horizontal scroll, no theme/dir errors, no console/HTTP errors, no untranslated text** (after one Settings fix) |
+| Fresh `pip install -r requirements.txt` + boot | fails (SQLAlchemy 2.1/psycopg, missing email-validator); 3.11 crashes on import | boots on **Python 3.14.0 and 3.11.18**, `/openapi.json` 200 |
+| ESLint (`frontend/src`) | 61 problems (3 errors) | **18 problems (1 React-Compiler advisory, 17 warnings)** |
+| `vite build` | passes | passes |
+
+The test suite grew from 230 to 258 API tests and 27 to 28 E2E tests. Test changes are described in each commit message and listed in 9.6.
+
+### 9.2 Issue status
+
+| Issue | Prio | Status | What changed | Commits |
+|---|---|---|---|---|
+| I-01 | 🔴 | ✅ fixed | No seeding on startup; `seed.py` refuses to run in production; demo inserts removed from `init_db.sql`. | `bb607c0`, `d66f025` |
+| I-02 | 🔴 | ✅ fixed | Explicit application state machine; companies only nominate/reject; company projects need a nomination before academic approval. | `023792c`, `51a524c` |
+| I-03 | 🔴 | ✅ fixed | Students can never decide applications; cannot apply to their own project. | `023792c` |
+| I-04 | 🔴 | ✅ fixed | Exact pins + `email-validator`, SQLAlchemy 2.0.55, psycopg2 forced in the URL; boots on 3.11 and 3.14. | `784f047` |
+| I-05 | 🔴 | ✅ fixed | Reports page for every role: students submit (link and/or private file), owners/assigned supervisors grade, approve, request changes, reject. | `f51409c` |
+| I-06 | 🟠 | ✅ fixed | `GET /users/` is supervisor/admin only. | `0053e1d` |
+| I-07 | 🟠 | ✅ fixed | Only approved members submit reports; only owner/assigned supervisor/admin review. | `ce58777` |
+| I-08 | 🟠 | ✅ fixed | Role-based project visibility with an optional token (anon: approved; student/company: approved + own; supervisor/admin: all). | `77be023`, `51a524c` |
+| I-09 | 🟠 | ✅ fixed | Chat restricted to approved members, owner, assigned supervisor, admin. | `7df3567` |
+| I-10 | 🟠 | ✅ fixed | `List` imported; `/openapi.json`, `/docs`, `/analytics/overview` return 200. | `d04131c` |
+| I-11 | 🟠 | ✅ fixed | Generic 500 with request id; no SQL/params/`str(exc)` in responses; `max_length` on inputs. | `c8e9022` |
+| I-12 | 🟠 | ✅ fixed | Capacity check for supervisors; approving an application no longer changes `project.status`. | `023792c` |
+| I-13 | 🟠 | ✅ fixed | Separate owner/supervisor update schemas; company name derived from creator; content edits send approved projects back to pending. | `31cdd69` |
+| I-14 | 🟠 | ✅ fixed | PDF magic bytes, 5 MB limit, students only, old file deleted, private Supabase storage with local fallback, signed short-lived links. | `7e8a085`, `a1366dd` |
+| I-15 | 🟠 | ✅ fixed | No `*.vercel.app` regex; production origin + localhost (+ `ALLOWED_ORIGINS`). | `e24c62b` |
+| I-16 | 🟠 | ✅ fixed | Chat notifies all participants except the sender; project status → owner; new pending project → supervisors. | `bff14a8` |
+| I-17 | 🟠 | ✅ fixed | Login rate-limited per IP and per account, registration per IP (429 + Retry-After). | `ba992e0` |
+| I-18 | 🟠 | ✅ fixed | Status update requires an explicit status. | `30093fd` |
+| I-19 | 🟠 | ✅ fixed | `token_version` revokes tokens on logout and password change. | `f55018c` |
+| I-20 | 🟠 | ✅ fixed | Password 8-128, full name 2-100 (stripped); frontend messages match. | `2c4ff31`, `8ce7b0a` |
+| I-21 | 🟠 | ✅ fixed | Applications modal per project, correct labels, Accept/Reject only when allowed, CV download. | `4d7fc18` |
+| I-22 | 🟠 | ✅ fixed | Profile loads/saves only real data; website/industry saved; errors shown. | `d25cc83` |
+| I-23 | 🟡 | ✅ fixed | Login back links go to `/about` (public). | `df6b702` |
+| I-24 | 🟡 | ✅ fixed | About 'Browse Projects' → sign-in, then `/projects`. | `4eb062d`, `cc84307` |
+| I-25 | 🟡 | ✅ fixed | Physical left/right classes for LTR inputs in RTL. | `9378ab8` |
+| I-26 | 🟡 | ✅ fixed | Back button icon-only on phones, no wrapping. | `98b8db4`, `cc84307` |
+| I-26b | 🟠 | ✅ fixed | Navbar fits at 375 px (no horizontal scroll on any page). | `9635f57` |
+| I-27 | 🟡 | ✅ fixed | Meta description, Open Graph/Twitter tags; title follows the language; doctype first. | `e5a0113` |
+| I-28 | 🟡 | ✅ fixed | Accept-Language on every call; bilingual API errors/notifications; Arabic-only UI strings moved to locale files. | `f27d7c1`, `10a0094`, `73478c5`, `f5411df` |
+| I-29 | 🟡 | ✅ fixed | No invented skills/category/difficulty/hours/free-status/supervisor/dates/IPs/fake projects/notifications; real CSV export. | `92e3719` |
+| I-30 | 🟡 | ✅ fixed | Favorites table + settings column with API; one-time migration of local favorites. | `2baa5ce`, `c143f28` |
+| I-31 | 🟡 | ✅ fixed | Server skills list always wins, even when empty. | `1e984b6` |
+| I-32 | 🟡 | ✅ fixed | Only students apply, only to approved projects, never their own. | `3cb04c9` |
+| I-33 | 🟡 | ✅ fixed | Notification links are real SPA routes; notifications are clickable. | `f27d7c1`, `45262b4` |
+| I-34 | 🟡 | ✅ fixed | Companies can open Collaboration Requests. | `336af47` |
+| I-35 | 🟡 | ✅ fixed | Admin has the full management menu + Users & Accounts. | `be843bd` |
+| I-36 | 🟡 | ✅ fixed | Role-gated pages wait for `/me` to confirm the role (retries on network errors). | `7659268` |
+| I-37 | 🟡 | ✅ fixed | Applicant profile fields from `student.profile`; teammates see team reports. | `b2c75cc` |
+| I-38 | 🟡 | ✅ fixed | Non-blank titles, `max_members` 1-10, http(s)-only URLs. | `32a308f` |
+| I-39 | 🟡 | ✅ fixed | Skills split on `,` and `<` (legacy data) without the `<spl` hack. | `7fec580` |
+| I-40 | 🟡 | ✅ fixed | New password kept exactly as typed. | `e9627ee` |
+| I-41 | 🟡 | ✅ fixed | API refuses to start without `SECRET_KEY` unless `DEV_INSECURE_KEY=1`. | `b9146cf` |
+| I-42 | 🟡 | ✅ fixed | `limit/offset` + `X-Total-Count` on projects and notifications; batched seat counts; incremental rendering / load more in the UI. | `af95664` |
+| I-43 | 🟡 | ✅ fixed | Supervisors land on `/supervisor`. | `dc4848f` |
+| I-44 | 🟡 | ✅ fixed | Chat button only for chat participants. | `3ac4ad4` |
+| I-45 | 🟡 | ✅ fixed | Projects cache cleared on logout. | `1949cbf` |
+| I-46 | 🟡 | ✅ fixed | Production API fallback only for the production domain; build warns without `VITE_API_URL`. | `a58d469`, `305465c` |
+| I-47 | 🟡 | ✅ fixed | Admin users API + page (list/search, create supervisor/admin, enable/disable, reset password, delete); `users.is_active`. | `500edf0` |
+| I-48 | 🟡 | ✅ fixed | `notifications.project_id`; deleting a project deletes its notifications. | `f27d7c1` |
+| I-49 | ⚪ | ✅ fixed | nosniff, X-Frame-Options, Referrer-Policy, HSTS, CSP (except Swagger pages). | `211d444` |
+| I-50 | ⚪ | ✅ fixed | `backend/uploads/` and QA artifacts in `.gitignore`. | `f4f9927` |
+| I-51 | ⚪ | ✅ fixed | Missing `/api` aliases added. | `340be6f` |
+| I-52 | ⚪ | ✅ fixed | Shadowed duplicate route and all demo-login code removed. | `c28ffb9` |
+| I-53 | ⚪ | ⏭️ skipped | Skipped as requested (httpOnly cookie for the JWT). | — |
+| I-54 | ⚪ | ✅ fixed | `verify_password` logs instead of printing. | `072ee7c` |
+| I-55 | ⚪ | ✅ fixed | `/users/me/profile` documented; aliases kept but hidden from OpenAPI. | `8ed0cf1` |
+| I-56 | ⚪ | ⏭️ skipped | Skipped as requested (Alembic). Startup migrations stay additive: only `ADD COLUMN IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS` and new tables. | — |
+| I-57 | ⚪ | ✅ fixed | render.yaml / `.python-version` = 3.14.0, code boots on 3.11 too. | `784f047` |
+| I-58 | ⚪ | ✅ fixed | Supervisors manage unassigned or own projects only (admin: all); UI hides actions elsewhere. | `51a524c` |
+| I-59 | ⚪ | ✅ fixed | Notification polling paused while the tab is hidden. | `86045a6` |
+| I-60 | ⚪ | ✅ fixed | Stray `tatusgit status` file deleted. | `642b760` |
+| NEW-1 | 🟡 | ✅ fixed | Sidebar hook order fixed (useEffect after an early return). | `e8f3c6a` |
+
+### 9.3 Environment variables to set
+
+**Render (backend service):**
+
+| Variable | Value | Status |
+|---|---|---|
+| `SECRET_KEY` | random, at least 32 characters | already generated by render.yaml (`generateValue`). **Now required in every environment**: the API refuses to start without it (I-41). Never set `DEV_INSECURE_KEY` in a deployment. |
+| `ENVIRONMENT` | `production` | already in render.yaml |
+| `DATABASE_URL` | from the Render database | unchanged (the code now forces the psycopg2 driver) |
+| `ALLOWED_ORIGINS` | `https://capstone-market.vercel.app` (comma-separate any other frontend domains, e.g. a custom domain) | already set. **Vercel preview URLs are no longer allowed automatically** (I-15). |
+| `SUPABASE_URL` | `https://<project>.supabase.co` | **new**: CV/report file storage (I-14). Without it files go to the Render disk, which is wiped on every deploy. |
+| `SUPABASE_SERVICE_KEY` | the project's `service_role` key | **new**, secret |
+| `SUPABASE_STORAGE_BUCKET` | `capstone-files` | **new** (default). Create it as a **private** bucket. |
+| `PYTHON_VERSION` | `3.14.0` | set in render.yaml and `backend/.python-version`. If the dashboard has its own `PYTHON_VERSION`, it overrides both; check it. |
+| `LOGIN_IP_RATE_LIMIT`, `LOGIN_IP_RATE_WINDOW`, `LOGIN_ACCOUNT_FAILURE_LIMIT`, `LOGIN_ACCOUNT_FAILURE_WINDOW`, `REGISTER_RATE_LIMIT`, `REGISTER_RATE_WINDOW` | optional (defaults 30/300 s, 5/900 s, 10/3600 s) | new, optional |
+
+**Vercel (frontend):**
+
+| Variable | Value | Status |
+|---|---|---|
+| `VITE_API_URL` | `https://capstone-market.onrender.com` | **set it for Production and Preview.** Without it only `capstone-market.vercel.app` falls back to the production API; any other host makes no API calls (I-46). |
+
+### 9.4 Manual steps in production
+
+1. **Push**: give `jo04saleh` write access (or push from the owner account): `git push origin main`.
+2. **Create the first admin.** There is no admin in production and the API never creates one. With `DATABASE_URL` pointing at production, run `python -c "import utils;print(utils.hash_password('<strong password>'))"` from `backend/` with `DEV_INSECURE_KEY=1` (it only hashes). Then `INSERT INTO users (full_name,email,password_hash,role) VALUES ('<name>','<email>','<hash>','admin');`. After that, create supervisors from **Admin → Users & Accounts**.
+3. **Disable or delete the four public demo accounts** (`osama.merhi@capstone.ps`, `omarie@qou.edu`, `student@capstone.ps`, `company@capstone.ps`; see `qa/find_demo_data.sql` §1) from the Users page. The code no longer recreates them, but it does not delete existing rows.
+4. **Create the Supabase project and private bucket `capstone-files`**, and set the three `SUPABASE_*` variables before deploying.
+5. **CVs uploaded before this release are gone** (they lived on Render's disk). Old `/uploads/...` links are hidden from the API; students need to re-upload. Ask them to.
+6. Optionally run `qa/find_demo_data.sql` (read-only) and decide what test data to remove.
+7. Check the Render build log line "Using Python version …".
+8. No manual migration is needed. On startup the API adds columns `users.token_version/website/industry/is_active/settings`, `student_profiles.cv_key`, `reports.file_key` and `notifications.title_en/message_en/project_id` (+ index), and creates the `favorites` table, all with `IF NOT EXISTS` and defaults. Existing tokens keep working (`token_version` defaults to 0).
+
+### 9.5 Behaviour changes users will notice
+
+- **Logging out signs the account out on every device**, and so does changing the password (the current tab gets a new token).
+- **A company's Accept is a nomination**; a supervisor must still give academic approval.
+  - On company projects, the supervisor can approve only after the nomination.
+  - On supervisor or student projects, the supervisor approves directly.
+- **Supervisors act only on unassigned projects or their own.** The first supervisor to approve a project (or its first applicant) becomes its assigned supervisor. Admin can act on everything.
+- **Students now see their own pending and rejected proposals.**
+- **An invalid or expired token on the public project list is treated as an anonymous visitor.**
+- **Repeating an application's current status is a no-op (200).**
+- **Legacy `accepted` applications are treated as academically approved.**
+- **Preview deployments need `VITE_API_URL` and an `ALLOWED_ORIGINS` entry.**
+
+### 9.6 QA test changes (why)
+
+Every change is explained in its commit. In short:
+- **Wrong assumptions in my own tests:** `#` comments counted as unpinned requirements; settings, CV-cleanup and report-visibility tests assumed a pristine database.
+- **Expectations that changed by design:**
+  - the anonymous "deny" for hidden projects is now 404;
+  - supervisor approval of an un-nominated company application is now 4xx;
+  - CV upload is students-only and uses private storage;
+  - the login rate-limit test uses a throwaway account;
+  - token-minting tests sign with the QA key;
+  - `/reports` is a shared route, and `/collaboration-requests` is open to companies;
+  - the login back link targets `/about`, and visitors go through sign-in;
+  - supervisors land on `/supervisor`;
+  - the tamper test checks that no supervisor content renders;
+  - favorites are checked on the server.
+- **New tests:**
+  - admin users;
+  - favorites and settings;
+  - report files;
+  - rate limits (in-process);
+  - Supabase storage (mocked);
+  - English errors and notifications, and deleting a project removes its notifications;
+  - academic-approval paths and supervisor scope;
+  - E2E admin page.
+
+### 9.7 Known limitations
+
+- The rate limiter is in-memory, so it is per API instance.
+- Supabase was tested against a mocked API, not a real project.
+- Pagination: the dashboards still load the full (paged) project list for their statistics.
+- One React Compiler advisory remains in `MyProjectsPage.jsx` ("existing memoization could not be preserved"). It is not a runtime error.
