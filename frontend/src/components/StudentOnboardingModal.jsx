@@ -99,8 +99,8 @@ export default function StudentOnboardingModal() {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      showToast(isRtl ? 'حجم الملف يجب ألا يتجاوز 10 ميغابايت' : 'File size cannot exceed 10MB', 'error');
+    if (file.size > 5 * 1024 * 1024) {
+      showToast(isRtl ? 'حجم الملف يجب ألا يتجاوز 5 ميغابايت' : 'File size cannot exceed 5 MB', 'error');
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -388,7 +388,7 @@ export default function StudentOnboardingModal() {
                       {isRtl ? 'أو ارفع ملف السيرة الذاتية (PDF)' : 'Or upload CV file (PDF)'}
                     </span>
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">Max 10MB</span>
+                  <span className="text-[10px] text-slate-400 font-mono">Max 5MB</span>
                 </label>
               ) : (
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300">

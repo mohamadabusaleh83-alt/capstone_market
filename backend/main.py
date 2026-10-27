@@ -1,14 +1,12 @@
 import os
 import re
 import uuid
-import shutil
 import logging
 from typing import List, Optional
 from datetime import datetime
 
 from fastapi import FastAPI, Depends, HTTPException, Query, Request, status, UploadFile, File
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import ValidationError
@@ -17,6 +15,7 @@ from sqlalchemy import text, or_
 
 import models
 import ratelimit
+import storage
 import schemas
 import utils
 from database import engine, get_db
@@ -43,6 +42,7 @@ with engine.connect() as conn:
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS portfolio_url VARCHAR(255)",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS course VARCHAR(100)",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS university VARCHAR(150)",
+        "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS cv_key VARCHAR(255)",
         "ALTER TABLE applications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         "ALTER TABLE applications ADD COLUMN IF NOT EXISTS feedback TEXT",
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_student_app ON applications (project_id, student_id)",
@@ -88,10 +88,7 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
-# تهيئة مجلد الرفع وخدمة الملفات الثابتة (مثل ملفات PDF للسيرة الذاتية)
-uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
-os.makedirs(uploads_dir, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+# الملفات (السير الذاتية والتقارير) لا تُخدم كملفات ثابتة عامة: التنزيل عبر روابط موقّعة قصيرة الأجل (storage.py)
 
 def is_allowed_origin(origin: Optional[str]) -> bool:
     return bool(origin) and origin in origins
@@ -433,11 +430,20 @@ def get_user_profile_response(user: models.User, db: Session) -> schemas.UserPro
         skills=user.skills or (profile.skills if profile else "") or "",
         major=profile.major if profile else None,
         bio=profile.bio if profile else None,
-        portfolio_url=profile.portfolio_url if profile else None,
+        portfolio_url=public_portfolio_url(profile),
         course=profile.course if profile else None,
         university=profile.university if profile else None,
+        has_cv=bool(profile and profile.cv_key),
         created_at=user.created_at
     )
+
+
+def public_portfolio_url(profile: Optional[models.StudentProfile]) -> Optional[str]:
+    """رابط الأعمال الخارجي فقط؛ المسارات القديمة /uploads/... كانت ملفات عامة على قرص Render ولم تعد متاحة"""
+    url = profile.portfolio_url if profile else None
+    if url and url.startswith("/uploads/"):
+        return None
+    return url
 
 
 @app.get("/users/me/profile", response_model=schemas.UserProfileResponse)
@@ -514,6 +520,41 @@ def update_my_skills(
     return get_user_profile_response(current_user, db)
 
 
+CV_MAX_BYTES = 5 * 1024 * 1024
+
+
+async def read_upload_limited(file: UploadFile, max_bytes: int) -> bytes:
+    data = await file.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"حجم الملف يتجاوز الحد المسموح ({max_bytes // (1024 * 1024)} ميغابايت)"
+        )
+    return data
+
+
+def store_file_or_503(key: str, data: bytes, content_type: str) -> None:
+    try:
+        storage.save(key, data, content_type)
+    except storage.StorageError:
+        logger.error("File storage failed for %s", key, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="تعذر حفظ الملف حالياً، يرجى المحاولة لاحقاً"
+        )
+
+
+def signed_url_or_503(key: str) -> str:
+    try:
+        return storage.signed_url(key)
+    except storage.StorageError:
+        logger.error("Could not sign URL for %s", key, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="تعذر تجهيز رابط التنزيل حالياً، يرجى المحاولة لاحقاً"
+        )
+
+
 @app.post("/users/me/cv-upload")
 @app.post("/api/users/me/cv-upload")
 async def upload_student_cv(
@@ -521,35 +562,76 @@ async def upload_student_cv(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """رفع ملف السيرة الذاتية (PDF) وتحديث رابط الملف الشخصي للمستخدم الحالي"""
-    if not file.filename.lower().endswith(".pdf"):
+    """رفع السيرة الذاتية (PDF حتى 5 ميغابايت) للطلاب فقط، في تخزين خاص مع حذف الملف السابق"""
+    if (current_user.role or "").lower() != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="رفع السيرة الذاتية متاح للطلاب فقط"
+        )
+    data = await read_upload_limited(file, CV_MAX_BYTES)
+    if not (file.filename or "").lower().endswith(".pdf") or not data.startswith(storage.PDF_MAGIC):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="صيغة الملف غير مدعومة، يرجى رفع ملف بصيغة PDF فقط."
+            detail="صيغة الملف غير مدعومة، يرجى رفع ملف PDF صالح فقط."
         )
 
-    cvs_dir = os.path.join(uploads_dir, "cvs")
-    os.makedirs(cvs_dir, exist_ok=True)
-    safe_filename = f"cv_{current_user.id}_{int(datetime.now().timestamp())}.pdf"
-    file_path = os.path.join(cvs_dir, safe_filename)
+    key = f"cvs/{current_user.id}/{uuid.uuid4().hex}.pdf"
+    store_file_or_503(key, data, "application/pdf")
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    portfolio_url = f"/uploads/cvs/{safe_filename}"
     profile = db.query(models.StudentProfile).filter(models.StudentProfile.user_id == current_user.id).first()
     if not profile:
         profile = models.StudentProfile(user_id=current_user.id)
         db.add(profile)
-    profile.portfolio_url = portfolio_url
+    old_key = profile.cv_key
+    profile.cv_key = key
     db.commit()
-    db.refresh(current_user)
+    if old_key and old_key != key:
+        storage.delete(old_key)
 
     return {
         "status": "success",
         "message": "تم رفع ملف السيرة الذاتية بنجاح",
-        "portfolio_url": portfolio_url
+        "has_cv": True
     }
+
+
+def can_view_student_cv(viewer: models.User, student_id: int, db: Session) -> bool:
+    """السيرة الذاتية: صاحبها، المشرف/الأدمن، أو شركة تقدّم الطالب لأحد مشاريعها"""
+    role = (viewer.role or "").lower()
+    if viewer.id == student_id or role in ("supervisor", "admin"):
+        return True
+    if role in COMPANY_ROLES:
+        return db.query(models.Application).join(
+            models.Project, models.Application.project_id == models.Project.id
+        ).filter(
+            models.Application.student_id == student_id,
+            models.Project.created_by == viewer.id
+        ).first() is not None
+    return False
+
+
+@app.get("/users/{user_id}/cv")
+def get_student_cv_link(
+    user_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """رابط تنزيل مؤقت (10 دقائق) للسيرة الذاتية لمن يملك صلاحية الاطلاع عليها"""
+    if not can_view_student_cv(current_user, user_id, db):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="ليس لديك الصلاحية للاطلاع على هذه السيرة الذاتية")
+    profile = db.query(models.StudentProfile).filter(models.StudentProfile.user_id == user_id).first()
+    if not profile or not profile.cv_key:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="لا توجد سيرة ذاتية مرفوعة")
+    return {"url": signed_url_or_503(profile.cv_key), "expires_in": storage.SIGNED_URL_TTL_SECONDS}
+
+
+@app.get("/files/{token}", include_in_schema=False)
+def download_local_file(token: str):
+    """تنزيل ملف من التخزين المحلي الاحتياطي عبر توكن موقّع قصير الأجل"""
+    path = storage.resolve_local_token(token)
+    if not path:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="الرابط غير صالح أو منتهي الصلاحية")
+    return FileResponse(path, filename=os.path.basename(path))
 
 
 @app.put("/users/me/password")
@@ -588,7 +670,7 @@ def format_user_item(u: models.User):
         phone=u.phone,
         major=prof.major if prof else None,
         bio=prof.bio if prof else None,
-        portfolio_url=prof.portfolio_url if prof else None,
+        portfolio_url=public_portfolio_url(prof),
         course=prof.course if prof else None,
         university=prof.university if prof else None,
         created_at=u.created_at
@@ -946,7 +1028,8 @@ def format_application_item(app_item: models.Application, db: Session):
     app_item.student_major = profile.major if profile else None
     app_item.student_skills = (student.skills or (profile.skills if profile else None)) if student else None
     app_item.student_bio = profile.bio if profile else None
-    app_item.student_portfolio_url = profile.portfolio_url if profile else None
+    app_item.student_portfolio_url = public_portfolio_url(profile)
+    app_item.student_has_cv = bool(profile and profile.cv_key)
     app_item.project_title = project.title if project else f"مشروع #{app_item.project_id}"
     app_item.company_name = (getattr(project, "company_name", None) or "شركة شريكة") if project else "شركة شريكة"
     app_item.feedback = getattr(app_item, "feedback", None)

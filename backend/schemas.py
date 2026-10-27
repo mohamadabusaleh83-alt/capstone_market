@@ -55,6 +55,7 @@ class UserProfileResponse(BaseModel):
     portfolio_url: Optional[str] = None
     course: Optional[str] = None
     university: Optional[str] = None
+    has_cv: bool = False
     created_at: Optional[datetime] = None
 
 
@@ -167,6 +168,7 @@ class ApplicationResponse(BaseModel):
     student_skills: Optional[str] = None
     student_bio: Optional[str] = None
     student_portfolio_url: Optional[str] = None
+    student_has_cv: bool = False
     project_title: Optional[str] = None
     company_name: Optional[str] = None
 

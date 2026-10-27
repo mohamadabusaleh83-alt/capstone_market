@@ -67,7 +67,8 @@ CASES = [
     ("PUT /users/me/skills", "PUT", "/users/me/skills", None, lambda c: {"json": {"skills": "Python"}}, ALL_AUTH),
     ("PUT /users/me/password (wrong current)", "PUT", "/users/me/password", None,
      lambda c: {"json": {"current_password": "nope", "new_password": "whatever123"}}, [U, X, X, X, X, X, X]),
-    ("POST /users/me/cv-upload", "POST", "/users/me/cv-upload", None, lambda c: cv_file(), ALL_AUTH),
+    # Phase 2 (I-14): CV upload is students-only (was allowed for every role)
+    ("POST /users/me/cv-upload", "POST", "/users/me/cv-upload", None, lambda c: cv_file(), [U, O, O, D, D, D, D]),
     ("GET /users/ (all users + emails/phones)", "GET", "/users/", None, None, [U, D, D, D, D, O, O]),
     ("GET /users/?role=student", "GET", "/users/?role=student", None, None, [U, D, D, D, D, O, O]),
     ("POST /projects/", "POST", "/projects/", None,

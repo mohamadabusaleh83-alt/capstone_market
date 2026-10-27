@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { ACADEMIC_MAJORS } from '../api/client';
-import { FileText, Award, CheckCircle, Sparkles } from 'lucide-react';
+import { FileText, Award, CheckCircle, Sparkles, Upload, Download } from 'lucide-react';
 
 export default function StudentCvPage() {
   const { t } = useTranslation();
@@ -13,6 +13,8 @@ export default function StudentCvPage() {
     studentCv,
     setStudentCv,
     saveStudentCv,
+    uploadMyCv,
+    openUserCv,
     userSkills,
     setShowSkillsModal,
     setIsOnboardingModalOpen,
@@ -20,6 +22,16 @@ export default function StudentCvPage() {
   } = useApp();
 
   const [cvUpdateMessage, setCvUpdateMessage] = useState('');
+  const [isUploadingCv, setIsUploadingCv] = useState(false);
+
+  const handleCvFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setIsUploadingCv(true);
+    await uploadMyCv(file);
+    setIsUploadingCv(false);
+  };
 
   const handleSaveCv = (e) => {
     e.preventDefault();
@@ -162,6 +174,29 @@ export default function StudentCvPage() {
                   {sk}
                 </span>
               ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-dashed border-slate-300 dark:border-[#2499F2]/30 p-3 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              {isRtl ? 'ملف السيرة الذاتية (PDF، حتى 5 ميغابايت)' : 'CV file (PDF, up to 5 MB)'}
+            </span>
+            <div className="flex items-center gap-2">
+              {studentCv.hasCv && currentUser?.id && (
+                <button
+                  type="button"
+                  onClick={() => openUserCv(currentUser.id)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-[#152550] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  {isRtl ? 'تنزيل سيرتي الذاتية' : 'Download my CV'}
+                </button>
+              )}
+              <label className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#2499F2] text-white cursor-pointer">
+                <Upload className="w-3.5 h-3.5" />
+                {isUploadingCv ? (isRtl ? 'جاري الرفع...' : 'Uploading...') : (studentCv.hasCv ? (isRtl ? 'استبدال الملف' : 'Replace file') : (isRtl ? 'رفع ملف PDF' : 'Upload PDF'))}
+                <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handleCvFile} disabled={isUploadingCv} />
+              </label>
             </div>
           </div>
 

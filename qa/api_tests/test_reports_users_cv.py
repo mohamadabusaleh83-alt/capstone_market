@@ -140,17 +140,31 @@ def test_skills_stored_on_create_project(api):
 
 
 # ---------------- CV upload ----------------
+# Phase 2 (I-14): CVs live in private storage (Supabase or backend/uploads/private locally) and are
+# downloaded through GET /users/{id}/cv -> short-lived signed URL. The original tests asserted the old
+# public /uploads/cvs/... layout and were rewritten for the new contract.
+
+PRIVATE_CVS = os.path.join(BACKEND_UPLOADS, "private", "cvs")
+
 
 def upload(api, role, name, data, ctype="application/pdf"):
     return api.call(role, "POST", "/users/me/cv-upload", files={"file": (name, io.BytesIO(data), ctype)})
 
 
-def test_cv_pdf_ok_and_stored_locally(api):
+def cv_files(user_id):
+    d = os.path.join(PRIVATE_CVS, str(user_id))
+    return os.listdir(d) if os.path.isdir(d) else []
+
+
+def test_cv_pdf_ok_and_stored_privately(api, ids, client):
     r = upload(api, "student", "cv.pdf", b"%PDF-1.4\n% qa\n")
-    assert r.status_code == 200
-    url = r.json()["portfolio_url"]
-    assert url.startswith("/uploads/cvs/")
-    assert os.path.exists(os.path.join(BACKEND_UPLOADS, "cvs", url.rsplit("/", 1)[1]))
+    assert r.status_code == 200 and r.json()["has_cv"] is True
+    assert "portfolio_url" not in r.json() or not str(r.json().get("portfolio_url", "")).startswith("/uploads/")
+    assert api.call("student", "GET", "/users/me/profile").json()["has_cv"] is True
+    assert cv_files(ids["student"]), "file not in private storage"
+    link = api.call("student", "GET", f"/users/{ids['student']}/cv").json()["url"]
+    body = client.get(link).content if link.startswith("/") else b""
+    assert body.startswith(b"%PDF-"), "signed link does not return the PDF"
 
 
 def test_cv_requires_auth(api):
@@ -168,23 +182,34 @@ def test_cv_rejects_non_pdf_content(api):
 
 
 def test_cv_size_limit(api):
-    big = b"%PDF-1.4\n" + b"0" * (12 * 1024 * 1024)
+    big = b"%PDF-1.4\n" + b"0" * (6 * 1024 * 1024)
     r = upload(api, "student", "big.pdf", big)
-    assert r.status_code in (400, 413), "12 MB CV accepted - no server-side size limit"
+    assert r.status_code in (400, 413), "6 MB CV accepted - limit is 5 MB"
 
 
-def test_cv_not_publicly_downloadable(api, client):
-    url = upload(api, "student", "cv.pdf", b"%PDF-1.4\n% private\n").json()["portfolio_url"]
-    r = client.get(url)
-    assert r.status_code in (401, 403, 404), f"CV downloadable without auth at {url}"
+def test_cv_not_publicly_downloadable(api, ids, client):
+    upload(api, "student", "cv.pdf", b"%PDF-1.4\n% private\n")
+    assert api.call("anon", "GET", f"/users/{ids['student']}/cv").status_code == 401
+    assert api.call("student2", "GET", f"/users/{ids['student']}/cv").status_code == 403
+    assert api.call("company2", "GET", f"/users/{ids['student']}/cv").status_code == 403
+    assert client.get(f"/uploads/cvs/cv_{ids['student']}_1.pdf").status_code == 404, "static /uploads still mounted"
+    assert client.get("/files/not-a-valid-token").status_code == 404
 
 
-def test_cv_upload_old_files_cleaned(api):
-    before = len(os.listdir(os.path.join(BACKEND_UPLOADS, "cvs")))
+def test_cv_visible_to_supervisor_and_applied_company(api, ids):
+    upload(api, "student", "cv.pdf", b"%PDF-1.4\n")
+    assert api.call("supervisor", "GET", f"/users/{ids['student']}/cv").status_code == 200
+    pid = api.make_project("company")
+    api.make_application("student", pid)
+    assert api.call("company", "GET", f"/users/{ids['student']}/cv").status_code == 200
+    rows = [a for a in api.call("company", "GET", "/applications/").json() if a["project_id"] == pid]
+    assert rows and rows[0]["student_has_cv"] is True
+
+
+def test_cv_upload_old_files_cleaned(api, ids):
     upload(api, "student2", "cv.pdf", b"%PDF-1.4\n")
     upload(api, "student2", "cv2.pdf", b"%PDF-1.4\n")
-    after = len(os.listdir(os.path.join(BACKEND_UPLOADS, "cvs")))
-    assert after - before <= 1, "every upload leaves a new orphan file; old CVs are never deleted"
+    assert len(cv_files(ids["student2"])) == 1, "old CV files are not deleted"
 
 
 def test_cv_upload_allowed_for_non_students(api):

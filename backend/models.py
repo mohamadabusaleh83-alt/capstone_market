@@ -44,6 +44,8 @@ class StudentProfile(Base):
     portfolio_url = Column(String(255), nullable=True)
     course = Column(String(100), nullable=True)
     university = Column(String(150), nullable=True)
+    # مفتاح ملف السيرة الذاتية في التخزين الخاص (لا رابط عام)
+    cv_key = Column(String(255), nullable=True)
 
     user = relationship("User", back_populates="profile")
 

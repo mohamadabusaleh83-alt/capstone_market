@@ -18,6 +18,13 @@ services:
         generateValue: true
       - key: ALLOWED_ORIGINS
         value: https://capstone-market.vercel.app
+      # private file storage for CVs and report files (Supabase Storage, private bucket)
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: capstone-files
 
 databases:
   - name: capstone-db

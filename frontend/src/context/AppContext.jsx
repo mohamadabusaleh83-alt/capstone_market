@@ -558,6 +558,7 @@ export function AppProvider({ children }) {
       const res = await apiFetch('/users/me/profile');
       if (res && res.ok) {
         const data = await res.json();
+        setStudentCv((prev) => ({ ...prev, hasCv: Boolean(data.has_cv) }));
         if (data.skills) {
           const sList = data.skills.split(',').map((s) => s.trim()).filter(Boolean);
           if (sList.length > 0) {
@@ -572,7 +573,8 @@ export function AppProvider({ children }) {
             major: data.major || 'أنظمة المعلومات الحاسوبية (CIS)',
             course: data.course || 'مشروع تخرج 1',
             portfolioUrl: data.portfolio_url || '',
-            bio: data.bio || ''
+            bio: data.bio || '',
+            hasCv: Boolean(data.has_cv)
           };
           setStudentCv(cvObj);
           if (typeof window !== 'undefined' && currentUserId) {
@@ -982,6 +984,50 @@ export function AppProvider({ children }) {
   }, [apiFetch, fetchReports, isRtl, showToast]);
 
   // ==========================================
+  // الملفات الخاصة (السيرة الذاتية وملفات التقارير): تُفتح عبر رابط موقّع قصير الأجل
+  // ==========================================
+  const openSignedFile = useCallback(async (endpoint) => {
+    try {
+      const res = await apiFetch(endpoint);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) {
+        throw new Error(data.detail || (isRtl ? 'تعذر فتح الملف' : 'Could not open the file'));
+      }
+      const url = data.url.startsWith('/') ? `${API_URL}${data.url}` : data.url;
+      window.open(url, '_blank', 'noopener');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }, [apiFetch, isRtl, showToast]);
+
+  const openUserCv = useCallback((userId) => openSignedFile(`/users/${userId}/cv`), [openSignedFile]);
+
+  const uploadMyCv = useCallback(async (file) => {
+    if (!file) return false;
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      showToast(isRtl ? 'يرجى اختيار ملف بصيغة PDF فقط' : 'Please choose a PDF file', 'error');
+      return false;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast(isRtl ? 'حجم الملف يجب ألا يتجاوز 5 ميغابايت' : 'File size cannot exceed 5 MB', 'error');
+      return false;
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await apiFetch('/users/me/cv-upload', { method: 'POST', body: formData });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || (isRtl ? 'تعذر رفع الملف' : 'Upload failed'));
+      setStudentCv((prev) => ({ ...prev, hasCv: true }));
+      showToast(isRtl ? 'تم رفع السيرة الذاتية بنجاح' : 'CV uploaded successfully', 'success');
+      return true;
+    } catch (err) {
+      showToast(err.message, 'error');
+      return false;
+    }
+  }, [apiFetch, isRtl, showToast]);
+
+  // ==========================================
   // حفظ السيرة الذاتية للطالب
   // ==========================================
   const saveStudentCv = useCallback((newCv) => {
@@ -1028,6 +1074,9 @@ export function AppProvider({ children }) {
         studentCv,
         setStudentCv,
         saveStudentCv,
+        openSignedFile,
+        openUserCv,
+        uploadMyCv,
         activeChatProject,
         setActiveChatProject,
         chatMessages,
