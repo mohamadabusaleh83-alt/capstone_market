@@ -211,9 +211,12 @@ def test_cv_visible_to_supervisor_and_applied_company(api, ids):
 
 
 def test_cv_upload_old_files_cleaned(api, ids):
+    # only count files this test creates (fresh QA databases reuse user ids, the folder persists)
+    before = set(cv_files(ids["student2"]))
     upload(api, "student2", "cv.pdf", b"%PDF-1.4\n")
     upload(api, "student2", "cv2.pdf", b"%PDF-1.4\n")
-    assert len(cv_files(ids["student2"])) == 1, "old CV files are not deleted"
+    new = set(cv_files(ids["student2"])) - before
+    assert len(new) == 1, f"old CV files are not deleted ({len(new)} new files kept)"
 
 
 def test_cv_upload_allowed_for_non_students(api):
