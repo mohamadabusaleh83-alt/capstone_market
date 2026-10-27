@@ -162,7 +162,16 @@ test.describe('i18n static analysis (no browser)', () => {
       if (!/\.jsx$/.test(e.name)) return;
       const src = fs.readFileSync(f, 'utf-8');
       const ternaries = (src.match(/isRtl\s*\?\s*['`"]/g) || []).length;
-      const arabicOnly = src.split('\n').filter((l) => /[؀-ۿ]/.test(l) && !/isRtl|t\(|\/\/|\{\/\*|\*/.test(l)).length;
+      // Arabic text that is NOT behind a language switch. Phase 3: also understands multi-line
+      // `isRtl ?` ternaries (Arabic branch on the next line), the language toggle's own labels
+      // (currentLang ===), substrings used to match server error text (.includes) and the internal
+      // 'الكل' category value whose visible label is translated.
+      const lines = src.split('\n');
+      const arabicOnly = lines.filter((l, i) => {
+        if (!/[؀-ۿ]/.test(l)) return false;
+        if (/isRtl|currentLang|t\(|\/\/|\{\/\*|\*|\.includes\(|'الكل'/.test(l)) return false;
+        return !/(isRtl|\?)\s*$/.test((lines[i - 1] || '').trim());
+      }).length;
       hard[path.relative(SRC, f)] = { isRtlTernaries: ternaries, arabicOnlyLines: arabicOnly };
     });
     walk2(SRC);

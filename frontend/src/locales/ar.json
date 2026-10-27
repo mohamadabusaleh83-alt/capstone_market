@@ -308,7 +308,8 @@
     "skills_placeholder": "Python, React, SQL",
     "max_members_label": "الحد الأقصى للمقاعد",
     "submit_btn": "تأكيد ونشر المشروع في الباك إند",
-    "saving": "جاري الحفظ في الخادم..."
+    "saving": "جاري الحفظ في الخادم...",
+    "btn_add": "إضافة مشروع"
   },
   "apply_project": {
     "modal_title": "تقديم طلب لـ: {{title}}",

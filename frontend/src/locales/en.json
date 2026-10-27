@@ -308,7 +308,8 @@
     "skills_placeholder": "Python, React, SQL",
     "max_members_label": "Maximum Team Seats",
     "submit_btn": "Publish Project to Backend",
-    "saving": "Saving to server..."
+    "saving": "Saving to server...",
+    "btn_add": "Add Project"
   },
   "apply_project": {
     "modal_title": "Submit Application for: {{title}}",
