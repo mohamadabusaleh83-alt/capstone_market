@@ -7,12 +7,14 @@ from datetime import datetime
 
 from fastapi import FastAPI, Depends, HTTPException, Query, Request, status, UploadFile, File
 from fastapi.responses import FileResponse, JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from sqlalchemy import text, or_
 
+import i18n_messages as i18n
 import models
 import ratelimit
 import storage
@@ -48,6 +50,10 @@ with engine.connect() as conn:
         "ALTER TABLE applications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         "ALTER TABLE applications ADD COLUMN IF NOT EXISTS feedback TEXT",
         "ALTER TABLE reports ADD COLUMN IF NOT EXISTS file_key VARCHAR(255)",
+        "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS title_en VARCHAR(200)",
+        "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS message_en TEXT",
+        "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS project_id INTEGER",
+        "CREATE INDEX IF NOT EXISTS ix_notifications_project_id ON notifications (project_id)",
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_student_app ON applications (project_id, student_id)",
         "CREATE TABLE IF NOT EXISTS reports (id SERIAL PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE, student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, title VARCHAR(200) NOT NULL, description TEXT, file_url VARCHAR(255), status VARCHAR(30) DEFAULT 'pending', supervisor_feedback TEXT, grade VARCHAR(50), deadline_date VARCHAR(50), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
     ]:
@@ -102,7 +108,12 @@ def is_allowed_origin(origin: Optional[str]) -> bool:
 async def add_request_id(request: Request, call_next):
     request_id = uuid.uuid4().hex
     request.state.request_id = request_id
-    response = await call_next(request)
+    # لغة الرد (رسائل الأخطاء والإشعارات) من Accept-Language (I-28)
+    lang_token = i18n.current_lang.set(i18n.lang_from_header(request.headers.get("accept-language", "")))
+    try:
+        response = await call_next(request)
+    finally:
+        i18n.current_lang.reset(lang_token)
     response.headers["X-Request-ID"] = request_id
     # ترويسات أمان أساسية لكل الردود (I-49)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
@@ -113,6 +124,15 @@ async def add_request_id(request: Request, call_next):
         # صفحات التوثيق تحمّل Swagger UI من CDN، باقي الردود JSON أو ملفات فقط
         response.headers.setdefault("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
     return response
+
+
+@app.exception_handler(StarletteHTTPException)
+async def localized_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """أخطاء HTTP بلغة العميل: العربية افتراضياً، والإنجليزية عند Accept-Language: en"""
+    detail = exc.detail
+    if isinstance(detail, str) and i18n.lang_from_header(request.headers.get("accept-language", "")) == "en":
+        detail = i18n.to_english(detail)
+    return JSONResponse(status_code=exc.status_code, content={"detail": detail}, headers=getattr(exc, "headers", None))
 
 
 # معالج عام لأي خطأ غير متوقع: رسالة عامة + معرّف الطلب للمستخدم، والتفاصيل في سجل الخادم فقط
@@ -130,7 +150,12 @@ async def global_exception_handler(request: Request, exc: Exception):
         headers["Vary"] = "Origin"
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "حدث خطأ داخلي في الخادم، يرجى المحاولة لاحقاً", "request_id": request_id},
+        content={
+            "detail": i18n.to_english("حدث خطأ داخلي في الخادم، يرجى المحاولة لاحقاً")
+            if i18n.lang_from_header(request.headers.get("accept-language", "")) == "en"
+            else "حدث خطأ داخلي في الخادم، يرجى المحاولة لاحقاً",
+            "request_id": request_id
+        },
         headers=headers
     )
 
@@ -246,6 +271,17 @@ def is_approved_member(project_id: int, user_id: int, db: Session) -> bool:
     ).first() is not None
 
 
+def home_link(user_id: Optional[int], db: Session) -> str:
+    """صفحة الواجهة التي تعرض مشاريع المستخدم حسب دوره (روابط إشعارات موجودة فعلاً في الواجهة)"""
+    user = db.query(models.User).filter(models.User.id == user_id).first() if user_id else None
+    role = (user.role or "").lower() if user else ""
+    if role in ("partner", "company", "business"):
+        return "/company/opportunities"
+    if role in ("supervisor", "admin"):
+        return "/supervisor"
+    return "/my-projects"
+
+
 def get_project_accepted_members(project_id: int, db: Session) -> int:
     """حساب عدد المقاعد المشغولة حالياً (الطلبات المقبولة أو المرشحة) لمشروع محدد"""
     return db.query(models.Application).filter(
@@ -259,15 +295,21 @@ def create_notification(
     user_id: int,
     title: str,
     message: str,
-    link: Optional[str] = None
+    link: Optional[str] = None,
+    title_en: Optional[str] = None,
+    message_en: Optional[str] = None,
+    project_id: Optional[int] = None
 ):
-    """إنشاء وحفظ إشعار جديد لمستخدم محدد"""
+    """إنشاء وحفظ إشعار جديد لمستخدم محدد (بالعربية والإنجليزية) مرتبط بالمشروع إن وُجد"""
     try:
         notif = models.Notification(
             user_id=user_id,
             title=title,
             message=message,
+            title_en=title_en,
+            message_en=message_en,
             link=link,
+            project_id=project_id,
             is_read=False
         )
         db.add(notif)
@@ -352,7 +394,7 @@ def logout(current_user: models.User = Depends(get_current_user), db: Session = 
     """تسجيل الخروج: يُبطل كل التوكنات الصادرة لهذا الحساب (على جميع الأجهزة)"""
     current_user.token_version = (current_user.token_version or 0) + 1
     db.commit()
-    return {"message": "تم تسجيل الخروج بنجاح", "user_id": current_user.id}
+    return {"message": i18n.tr("تم تسجيل الخروج بنجاح"), "user_id": current_user.id}
 
 
 @app.get("/me", response_model=schemas.UserResponse)
@@ -607,7 +649,7 @@ async def upload_student_cv(
 
     return {
         "status": "success",
-        "message": "تم رفع ملف السيرة الذاتية بنجاح",
+        "message": i18n.tr("تم رفع ملف السيرة الذاتية بنجاح"),
         "has_cv": True
     }
 
@@ -673,7 +715,7 @@ def change_my_password(
     current_user.token_version = (current_user.token_version or 0) + 1
     db.commit()
     db.refresh(current_user)
-    return {"message": "تم تحديث كلمة المرور بنجاح", "access_token": issue_token(current_user), "token_type": "bearer"}
+    return {"message": i18n.tr("تم تحديث كلمة المرور بنجاح"), "access_token": issue_token(current_user), "token_type": "bearer"}
 
 
 def format_user_item(u: models.User):
@@ -797,7 +839,10 @@ def create_project(
                 user_id=sup.id,
                 title="مشروع جديد بانتظار الاعتماد ⏳",
                 message=f"قام {current_user.full_name} بطرح مشروع جديد: {db_project.title}. يرجى مراجعته واعتماده أو رفضه.",
-                link="/supervisor"
+                link="/supervisor",
+                title_en="New project awaiting approval ⏳",
+                message_en=f"{current_user.full_name} posted a new project: {db_project.title}. Please review it and approve or reject it.",
+                project_id=db_project.id
             )
 
     return format_project_item(db_project, db)
@@ -1014,13 +1059,22 @@ def update_project_status(
             "rejected": "تم رفض مشروعك",
             "pending": "أُعيد مشروعك إلى قيد المراجعة",
         }
+        status_titles_en = {
+            "approved": "Your project was approved ✅",
+            "rejected": "Your project was rejected",
+            "pending": "Your project is back under review",
+        }
         feedback_note = f" ملاحظات المشرف: {project.supervisor_feedback}" if project.supervisor_feedback else ""
+        feedback_note_en = f" Supervisor feedback: {project.supervisor_feedback}" if project.supervisor_feedback else ""
         create_notification(
             db=db,
             user_id=project.created_by,
             title=status_titles[new_status],
             message=f"قام المشرف الأكاديمي {current_user.full_name} بتحديث حالة مشروع: {project.title}.{feedback_note}",
-            link=f"/projects/{project.id}"
+            link=home_link(project.created_by, db),
+            title_en=status_titles_en[new_status],
+            message_en=f"Academic supervisor {current_user.full_name} updated the status of project: {project.title}.{feedback_note_en}",
+            project_id=project.id
         )
     return format_project_item(project, db)
 
@@ -1050,6 +1104,7 @@ def delete_project(
         )
 
     # حذف الرسائل والطلبات المرتبطة بالمشروع لتفادي تعارض المفاتيح الخارجية
+    db.query(models.Notification).filter(models.Notification.project_id == id).delete(synchronize_session=False)
     db.query(models.Message).filter(models.Message.project_id == id).delete(synchronize_session=False)
     db.query(models.Application).filter(models.Application.project_id == id).delete(synchronize_session=False)
     db.query(models.Project).filter(models.Project.id == id).delete(synchronize_session=False)
@@ -1154,7 +1209,10 @@ def apply_to_project(
             user_id=project.created_by,
             title="طلب انضمام جديد",
             message=f"قام الطالب {current_user.full_name} بتقديم طلب انضمام لمشروعك: {project.title}",
-            link=f"/projects/{project.id}"
+            link=home_link(project.created_by, db),
+            title_en="New application",
+            message_en=f"{current_user.full_name} applied to your project: {project.title}",
+            project_id=project.id
         )
 
     return format_application_item(new_app, db)
@@ -1350,6 +1408,7 @@ def update_application_status(
     student_name = student.full_name if student else ""
     proj_title = project.title if project else "المشروع"
     feedback_note = f"ملاحظات: {feedback_text}" if feedback_text else ""
+    feedback_note_en = f"Feedback: {feedback_text}" if feedback_text else ""
 
     if new_status == "company_accepted":
         create_notification(
@@ -1357,7 +1416,10 @@ def update_application_status(
             user_id=application.student_id,
             title="ترشيح صناعي من الشركة! 🌟",
             message=f"قامت الشركة باختيارك وترشيحك لمشروع: {proj_title}. الطلب الآن بانتظار الاعتماد الأكاديمي النهائي من المشرف.",
-            link=f"/projects/{application.project_id}"
+            link="/my-projects",
+            title_en="Nominated by the company! 🌟",
+            message_en=f"The company nominated you for project: {proj_title}. Your application now awaits final academic approval.",
+            project_id=application.project_id
         )
         for sup in db.query(models.User).filter(models.User.role.in_(["supervisor", "admin"])).all():
             create_notification(
@@ -1365,7 +1427,10 @@ def update_application_status(
                 user_id=sup.id,
                 title="طلب اعتماد أكاديمي معلق ⏳",
                 message=f"قامت الشركة بترشيح الطالب {student_name} لمشروع: {proj_title}. يرجى المراجعة والاعتماد الأكاديمي.",
-                link="/supervisor"
+                link="/supervisor",
+                title_en="Academic approval pending ⏳",
+                message_en=f"The company nominated {student_name} for project: {proj_title}. Please review and approve.",
+                project_id=application.project_id
             )
     elif new_status == "academically_approved":
         create_notification(
@@ -1373,7 +1438,10 @@ def update_application_status(
             user_id=application.student_id,
             title="تم الاعتماد الأكاديمي رسمياً! 🎓",
             message=f"اعتمد المشرف الأكاديمي {current_user.full_name} انضمامك لمشروع: {proj_title}. تم تفعيل مساحة العمل ومتابعة التقارير رسمياً!",
-            link="/workspace"
+            link="/my-projects",
+            title_en="Academically approved! 🎓",
+            message_en=f"Academic supervisor {current_user.full_name} approved your membership in: {proj_title}. Your workspace and reports are now active!",
+            project_id=application.project_id
         )
         if project and project.created_by and project.created_by != current_user.id:
             create_notification(
@@ -1381,7 +1449,10 @@ def update_application_status(
                 user_id=project.created_by,
                 title="تم الاعتماد الأكاديمي للمشروع",
                 message=f"اعتمد المشرف الأكاديمي {current_user.full_name} مشروع: {proj_title} والطالب {student_name} رسمياً.",
-                link=f"/projects/{project.id}"
+                link=home_link(project.created_by, db),
+                title_en="Project academically approved",
+                message_en=f"Academic supervisor {current_user.full_name} approved project {proj_title} and student {student_name}.",
+                project_id=application.project_id
             )
     elif new_status == "rejected" and actor == "owner":
         create_notification(
@@ -1389,7 +1460,10 @@ def update_application_status(
             user_id=application.student_id,
             title="تحديث حالة طلب الانضمام",
             message=f"نعتذر، لم يتم اختيار طلبك لمشروع: {proj_title}. {feedback_note}",
-            link="/browse"
+            link="/projects",
+            title_en="Application update",
+            message_en=f"Sorry, your application for {proj_title} was not selected. {feedback_note_en}",
+            project_id=application.project_id
         )
     elif new_status == "rejected":
         create_notification(
@@ -1397,7 +1471,10 @@ def update_application_status(
             user_id=application.student_id,
             title="قرار المشرف الأكاديمي بخصوص المشروع",
             message=f"لم يتم الاعتماد الأكاديمي لطلبك في مشروع: {proj_title}. {feedback_note}",
-            link="/browse"
+            link="/projects",
+            title_en="Academic supervisor decision",
+            message_en=f"Your application for {proj_title} was not academically approved. {feedback_note_en}",
+            project_id=application.project_id
         )
         if project and project.created_by and project.created_by != current_user.id:
             create_notification(
@@ -1405,7 +1482,10 @@ def update_application_status(
                 user_id=project.created_by,
                 title="قرار الاعتماد الأكاديمي",
                 message=f"رفض المشرف الأكاديمي الاعتماد لمشروع: {proj_title}. {feedback_note}",
-                link=f"/projects/{project.id}"
+                link=home_link(project.created_by, db),
+                title_en="Academic approval decision",
+                message_en=f"The academic supervisor declined approval for project: {proj_title}. {feedback_note_en}",
+                project_id=application.project_id
             )
 
     return format_application_item(application, db)
@@ -1497,7 +1577,10 @@ def create_project_message(
             user_id=user_id,
             title="رسالة جديدة في شات المشروع",
             message=f"أرسل {current_user.full_name} رسالة في مشروع {project.title}: '{text_content[:60]}'",
-            link=f"/projects/{project.id}"
+            link=home_link(user_id, db),
+            title_en="New message in project chat",
+            message_en=f"{current_user.full_name} sent a message in {project.title}: '{text_content[:60]}'",
+            project_id=project.id
         )
 
     return schemas.MessageResponse(
@@ -1563,10 +1646,25 @@ def get_user_notifications(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """جلب إشعارات المستخدم الحالي مرتبة حسب الأحدث تنازلياً"""
-    return db.query(models.Notification).filter(
+    """جلب إشعارات المستخدم الحالي مرتبة حسب الأحدث تنازلياً، بلغة الطلب"""
+    rows = db.query(models.Notification).filter(
         models.Notification.user_id == current_user.id
     ).order_by(models.Notification.created_at.desc()).limit(50).all()
+    return [localize_notification(n) for n in rows]
+
+
+def localize_notification(n: models.Notification) -> schemas.NotificationResponse:
+    english = i18n.current_lang.get() == "en"
+    return schemas.NotificationResponse(
+        id=n.id,
+        user_id=n.user_id,
+        title=(n.title_en if english and n.title_en else n.title),
+        message=(n.message_en if english and n.message_en else n.message),
+        link=n.link,
+        project_id=n.project_id,
+        is_read=bool(n.is_read),
+        created_at=n.created_at,
+    )
 
 
 @app.put("/notifications/{id}/read", response_model=schemas.NotificationResponse)
@@ -1589,7 +1687,7 @@ def mark_notification_as_read(
     notif.is_read = True
     db.commit()
     db.refresh(notif)
-    return notif
+    return localize_notification(notif)
 
 
 @app.put("/notifications/read-all", status_code=status.HTTP_200_OK)
@@ -1604,7 +1702,7 @@ def mark_all_notifications_as_read(
         models.Notification.is_read == False
     ).update({"is_read": True}, synchronize_session=False)
     db.commit()
-    return {"message": "تم تحديد جميع الإشعارات كمقروءة"}
+    return {"message": i18n.tr("تم تحديد جميع الإشعارات كمقروءة")}
 
 
 # ==========================================
@@ -1771,7 +1869,10 @@ def submit_report(
             user_id=user_id,
             title="تسليم تقرير جديد 📄",
             message=f"قام الطالب {current_user.full_name} برفع تقرير جديد '{new_report.title}' لمشروع '{project.title}'",
-            link="/reports"
+            link="/reports",
+            title_en="New report submitted 📄",
+            message_en=f"Student {current_user.full_name} submitted a new report '{new_report.title}' for '{project.title}'",
+            project_id=project.id
         )
 
     return format_report_item(new_report, db, current_user)
@@ -1825,12 +1926,20 @@ def update_report_status(
         "needs_changes": "مطلوب تعديلات على التقرير الأكاديمي ⚠️",
         "rejected": "تم رفض التقرير الأكاديمي"
     }
+    status_titles_en = {
+        "approved": "Your report was approved! 🎉",
+        "needs_changes": "Changes requested on your report ⚠️",
+        "rejected": "Your report was rejected"
+    }
     create_notification(
         db=db,
         user_id=report.student_id,
         title=status_titles.get(st, "تحديث حالة التقرير"),
         message=f"تم تحديث حالة تقريرك '{report.title}' إلى {st}. ملاحظات: {report.supervisor_feedback or 'لا توجد ملاحظات'}",
-        link="/reports"
+        link="/reports",
+        title_en=status_titles_en.get(st, "Report status updated"),
+        message_en=f"Your report '{report.title}' was updated to {st}. Feedback: {report.supervisor_feedback or 'none'}",
+        project_id=report.project_id
     )
 
     return format_report_item(report, db, current_user)

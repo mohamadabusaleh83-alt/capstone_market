@@ -334,5 +334,6 @@ class NotificationResponse(BaseModel):
     title: str
     message: str
     link: Optional[str] = None
+    project_id: Optional[int] = None
     is_read: bool = False
     created_at: Optional[datetime] = None

@@ -138,6 +138,10 @@ class Notification(Base):
     title = Column(String(200), nullable=False)
     message = Column(Text, nullable=False)
     link = Column(String(255), nullable=True)
+    # النسخة الإنجليزية (I-28) والمشروع المرتبط لحذف الإشعارات مع المشروع (I-48)
+    title_en = Column(String(200), nullable=True)
+    message_en = Column(Text, nullable=True)
+    project_id = Column(Integer, nullable=True, index=True)
     is_read = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 

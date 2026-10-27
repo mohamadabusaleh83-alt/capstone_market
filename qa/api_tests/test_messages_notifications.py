@@ -164,7 +164,9 @@ def test_notification_links_point_to_existing_routes(api):
     pid = api.make_project("company")
     a = api.make_application("student", pid)
     api.set_app_status("company", a, "rejected")
-    frontend_routes = {"/", "/projects", "/dashboard", "/notifications", "/my-projects", "/supervisor", "/reports"}
+    # Phase 3: /company/opportunities is the company's own-projects page (a real route) - added to the list
+    frontend_routes = {"/", "/projects", "/dashboard", "/notifications", "/my-projects", "/supervisor", "/reports",
+                       "/company/opportunities"}
     bad = {n["link"] for n in api.notifications("student") + api.notifications("company")
            if n["link"] and n["link"].split("?")[0] not in frontend_routes}
     assert not bad, f"notification links that 404 in the SPA: {sorted(bad)[:6]}"
@@ -199,3 +201,28 @@ def test_read_all_only_affects_self(api):
 
 def test_notifications_capped_at_50_no_paging(api):
     assert len(api.notifications("supervisor")) <= 50
+
+
+
+# ---------------- Phase 3 (I-28, I-48) ----------------
+
+def test_errors_and_notifications_follow_accept_language(api):
+    en = {"Accept-Language": "en-US,en;q=0.9"}
+    r = api.call("student", "GET", "/projects/99999999", headers=en)
+    assert r.status_code == 404 and r.json()["detail"] == "Project 99999999 not found"
+    r = api.call("student", "GET", "/projects/99999999")
+    assert "غير موجود" in r.json()["detail"]
+    pid = api.make_project("company")
+    api.make_application("student", pid)
+    n_en = api.call("company", "GET", "/notifications", headers=en).json()[0]
+    n_ar = api.call("company", "GET", "/notifications").json()[0]
+    assert n_en["title"] == "New application" and n_ar["title"] == "طلب انضمام جديد"
+    assert n_en["project_id"] == pid
+
+
+def test_deleting_project_removes_its_notifications(api):
+    pid = api.make_project("company")
+    api.make_application("student", pid)
+    assert any(n["project_id"] == pid for n in api.notifications("company"))
+    api.call("company", "DELETE", f"/projects/{pid}")
+    assert not any(n["project_id"] == pid for n in api.notifications("company"))
