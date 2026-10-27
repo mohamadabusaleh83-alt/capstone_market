@@ -8,8 +8,11 @@ logger = logging.getLogger("capstone_db")
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:1234@localhost:5432/capstone_db")
 
 # Render قد يقدم الرابط بصيغة postgres:// بينما SQLAlchemy تتطلب postgresql://
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+# نحدد مشغل psycopg2 صراحةً لأن SQLAlchemy 2.1+ يستخدم psycopg (v3) افتراضياً وهو غير مثبت
+for prefix in ("postgres://", "postgresql://"):
+    if DATABASE_URL.startswith(prefix):
+        DATABASE_URL = "postgresql+psycopg2://" + DATABASE_URL[len(prefix):]
+        break
 
 if os.getenv("RENDER") == "true" and ("localhost" in DATABASE_URL or "127.0.0.1" in DATABASE_URL):
     logger.critical("WARNING: Running in cloud environment but DATABASE_URL points to localhost! Configure DATABASE_URL in Render dashboard.")
