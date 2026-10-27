@@ -596,14 +596,11 @@ export function AppProvider({ children }) {
       if (res && res.ok) {
         const data = await res.json();
         setStudentCv((prev) => ({ ...prev, hasCv: Boolean(data.has_cv) }));
-        if (data.skills) {
-          const sList = data.skills.split(',').map((s) => s.trim()).filter(Boolean);
-          if (sList.length > 0) {
-            setUserSkills(sList);
-            if (typeof window !== 'undefined' && currentUserId) {
-              localStorage.setItem(`user_skills_${currentUserId}`, JSON.stringify(sList));
-            }
-          }
+        // الخادم هو المرجع دائماً، حتى عندما تكون القائمة فارغة (حذف المهارات من جهاز آخر)
+        const sList = (data.skills || '').split(',').map((s) => s.trim()).filter(Boolean);
+        setUserSkills(sList);
+        if (typeof window !== 'undefined' && currentUserId) {
+          localStorage.setItem(`user_skills_${currentUserId}`, JSON.stringify(sList));
         }
         if (data.major || data.bio || data.portfolio_url || data.course) {
           const cvObj = {

@@ -48,10 +48,7 @@ export default function ProfilePage() {
               setBio(data.bio || '');
               setCompanyWebsite(data.website || '');
               setCompanyIndustry(data.industry || '');
-              if (data.skills) {
-                const sList = data.skills.split(',').map((s) => s.trim()).filter(Boolean);
-                if (sList.length > 0) setUserSkills(sList);
-              }
+              setUserSkills((data.skills || '').split(',').map((s) => s.trim()).filter(Boolean));
             }
           }
         })
