@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -57,6 +59,18 @@ export default function Sidebar() {
   const closeSidebarOnMobile = () => {
     setIsSidebarOpen(false);
   };
+
+  // منع تمرير محتوى الصفحة الخلفية أثناء فتح القائمة على الهواتف
+  useEffect(() => {
+    if (isSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isSidebarOpen]);
 
   const handleLogout = () => {
     closeSidebarOnMobile();
@@ -359,59 +373,66 @@ export default function Sidebar() {
         {renderSidebarBody(false)}
       </aside>
 
-      {/* 2. القائمة المنبثقة على الهواتف والأجهزة اللوحية الصغيرة (Mobile Drawer) */}
-      {/* خلفية معتمة على الموبايل بتأثير تلاشٍ تدريجي سلس */}
-      <div
-        onClick={closeSidebarOnMobile}
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-50 md:hidden transition-opacity duration-300 ${
-          isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-        aria-hidden="true"
-      />
-
-      {/* نافذة الدرج الجانبي المنبثقة (Drawer) بحركة انزلاق ناعمة وزر إغلاق ✕ */}
-      <aside
-        className={`
-          fixed top-0 bottom-0 ${isRtl ? 'right-0 border-l' : 'left-0 border-r'} z-50 w-72 max-w-[85vw] bg-white dark:bg-[#101E42] border-slate-300/80 dark:border-[#2499F2]/20 pt-3 pb-3 px-3 
-          overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col justify-start transition-transform duration-300 ease-in-out shadow-2xl md:hidden
-          ${isSidebarOpen ? 'translate-x-0' : isRtl ? 'translate-x-full' : '-translate-x-full'}
-        `}
-        aria-label="Mobile Navigation Drawer"
-      >
-        {/* ترويسة رئيسية للشعار واسم المنصة وزر الإغلاق ✕ تظهر فقط في درج الموبايل */}
-        <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-200/80 dark:border-white/10 shrink-0">
-          <Link
-            to="/"
+      {/* 2. القائمة المنبثقة على الهواتف والأجهزة اللوحية الصغيرة (Mobile Drawer via Portal) */}
+      {isSidebarOpen && typeof document !== 'undefined' && createPortal(
+        <div 
+          className={`fixed inset-0 z-50 flex ${isRtl ? 'justify-end' : 'justify-start'} md:hidden`}
+          dir={isRtl ? 'rtl' : 'ltr'}
+        >
+          {/* خلفية معتمة تغلق القائمة عند النقر خارجها */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
             onClick={closeSidebarOnMobile}
-            title={t('nav.back_home')}
-            className="flex-1 flex items-center gap-2 p-1.5 rounded-xl bg-slate-50 dark:bg-[#152550]/60 hover:bg-slate-100 dark:hover:bg-[#152550] border border-slate-200/80 dark:border-[#2499F2]/20 cursor-pointer hover:scale-102 transition-all duration-200 select-none group"
-          >
-            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#0B152E] border border-slate-200 dark:border-[#2499F2]/30 flex items-center justify-center shadow-md shadow-[#2499F2]/10 dark:shadow-[#2499F2]/20 overflow-hidden shrink-0 group-hover:border-[#2499F2]/60 transition-colors">
-              <img src="/logo.svg" alt="Capstone Market" className="w-6 h-6 object-contain" />
-            </div>
-            <div className="min-w-0">
-              <span className="font-black text-xs text-slate-900 dark:text-white tracking-wide block leading-tight truncate group-hover:text-[#2499F2] dark:group-hover:text-[#28C8C0] transition-colors">
-                سوق مشاريع التخرج
-              </span>
-              <span className="text-[10px] text-[#2499F2] dark:text-[#28C8C0] font-sans font-semibold block truncate">
-                Capstone Market
-              </span>
-            </div>
-          </Link>
+            aria-hidden="true"
+          />
 
-          <button
-            type="button"
-            onClick={closeSidebarOnMobile}
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#152550] border border-slate-200/70 dark:border-[#2499F2]/30 transition md:hidden cursor-pointer active:scale-95 shrink-0"
-            aria-label="إغلاق القائمة"
-            title="إغلاق القائمة"
+          {/* القائمة المنبثقة من جهة اليمين لتناسب اتجاه اللغة العربية */}
+          <aside
+            className={`relative z-10 w-72 max-w-[85vw] h-full bg-slate-900 border-slate-800 ${
+              isRtl ? 'border-l' : 'border-r'
+            } p-5 shadow-2xl flex flex-col justify-between overflow-y-auto`}
+            aria-label="Mobile Navigation Drawer"
           >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+            {/* ترويسة رئيسية للشعار واسم المنصة وزر الإغلاق (✕) بارز في أعلى زاوية القائمة */}
+            <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-800 shrink-0">
+              <Link
+                to="/"
+                onClick={closeSidebarOnMobile}
+                title={t('nav.back_home')}
+                className="flex-1 flex items-center gap-2 p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 cursor-pointer transition select-none group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-[#0B152E] border border-[#2499F2]/30 flex items-center justify-center shrink-0">
+                  <img src="/logo.svg" alt="Capstone Market" className="w-6 h-6 object-contain" />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-black text-xs text-white tracking-wide block leading-tight truncate">
+                    سوق مشاريع التخرج
+                  </span>
+                  <span className="text-[10px] text-[#28C8C0] font-sans font-semibold block truncate">
+                    Capstone Market
+                  </span>
+                </div>
+              </Link>
 
-        {renderSidebarBody(true)}
-      </aside>
+              {/* زر إغلاق (✕) بارز في أعلى زاوية القائمة */}
+              <button
+                type="button"
+                onClick={closeSidebarOnMobile}
+                className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700 transition cursor-pointer active:scale-95 shrink-0"
+                aria-label="إغلاق القائمة"
+                title="إغلاق القائمة"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 flex flex-col justify-between overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {renderSidebarBody(true)}
+            </div>
+          </aside>
+        </div>,
+        document.body
+      )}
     </>
   );
 }

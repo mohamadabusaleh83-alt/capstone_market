@@ -23,6 +23,11 @@ class UserResponse(BaseModel):
     role: str
     skills: Optional[str] = ""
     phone: Optional[str] = None
+    major: Optional[str] = None
+    bio: Optional[str] = None
+    portfolio_url: Optional[str] = None
+    course: Optional[str] = None
+    university: Optional[str] = None
     created_at: Optional[datetime] = None
 
 
@@ -72,6 +77,9 @@ class ProjectCreate(BaseModel):
     description: Optional[str] = ""
     required_skills: Optional[str] = ""
     max_members: Optional[int] = 4
+    category: Optional[str] = None
+    stipend: Optional[str] = None
+    company_name: Optional[str] = None
 
 
 class ProjectUpdate(BaseModel):
@@ -79,10 +87,16 @@ class ProjectUpdate(BaseModel):
     description: Optional[str] = None
     required_skills: Optional[str] = None
     max_members: Optional[int] = None
+    category: Optional[str] = None
+    stipend: Optional[str] = None
+    company_name: Optional[str] = None
+    supervisor_id: Optional[int] = None
+    supervisor_feedback: Optional[str] = None
 
 
 class ProjectStatusUpdate(BaseModel):
     status: str  # approved, rejected, pending
+    feedback: Optional[str] = None
 
 
 class ProjectResponse(BaseModel):
@@ -98,6 +112,12 @@ class ProjectResponse(BaseModel):
     available_seats: Optional[int] = 4
     created_by: Optional[int] = None
     created_at: Optional[datetime] = None
+    category: Optional[str] = None
+    stipend: Optional[str] = None
+    company_name: Optional[str] = None
+    supervisor_id: Optional[int] = None
+    supervisor_name: Optional[str] = None
+    supervisor_feedback: Optional[str] = None
 
 
 # ==========================================
@@ -111,6 +131,7 @@ class ApplicationCreate(BaseModel):
 
 class ApplicationStatusUpdate(BaseModel):
     status: str
+    feedback: Optional[str] = None
 
 
 class ApplicationResponse(BaseModel):
@@ -121,6 +142,76 @@ class ApplicationResponse(BaseModel):
     student_id: int
     status: str
     message: Optional[str] = None
+    feedback: Optional[str] = None
+    created_at: Optional[datetime] = None
+    student_name: Optional[str] = None
+    student_email: Optional[str] = None
+    student_major: Optional[str] = None
+    student_skills: Optional[str] = None
+    student_bio: Optional[str] = None
+    student_portfolio_url: Optional[str] = None
+    project_title: Optional[str] = None
+    company_name: Optional[str] = None
+
+
+# ==========================================
+# نماذج مراحل التسليم والتقارير الأكاديمية (Report / Deliverable Schemas)
+# ==========================================
+
+class ReportCreate(BaseModel):
+    project_id: int
+    title: str
+    description: Optional[str] = None
+    file_url: Optional[str] = None
+    deadline_date: Optional[str] = None
+
+
+class ReportStatusUpdate(BaseModel):
+    status: str  # pending, approved, needs_changes
+    supervisor_feedback: Optional[str] = None
+    grade: Optional[str] = None
+
+
+class ReportResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    project_id: int
+    student_id: int
+    student_name: Optional[str] = None
+    project_title: Optional[str] = None
+    title: str
+    description: Optional[str] = None
+    file_url: Optional[str] = None
+    status: str
+    supervisor_feedback: Optional[str] = None
+    grade: Optional[str] = None
+    deadline_date: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+# ==========================================
+# نماذج إحصائيات المنصة الحية (Analytics Schemas)
+# ==========================================
+
+class TopSkillItem(BaseModel):
+    name: str
+    count: int
+    percent: int
+
+
+class AnalyticsOverviewResponse(BaseModel):
+    total_projects: int
+    approved_projects: int
+    pending_projects: int
+    total_students: int
+    total_companies: int
+    total_supervisors: int
+    total_applications: int
+    total_reports: int
+    pending_reports: int
+    approved_reports: int
+    top_skills: List[TopSkillItem]
 
 
 # ==========================================

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
@@ -19,70 +19,57 @@ import {
 
 export default function ActivityLogsPage() {
   const { t } = useTranslation();
-  const { isRtl, showToast } = useApp();
+  const { isRtl, notifications, applications, rawProjects, showToast } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const [logsList] = useState([
-    {
-      id: 'log-1',
-      action: isRtl ? 'اعتماد مشروع تخرج رسمي' : 'Project Approval Certified',
-      user: 'د. أسامة أمين مرعي',
-      role: 'supervisor',
-      details: isRtl
-        ? 'تم اعتماد مشروع (نظام إدارة المستودعات ونقاط البيع السحابي) رسمياً.'
-        : 'Approved Capstone Project: POS Cloud Warehouse System.',
-      ip: '192.168.1.45',
-      status: 'success',
-      timestamp: 'قبل 15 دقيقة'
-    },
-    {
-      id: 'log-2',
-      action: isRtl ? 'إرسال طلب رعاية وشراكة' : 'Partnership Proposal Sent',
-      user: 'شركة النور للحلول البرمجية',
-      role: 'company',
-      details: isRtl
-        ? 'تقديم عرض رعاية وتمويل سحابي لمشروع الذكاء الاصطناعي.'
-        : 'Submitted sponsorship offer for AI Capstone Project.',
-      ip: '192.168.1.82',
-      status: 'success',
-      timestamp: 'قبل 45 دقيقة'
-    },
-    {
-      id: 'log-3',
-      action: isRtl ? 'تسليم تقرير المتطلبات (SRS)' : 'Milestone Report Submitted',
-      user: 'أحمد منصور',
-      role: 'student',
-      details: isRtl
-        ? 'رفع وثيقة هندسة المتطلبات والنظام بصيغة PDF.'
-        : 'Uploaded SRS Requirements PDF document.',
-      ip: '192.168.1.104',
-      status: 'success',
-      timestamp: 'قبل ساعتين'
-    },
-    {
-      id: 'log-4',
-      action: isRtl ? 'تسجيل دخول موحد' : 'Unified User Login',
-      user: 'د. أسامة أمين مرعي',
-      role: 'supervisor',
-      details: isRtl ? 'تسجيل دخول ناجح إلى اللوحة الإشرافية.' : 'Successful login to Supervisor workspace.',
-      ip: '192.168.1.45',
-      status: 'success',
-      timestamp: 'قبل 3 ساعات'
-    },
-    {
-      id: 'log-5',
-      action: isRtl ? 'تحديث مهارات الطالب' : 'Student Skills Updated',
-      user: 'أحمد منصور',
-      role: 'student',
-      details: isRtl ? 'إضافة مهارات (FastAPI, Docker, PostgreSQL).' : 'Added technical skill badges.',
-      ip: '192.168.1.104',
-      status: 'info',
-      timestamp: 'اليوم، 10:15 ص'
-    }
-  ]);
+  // استخراج سجل النشاطات الحية من الإشعارات والطلبات والمشاريع المسجلة بقاعدة البيانات
+  const logsList = useMemo(() => {
+    const list = [];
+
+    (notifications || []).forEach((n, idx) => {
+      list.push({
+        id: `notif-${n.id || idx}`,
+        action: n.title,
+        user: isRtl ? 'النظام الأكاديمي' : 'System',
+        role: 'supervisor',
+        details: n.message,
+        ip: '127.0.0.1',
+        status: 'success',
+        timestamp: n.created_at ? new Date(n.created_at).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US') : (isRtl ? 'اليوم' : 'Today')
+      });
+    });
+
+    (applications || []).forEach((a, idx) => {
+      list.push({
+        id: `app-${a.id || idx}`,
+        action: a.status === 'accepted' ? (isRtl ? 'قبول طلب انضمام رسمي' : 'Application Accepted') : (isRtl ? 'تقديم طلب انضمام لمشروع' : 'Application Submitted'),
+        user: a.student_name || (isRtl ? `طالب #${a.student_id}` : `Student #${a.student_id}`),
+        role: 'student',
+        details: isRtl ? `طلب انضمام لمشروع: ${a.project_title || `#${a.project_id}`}` : `Applied to project #${a.project_id}`,
+        ip: '127.0.0.1',
+        status: a.status === 'accepted' ? 'success' : 'info',
+        timestamp: a.created_at ? new Date(a.created_at).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US') : (isRtl ? 'مؤخراً' : 'Recently')
+      });
+    });
+
+    (rawProjects || []).forEach((p, idx) => {
+      list.push({
+        id: `proj-${p.id || idx}`,
+        action: p.status === 'approved' ? (isRtl ? 'اعتماد مشروع تخرج رسمي' : 'Project Approved') : (isRtl ? 'طرح فكرة مشروع تخرج' : 'Project Proposed'),
+        user: p.supervisor_name || p.company_name || (isRtl ? 'منسق المشاريع' : 'Coordinator'),
+        role: p.company_name ? 'company' : 'supervisor',
+        details: p.title,
+        ip: '127.0.0.1',
+        status: p.status === 'approved' ? 'success' : 'info',
+        timestamp: p.created_at ? new Date(p.created_at).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US') : (isRtl ? 'مؤخراً' : 'Recently')
+      });
+    });
+
+    return list;
+  }, [notifications, applications, rawProjects, isRtl]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);

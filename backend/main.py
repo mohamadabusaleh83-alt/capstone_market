@@ -28,6 +28,11 @@ with engine.connect() as conn:
     for stmt in [
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS status VARCHAR DEFAULT 'pending'",
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS max_members INTEGER DEFAULT 4",
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS category VARCHAR(100)",
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS stipend VARCHAR(100)",
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS company_name VARCHAR(150)",
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS supervisor_id INTEGER",
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS supervisor_feedback TEXT",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS skills TEXT DEFAULT ''",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS bio TEXT",
@@ -35,7 +40,9 @@ with engine.connect() as conn:
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS course VARCHAR(100)",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS university VARCHAR(150)",
         "ALTER TABLE applications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+        "ALTER TABLE applications ADD COLUMN IF NOT EXISTS feedback TEXT",
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_student_app ON applications (project_id, student_id)",
+        "CREATE TABLE IF NOT EXISTS reports (id SERIAL PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE, student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, title VARCHAR(200) NOT NULL, description TEXT, file_url VARCHAR(255), status VARCHAR(30) DEFAULT 'pending', supervisor_feedback TEXT, grade VARCHAR(50), deadline_date VARCHAR(50), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
     ]:
         try:
             conn.execute(text(stmt))
@@ -158,10 +165,10 @@ def require_role(allowed_roles: List[str]):
 
 
 def get_project_accepted_members(project_id: int, db: Session) -> int:
-    """حساب عدد المقاعد المشغولة حالياً (الطلبات المقبولة) لمشروع محدد"""
+    """حساب عدد المقاعد المشغولة حالياً (الطلبات المقبولة أو المرشحة) لمشروع محدد"""
     return db.query(models.Application).filter(
         models.Application.project_id == project_id,
-        models.Application.status == "accepted"
+        models.Application.status.in_(["accepted", "academically_approved", "company_accepted"])
     ).count()
 
 
@@ -463,13 +470,41 @@ def change_my_password(
     return {"message": "تم تحديث كلمة المرور بنجاح"}
 
 
+def format_user_item(u: models.User):
+    prof = u.profile
+    return schemas.UserResponse(
+        id=u.id,
+        full_name=u.full_name,
+        email=u.email,
+        role=u.role,
+        skills=(prof.skills if prof and prof.skills else u.skills) or "",
+        phone=u.phone,
+        major=prof.major if prof else None,
+        bio=prof.bio if prof else None,
+        portfolio_url=prof.portfolio_url if prof else None,
+        course=prof.course if prof else None,
+        university=prof.university if prof else None,
+        created_at=u.created_at
+    )
+
+
 @app.get("/users/", response_model=List[schemas.UserResponse])
+@app.get("/api/users/", response_model=List[schemas.UserResponse])
 def get_users(
+    role: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role(["supervisor", "admin"]))
+    current_user: models.User = Depends(get_current_user)
 ):
-    """جلب قائمة المستخدمين (محمي للمشرفين والمسؤولين فقط)"""
-    return db.query(models.User).all()
+    """جلب قائمة المستخدمين مع دعم الفلترة بحسب الدور وإرجاع بيانات الملف الشخصي الكاملة"""
+    query = db.query(models.User)
+    if role:
+        r = role.lower().strip()
+        if r in ["company", "partner", "business"]:
+            query = query.filter(models.User.role.in_(["company", "partner", "business"]))
+        else:
+            query = query.filter(models.User.role == r)
+    users = query.order_by(models.User.id.desc()).all()
+    return [format_user_item(u) for u in users]
 
 
 # ==========================================
@@ -502,7 +537,21 @@ def clean_skills(skills_str: Optional[str]) -> str:
     return ", ".join(normalized)
 
 
+def format_project_item(p: models.Project, db: Session):
+    p.current_members = get_project_accepted_members(p.id, db)
+    p.available_seats = max(0, (p.max_members or 4) - p.current_members)
+    if p.supervisor_id:
+        sup = db.query(models.User).filter(models.User.id == p.supervisor_id).first()
+        p.supervisor_name = sup.full_name if sup else None
+    elif not getattr(p, "supervisor_name", None):
+        p.supervisor_name = "د. أسامة أمين مرعي"
+    if not p.company_name and p.creator and (p.creator.role or "").lower() in ["company", "partner", "business"]:
+        p.company_name = p.creator.full_name
+    return p
+
+
 @app.post("/projects/", response_model=schemas.ProjectResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/api/projects/", response_model=schemas.ProjectResponse, status_code=status.HTTP_201_CREATED)
 def create_project(
     project: schemas.ProjectCreate,
     db: Session = Depends(get_db),
@@ -510,9 +559,14 @@ def create_project(
 ):
     """طرح مشروع جديد بواسطة الشريك الصناعي أو المشرف، وتسجيل current_user.id كمالك للمشروع وتطهير المهارات"""
     user_role = (current_user.role or "").lower()
-    # مشاريع المشرفين أو الإدارة تعتمد تلقائياً، بينما مشاريع الشركات تحتاج اعتماد المشرف
     initial_status = "approved" if user_role in ["supervisor", "admin"] else "pending"
     sanitized_skills = clean_skills(project.required_skills)
+
+    comp_name = project.company_name
+    if not comp_name and user_role in ["partner", "company", "business"]:
+        comp_name = current_user.full_name
+
+    sup_id = current_user.id if user_role == "supervisor" else None
 
     db_project = models.Project(
         title=project.title,
@@ -520,19 +574,58 @@ def create_project(
         required_skills=sanitized_skills,
         status=initial_status,
         max_members=project.max_members or 4,
+        category=project.category,
+        stipend=project.stipend,
+        company_name=comp_name,
+        supervisor_id=sup_id,
         created_by=current_user.id
     )
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
     
-    # ربط عدد الأعضاء الحاليين والمقاعد المتاحة للرد
-    db_project.current_members = 0
-    db_project.available_seats = db_project.max_members or 4
-    return db_project
+    return format_project_item(db_project, db)
+
+
+@app.get("/projects/my", response_model=Optional[schemas.ProjectResponse])
+@app.get("/api/projects/my", response_model=Optional[schemas.ProjectResponse])
+def get_my_assigned_project(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """جلب المشروع الفعلي المعتمد التابع للطالب أو الشركة أو المشرف من قاعدة البيانات دون أي بيانات وهمية"""
+    user_role = (current_user.role or "").lower()
+
+    if user_role == "student":
+        # 1. فحص طلبات الانضمام المعتمدة أكاديمياً فقط
+        accepted_app = db.query(models.Application).filter(
+            models.Application.student_id == current_user.id,
+            models.Application.status.in_(["accepted", "academically_approved"])
+        ).order_by(models.Application.id.desc()).first()
+        if accepted_app:
+            proj = db.query(models.Project).filter(models.Project.id == accepted_app.project_id).first()
+            if proj and proj.status in ["approved", "academically_approved"]:
+                return format_project_item(proj, db)
+
+        # 2. فحص المشاريع التي أنشأها الطالب بنفسه والمعتمدة أكاديمياً
+        my_created = db.query(models.Project).filter(
+            models.Project.created_by == current_user.id,
+            models.Project.status.in_(["approved", "academically_approved"])
+        ).order_by(models.Project.id.desc()).first()
+        if my_created:
+            return format_project_item(my_created, db)
+
+        return None
+
+    # للشركة أو المشرف: أحدث مشروع تم إنشاؤه
+    proj = db.query(models.Project).filter(models.Project.created_by == current_user.id).order_by(models.Project.id.desc()).first()
+    if proj:
+        return format_project_item(proj, db)
+    return None
 
 
 @app.get("/projects/", response_model=List[schemas.ProjectResponse])
+@app.get("/api/projects/", response_model=List[schemas.ProjectResponse])
 def get_projects(
     status: Optional[str] = None,
     created_by: Optional[int] = None,
@@ -546,15 +639,11 @@ def get_projects(
         query = query.filter(models.Project.created_by == created_by)
     projects = query.order_by(models.Project.id.desc()).all()
 
-    results = []
-    for p in projects:
-        p.current_members = get_project_accepted_members(p.id, db)
-        p.available_seats = max(0, (p.max_members or 4) - p.current_members)
-        results.append(p)
-    return results
+    return [format_project_item(p, db) for p in projects]
 
 
 @app.get("/projects/{id}", response_model=schemas.ProjectResponse)
+@app.get("/api/projects/{id}", response_model=schemas.ProjectResponse)
 def get_project(id: int, db: Session = Depends(get_db)):
     """جلب تفاصيل مشروع محدد بواسطة معرّفه مع عدد المقاعد المحجوزة والمتاحة"""
     project = db.query(models.Project).filter(models.Project.id == id).first()
@@ -563,9 +652,7 @@ def get_project(id: int, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND, 
             detail=f"المشروع برقم {id} غير موجود"
         )
-    project.current_members = get_project_accepted_members(project.id, db)
-    project.available_seats = max(0, (project.max_members or 4) - project.current_members)
-    return project
+    return format_project_item(project, db)
 
 
 @app.put("/projects/{id}", response_model=schemas.ProjectResponse)
@@ -637,18 +724,25 @@ def update_project_status(
     else:
         new_status = "approved"
 
-    if new_status not in ["approved", "rejected", "pending"]:
+    if new_status not in ["approved", "academically_approved", "rejected", "pending"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="الحالة غير صالحة. الحالات المسموحة: approved, rejected, pending"
         )
 
+    if new_status == "academically_approved":
+        new_status = "approved"
+
     project.status = new_status
+    if status_update and status_update.feedback is not None:
+        project.supervisor_feedback = status_update.feedback.strip()
+    if is_supervisor_or_admin:
+        project.supervisor_id = current_user.id
+        project.supervisor_name = current_user.full_name
+
     db.commit()
     db.refresh(project)
-    project.current_members = get_project_accepted_members(project.id, db)
-    project.available_seats = max(0, (project.max_members or 4) - project.current_members)
-    return project
+    return format_project_item(project, db)
 
 
 @app.delete("/projects/{id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -686,7 +780,26 @@ def delete_project(
 # مسارات التقديم على المشاريع (Applications & Seats)
 # ==========================================
 
+def format_application_item(app_item: models.Application, db: Session):
+    """تنسيق وتزويد سجل الطلب ببيانات الطالب والمشروع الحقيقية من قاعدة البيانات"""
+    if not app_item:
+        return None
+    student = db.query(models.User).filter(models.User.id == app_item.student_id).first()
+    project = db.query(models.Project).filter(models.Project.id == app_item.project_id).first()
+    app_item.student_name = student.full_name if student else f"طالب #{app_item.student_id}"
+    app_item.student_email = student.email if student else None
+    app_item.student_major = getattr(student, "major", None)
+    app_item.student_skills = getattr(student, "skills", None)
+    app_item.student_bio = getattr(student, "bio", None)
+    app_item.student_portfolio_url = getattr(student, "portfolio_url", None)
+    app_item.project_title = project.title if project else f"مشروع #{app_item.project_id}"
+    app_item.company_name = (getattr(project, "company_name", None) or "شركة شريكة") if project else "شركة شريكة"
+    app_item.feedback = getattr(app_item, "feedback", None)
+    return app_item
+
+
 @app.post("/applications/", response_model=schemas.ApplicationResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/api/applications/", response_model=schemas.ApplicationResponse, status_code=status.HTTP_201_CREATED)
 def apply_to_project(
     application: schemas.ApplicationCreate,
     db: Session = Depends(get_db),
@@ -730,7 +843,7 @@ def apply_to_project(
     new_app = models.Application(
         project_id=application.project_id,
         student_id=current_user.id,
-        status="pending",
+        status="applied",
         message=application.message
     )
     db.add(new_app)
@@ -747,10 +860,11 @@ def apply_to_project(
             link=f"/projects/{project.id}"
         )
 
-    return new_app
+    return format_application_item(new_app, db)
 
 
 @app.get("/applications/", response_model=List[schemas.ApplicationResponse])
+@app.get("/api/applications/", response_model=List[schemas.ApplicationResponse])
 def get_all_applications(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
@@ -759,17 +873,19 @@ def get_all_applications(
     user_role = (current_user.role or "").lower()
 
     if user_role in ["supervisor", "admin"]:
-        return db.query(models.Application).order_by(models.Application.id.desc()).all()
-
-    if user_role in ["partner", "company", "business"]:
+        apps = db.query(models.Application).order_by(models.Application.id.desc()).all()
+    elif user_role in ["partner", "company", "business"]:
         user_projects = db.query(models.Project.id).filter(models.Project.created_by == current_user.id).all()
         project_ids = [p[0] for p in user_projects]
-        return db.query(models.Application).filter(models.Application.project_id.in_(project_ids)).order_by(models.Application.id.desc()).all()
+        apps = db.query(models.Application).filter(models.Application.project_id.in_(project_ids)).order_by(models.Application.id.desc()).all()
+    else:
+        apps = db.query(models.Application).filter(models.Application.student_id == current_user.id).order_by(models.Application.id.desc()).all()
 
-    return db.query(models.Application).filter(models.Application.student_id == current_user.id).order_by(models.Application.id.desc()).all()
+    return [format_application_item(a, db) for a in apps]
 
 
 @app.get("/projects/{project_id}/applications", response_model=List[schemas.ApplicationResponse])
+@app.get("/api/projects/{project_id}/applications", response_model=List[schemas.ApplicationResponse])
 def get_project_applications(
     project_id: int, 
     db: Session = Depends(get_db),
@@ -792,10 +908,12 @@ def get_project_applications(
             detail="ليس لديك الصلاحية لعرض طلبات هذا المشروع"
         )
 
-    return db.query(models.Application).filter(models.Application.project_id == project_id).order_by(models.Application.id.desc()).all()
+    apps = db.query(models.Application).filter(models.Application.project_id == project_id).order_by(models.Application.id.desc()).all()
+    return [format_application_item(a, db) for a in apps]
 
 
 @app.put("/applications/{id}/status", response_model=schemas.ApplicationResponse)
+@app.put("/api/applications/{id}/status", response_model=schemas.ApplicationResponse)
 def update_application_status(
     id: int,
     status_update: Optional[schemas.ApplicationStatusUpdate] = None,
@@ -822,8 +940,12 @@ def update_application_status(
         )
 
     new_status = None
-    if status_update and status_update.status:
-        new_status = status_update.status.strip().lower()
+    feedback_text = None
+    if status_update:
+        if status_update.status:
+            new_status = status_update.status.strip().lower()
+        if status_update.feedback:
+            feedback_text = status_update.feedback.strip()
     elif status_query:
         new_status = status_query.strip().lower()
 
@@ -833,38 +955,135 @@ def update_application_status(
             detail="يرجى إرسال الحالة الجديدة للطلب"
         )
 
-    if new_status not in ["accepted", "rejected", "pending"]:
+    valid_statuses = [
+        "applied", "pending", "company_accepted", 
+        "pending_academic_approval", "academically_approved", 
+        "accepted", "rejected"
+    ]
+    if new_status not in valid_statuses:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="الحالة غير صالحة. الحالات المقبولة هي: accepted, rejected, pending"
+            detail=f"الحالة غير صالحة. الحالات المقبولة هي: {', '.join(valid_statuses)}"
         )
 
-    # التحقق من سعة المقاعد عند القبول وخصم مقعد متاح
-    if new_status == "accepted" and application.status != "accepted":
-        current_accepted = get_project_accepted_members(application.project_id, db)
-        max_cap = project.max_members if (project and project.max_members) else 4
-        if current_accepted >= max_cap:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"لا يمكن قبول الطلب، المقاعد مكتملة للمشروع ({current_accepted}/{max_cap})"
+    student = db.query(models.User).filter(models.User.id == application.student_id).first()
+    proj_title = project.title if project else "المشروع"
+
+    # تدفق الحالات حسب صلاحية المستخدم (شركة راعية أم مشرف أكاديمي)
+    if is_owner and not is_supervisor_or_admin:
+        # قرارات الشركة الراعية: ترشيح صناعي أو رفض
+        if new_status in ["accepted", "company_accepted", "pending_academic_approval"]:
+            current_accepted = get_project_accepted_members(application.project_id, db)
+            max_cap = project.max_members if (project and project.max_members) else 4
+            if current_accepted >= max_cap and application.status not in ["company_accepted", "accepted", "academically_approved"]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"لا يمكن ترشيح الطلب، المقاعد مكتملة للمشروع ({current_accepted}/{max_cap})"
+                )
+            application.status = "company_accepted"
+            if feedback_text:
+                application.feedback = feedback_text
+
+            # إشعار الطالب بالترشيح الصناعي
+            create_notification(
+                db=db,
+                user_id=application.student_id,
+                title="ترشيح صناعي من الشركة! 🌟",
+                message=f"قامت الشركة باختيارك وترشيحك لمشروع: {proj_title}. الطلب الآن بانتظار الاعتماد الأكاديمي النهائي من المشرف.",
+                link=f"/projects/{application.project_id}"
             )
 
-    application.status = new_status
+            # إشعار المشرفين بوجود ترشيح بانتظار الاعتماد الأكاديمي
+            supervisors = db.query(models.User).filter(models.User.role.in_(["supervisor", "admin"])).all()
+            for sup in supervisors:
+                create_notification(
+                    db=db,
+                    user_id=sup.id,
+                    title="طلب اعتماد أكاديمي معلق ⏳",
+                    message=f"قامت الشركة بترشيح الطالب {student.full_name if student else ''} لمشروع: {proj_title}. يرجى المراجعة والاعتماد الأكاديمي.",
+                    link="/supervisor"
+                )
+        elif new_status == "rejected":
+            application.status = "rejected"
+            if feedback_text:
+                application.feedback = feedback_text
+            create_notification(
+                db=db,
+                user_id=application.student_id,
+                title="تحديث حالة طلب الانضمام",
+                message=f"نعتذر، لم يتم اختيار طلبك لمشروع: {proj_title}. {f'ملاحظات: {feedback_text}' if feedback_text else ''}",
+                link="/browse"
+            )
+        else:
+            application.status = new_status
+            if feedback_text:
+                application.feedback = feedback_text
+
+    elif is_supervisor_or_admin:
+        # قرارات المشرف الأكاديمي: اعتماد أكاديمي نهائي وتفعيل مساحة العمل أو رفض
+        if new_status in ["accepted", "academically_approved", "approved"]:
+            application.status = "academically_approved"
+            if feedback_text:
+                application.feedback = feedback_text
+
+            # تفعيل المشروع وتعيين المشرف الحالي رسمياً
+            if project:
+                project.status = "approved"
+                project.supervisor_id = current_user.id
+                project.supervisor_name = current_user.full_name
+                if feedback_text:
+                    project.supervisor_feedback = feedback_text
+
+            # إشعار فوري للطالب بتفعيل مساحة العمل رسمياً
+            create_notification(
+                db=db,
+                user_id=application.student_id,
+                title="تم الاعتماد الأكاديمي رسمياً! 🎓",
+                message=f"اعتمد المشرف الأكاديمي {current_user.full_name} انضمامك لمشروع: {proj_title}. تم تفعيل مساحة العمل ومتابعة التقارير رسمياً!",
+                link="/workspace"
+            )
+
+            # إشعار الشركة بالاعتماد النهائي
+            if project and project.created_by:
+                create_notification(
+                    db=db,
+                    user_id=project.created_by,
+                    title="تم الاعتماد الأكاديمي للمشروع",
+                    message=f"اعتمد المشرف الأكاديمي {current_user.full_name} مشروع: {proj_title} والطالب {student.full_name if student else ''} رسمياً.",
+                    link=f"/projects/{project.id}"
+                )
+
+        elif new_status == "rejected":
+            application.status = "rejected"
+            if feedback_text:
+                application.feedback = feedback_text
+                if project:
+                    project.supervisor_feedback = feedback_text
+
+            create_notification(
+                db=db,
+                user_id=application.student_id,
+                title="قرار المشرف الأكاديمي بخصوص المشروع",
+                message=f"لم يتم الاعتماد الأكاديمي لطلبك في مشروع: {proj_title}. {f'ملاحظات المشرف: {feedback_text}' if feedback_text else ''}",
+                link="/browse"
+            )
+
+            if project and project.created_by:
+                create_notification(
+                    db=db,
+                    user_id=project.created_by,
+                    title="قرار الاعتماد الأكاديمي",
+                    message=f"رفض المشرف الأكاديمي الاعتماد لمشروع: {proj_title}. {f'الملاحظات: {feedback_text}' if feedback_text else ''}",
+                    link=f"/projects/{project.id}"
+                )
+        else:
+            application.status = new_status
+            if feedback_text:
+                application.feedback = feedback_text
+
     db.commit()
     db.refresh(application)
-
-    # توليد إشعار فوري للطالب بالنتيجة
-    action_text = "قبول" if new_status == "accepted" else ("رفض" if new_status == "rejected" else "تحديث")
-    status_title = "تم قبول طلب انضمامك! 🎉" if new_status == "accepted" else ("تم رفض طلب انضمامك" if new_status == "rejected" else "تحديث حالة الطلب")
-    create_notification(
-        db=db,
-        user_id=application.student_id,
-        title=status_title,
-        message=f"تم {action_text} طلب انضمامك لمشروع: {project.title if project else ''}",
-        link=f"/projects/{application.project_id}"
-    )
-
-    return application
+    return format_application_item(application, db)
 
 
 @app.put("/applications/{application_id}/status", response_model=schemas.ApplicationResponse, include_in_schema=False)
@@ -1046,3 +1265,199 @@ def mark_all_notifications_as_read(
     ).update({"is_read": True}, synchronize_session=False)
     db.commit()
     return {"message": "تم تحديد جميع الإشعارات كمقروءة"}
+
+
+# ==========================================
+# مسارات مراحل التسليم والتقارير الأكاديمية (Reports & Deliverables)
+# ==========================================
+
+def format_report_item(r: models.Report, db: Session):
+    """تنسيق وتزويد سجل التقرير ببيانات الطالب واسم المشروع الحقيقي"""
+    if not r:
+        return None
+    if not getattr(r, "student_name", None):
+        st = db.query(models.User).filter(models.User.id == r.student_id).first()
+        r.student_name = st.full_name if st else f"طالب #{r.student_id}"
+    if not getattr(r, "project_title", None):
+        pj = db.query(models.Project).filter(models.Project.id == r.project_id).first()
+        r.project_title = pj.title if pj else f"مشروع #{r.project_id}"
+    return r
+
+
+@app.get("/reports/", response_model=List[schemas.ReportResponse])
+@app.get("/api/reports/", response_model=List[schemas.ReportResponse])
+def get_reports(
+    project_id: Optional[int] = None,
+    student_id: Optional[int] = None,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """جلب قائمة التقارير ومراحل التسليم مع الفلترة بحسب المشروع أو الطالب أو الحالة"""
+    user_role = (current_user.role or "").lower()
+    query = db.query(models.Report)
+
+    if user_role == "student":
+        accepted_proj_ids = [
+            a.project_id for a in db.query(models.Application.project_id).filter(
+                models.Application.student_id == current_user.id,
+                models.Application.status == "accepted"
+            ).all()
+        ]
+        query = query.filter(
+            (models.Report.student_id == current_user.id) | 
+            (models.Report.project_id.in_(accepted_proj_ids))
+        )
+    elif user_role in ["partner", "company", "business"]:
+        company_projects = db.query(models.Project.id).filter(models.Project.created_by == current_user.id).all()
+        p_ids = [p[0] for p in company_projects]
+        query = query.filter(models.Report.project_id.in_(p_ids))
+
+    if project_id:
+        query = query.filter(models.Report.project_id == project_id)
+    if student_id:
+        query = query.filter(models.Report.student_id == student_id)
+    if status:
+        query = query.filter(models.Report.status == status.strip().lower())
+
+    reports = query.order_by(models.Report.id.desc()).all()
+    return [format_report_item(r, db) for r in reports]
+
+
+@app.post("/reports/", response_model=schemas.ReportResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/api/reports/", response_model=schemas.ReportResponse, status_code=status.HTTP_201_CREATED)
+def submit_report(
+    report_in: schemas.ReportCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_role(["student"]))
+):
+    """رفع مرحلة تسليم أو تقرير جديد من قبل الطالب مع إشعار فوري للمشرف وصاحب المشروع"""
+    project = db.query(models.Project).filter(models.Project.id == report_in.project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="المشروع المرتبط بهذا التقرير غير موجود"
+        )
+
+    new_report = models.Report(
+        project_id=report_in.project_id,
+        student_id=current_user.id,
+        title=report_in.title.strip(),
+        description=report_in.description.strip() if report_in.description else None,
+        file_url=report_in.file_url.strip() if report_in.file_url else None,
+        deadline_date=report_in.deadline_date,
+        status="pending"
+    )
+    db.add(new_report)
+    db.commit()
+    db.refresh(new_report)
+
+    target_user_id = project.supervisor_id or project.created_by
+    if target_user_id:
+        create_notification(
+            db=db,
+            user_id=target_user_id,
+            title="تسليم تقرير جديد 📄",
+            message=f"قام الطالب {current_user.full_name} برفع تقرير جديد '{new_report.title}' لمشروع '{project.title}'",
+            link="/reports"
+        )
+
+    return format_report_item(new_report, db)
+
+
+@app.put("/reports/{id}/status", response_model=schemas.ReportResponse)
+@app.put("/api/reports/{id}/status", response_model=schemas.ReportResponse)
+def update_report_status(
+    id: int,
+    status_update: schemas.ReportStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_role(["supervisor", "admin", "partner", "company", "business"]))
+):
+    """تقييم واعتماد أو طلب تعديل تقرير من قبل المشرف الأكاديمي أو الشريك"""
+    report = db.query(models.Report).filter(models.Report.id == id).first()
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="التقرير المطلوب غير موجود"
+        )
+
+    st = status_update.status.strip().lower()
+    if st not in ["approved", "needs_changes", "pending", "rejected"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="حالة التقرير غير صالحة. الحالات المسموحة: approved, needs_changes, pending, rejected"
+        )
+
+    report.status = st
+    if status_update.supervisor_feedback is not None:
+        report.supervisor_feedback = status_update.supervisor_feedback.strip()
+    if status_update.grade is not None:
+        report.grade = status_update.grade.strip()
+
+    db.commit()
+    db.refresh(report)
+
+    status_titles = {
+        "approved": "تم اعتماد تقريرك الأكاديمي بنجاح! 🎉",
+        "needs_changes": "مطلوب تعديلات على التقرير الأكاديمي ⚠️",
+        "rejected": "تم رفض التقرير الأكاديمي"
+    }
+    create_notification(
+        db=db,
+        user_id=report.student_id,
+        title=status_titles.get(st, "تحديث حالة التقرير"),
+        message=f"تم تحديث حالة تقريرك '{report.title}' إلى {st}. ملاحظات: {report.supervisor_feedback or 'لا توجد ملاحظات'}",
+        link="/reports"
+    )
+
+    return format_report_item(report, db)
+
+
+# ==========================================
+# مسارات الإحصائيات الحية للمنصة (Platform Analytics)
+# ==========================================
+
+@app.get("/analytics/overview", response_model=schemas.AnalyticsOverviewResponse)
+@app.get("/api/analytics/overview", response_model=schemas.AnalyticsOverviewResponse)
+def get_platform_analytics(db: Session = Depends(get_db)):
+    """حساب وإرجاع إحصائيات المنصة الحية مباشرة من قاعدة البيانات بنسبة 100% دون أي أرقام وهمية"""
+    total_projects = db.query(models.Project).count()
+    approved_projects = db.query(models.Project).filter(models.Project.status == "approved").count()
+    pending_projects = db.query(models.Project).filter(models.Project.status == "pending").count()
+    total_students = db.query(models.User).filter(models.User.role == "student").count()
+    total_companies = db.query(models.User).filter(models.User.role.in_(["company", "partner", "business"])).count()
+    total_supervisors = db.query(models.User).filter(models.User.role == "supervisor").count()
+    total_applications = db.query(models.Application).count()
+    total_reports = db.query(models.Report).count()
+    pending_reports = db.query(models.Report).filter(models.Report.status == "pending").count()
+    approved_reports = db.query(models.Report).filter(models.Report.status == "approved").count()
+
+    projects = db.query(models.Project.required_skills).all()
+    skill_counts = {}
+    for (skills_str,) in projects:
+        if skills_str:
+            for s in skills_str.split(','):
+                s_clean = s.strip()
+                if s_clean:
+                    skill_counts[s_clean] = skill_counts.get(s_clean, 0) + 1
+
+    top_skills_list = []
+    tot_skills_count = sum(skill_counts.values()) or 1
+    sorted_skills = sorted(skill_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+    for skill_name, cnt in sorted_skills:
+        pct = int(round((cnt / tot_skills_count) * 100))
+        top_skills_list.append(schemas.TopSkillItem(name=skill_name, count=cnt, percent=pct))
+
+    return schemas.AnalyticsOverviewResponse(
+        total_projects=total_projects,
+        approved_projects=approved_projects,
+        pending_projects=pending_projects,
+        total_students=total_students,
+        total_companies=total_companies,
+        total_supervisors=total_supervisors,
+        total_applications=total_applications,
+        total_reports=total_reports,
+        pending_reports=pending_reports,
+        approved_reports=approved_reports,
+        top_skills=top_skills_list
+    )

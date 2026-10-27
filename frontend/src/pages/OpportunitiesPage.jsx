@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
@@ -13,66 +13,56 @@ import {
 
 export default function OpportunitiesPage() {
   const { t } = useTranslation();
-  const { isRtl, showToast } = useApp();
+  const { rawProjects, applyToProject, isRtl, showToast } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTrack, setSelectedTrack] = useState('all');
 
-  const opportunitiesList = [
-    {
-      id: 1,
-      company: 'شركة النور للحلول البرمجية',
-      title: isRtl
-        ? 'رعاية كاملة وتوظيف لمشاريع الذكاء الاصطناعي وتطوير الويب'
-        : 'Full Sponsorship & Direct Hiring: AI & Web Systems',
-      description: isRtl
-        ? 'نقدم رعاية وتمويل لمشروع تخرج تطبيقي يركز على نماذج الذكاء الاصطناعي وربط الـ API، مع تغطية تكاليف الخوادم السحابية ومكافأة شهرية.'
-        : 'Offering full sponsorship and server resources for a capstone team focused on practical LLM integrations and enterprise APIs.',
-      stipend: '1,200$ + بيئة سحابية',
-      track: 'AI / Web',
-      skills: ['Python', 'FastAPI', 'React', 'Docker'],
-      deadline: '2026-11-15',
-      slots: 'فريقين طلابيين'
-    },
-    {
-      id: 2,
-      company: 'مجموعة الاتصالات وتكنولوجيا المعلومات',
-      title: isRtl
-        ? 'حاضنة مشاريع إنترنت الأشياء (IoT) والأنظمة الذكية'
-        : 'IoT & Smart Cities Incubation Program',
-      description: isRtl
-        ? 'فرصة تبني واحتضان مشاريع تخرج إنترنت الأشياء وتوفير وحدات الاستشعار وعتاد الاختبار داخل مختبرات الشركة مع إشراف مهندسينا.'
-        : 'Incubation opportunity offering hardware sensors, lab environments, and expert mentorship for IoT capstone projects.',
-      stipend: 'تمويل عتاد + تدريب معتمد',
-      track: 'IoT',
-      skills: ['ESP32', 'C++', 'MQTT', 'Python'],
-      deadline: '2026-11-20',
-      slots: '3 فرق'
-    },
-    {
-      id: 3,
-      company: 'عسل تكنولوجيز (ASAL Technologies)',
-      title: isRtl
-        ? 'برنامج تدريب خريجي الأمن السيبراني وهندسة الجودة (QA)'
-        : 'Cybersecurity & QA Graduate Internship Cohort',
-      description: isRtl
-        ? 'تدريب عملي مكثف مدفوع الأجر خلال الفصل الدراسي الأخير مع فرصة توظيف مباشر بعد مناقشة مشروع التخرج.'
-        : 'Intensive paid internship program during the final semester with direct full-time employment upon successful thesis defense.',
-      stipend: 'مكافأة تدريب شهرية',
-      track: 'Security / QA',
-      skills: ['PenTesting', 'OWASP', 'Linux', 'Selenium'],
-      deadline: '2026-11-30',
-      slots: '5 طلاب'
-    }
-  ];
+  // استخراج الفرص والتحديات الحقيقية من المشاريع المسجلة بالمنصة
+  const opportunitiesList = useMemo(() => {
+    return (rawProjects || []).map((p) => {
+      const skillsArr = Array.isArray(p.skills) && p.skills.length > 0
+        ? p.skills
+        : (typeof p.required_skills === 'string' && p.required_skills
+          ? p.required_skills.split(',').map((s) => s.trim()).filter(Boolean)
+          : ['React', 'FastAPI']);
 
-  const handleApplyOpportunity = (company, title) => {
-    showToast(
-      isRtl
-        ? `تم تقديم طلبك بنجاح لفرصة (${title}) لدى ${company}!`
-        : `Your application has been submitted to ${company}!`,
-      'success'
-    );
+      return {
+        id: p.id,
+        company: p.company_name || (isRtl ? 'شراكة صناعية معتمدة' : 'Accredited Industry Partner'),
+        title: p.title,
+        description: p.description,
+        stipend: p.stipend || (isRtl ? 'حزمة دعم ورعاية وتدريب' : 'Sponsorship & Training Cohort'),
+        track: p.category || 'CIS / CS',
+        skills: skillsArr,
+        deadline: '2026-11-25',
+        slots: `${p.availableSeats !== undefined ? p.availableSeats : (p.available_seats !== undefined ? p.available_seats : 3)} ${isRtl ? 'مقاعد شاغرة' : 'open seats'}`
+      };
+    });
+  }, [rawProjects, isRtl]);
+
+  const handleApplyOpportunity = async (companyOrOp, title) => {
+    try {
+      const isObj = typeof companyOrOp === 'object' && companyOrOp !== null;
+      const opTitle = isObj ? companyOrOp.title : title;
+      const opId = isObj ? companyOrOp.id : (rawProjects.find((p) => p.title === opTitle)?.id || 1);
+      if (applyToProject) {
+        await applyToProject({
+          projectId: opId,
+          role: isRtl ? 'طالب خريج ومطور' : 'Graduate Student Developer',
+          message: isRtl ? `التقديم على فرصة رعاية وتدريب: ${opTitle}` : `Application for sponsorship: ${opTitle}`
+        });
+      } else {
+        showToast(
+          isRtl
+            ? `تم تقديم طلبك بنجاح لفرصة (${opTitle})!`
+            : `Your application has been submitted to ${opTitle}!`,
+          'success'
+        );
+      }
+    } catch {
+      // Ignored
+    }
   };
 
   const filtered = opportunitiesList.filter((op) => {

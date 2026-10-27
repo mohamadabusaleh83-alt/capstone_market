@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -20,42 +20,39 @@ import {
 export default function CompanyPartnershipsPage() {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
-  const { isRtl, setSelectedChatProject, showToast } = useApp();
+  const { rawProjects, applications, reportsTimeline, isRtl, setSelectedChatProject, showToast } = useApp();
 
-  const isDemoCompany = currentUser?.id === 'company-1';
+  const partnershipsList = useMemo(() => {
+    if (!currentUser) return [];
+    const myProjects = (rawProjects || []).filter(
+      (p) => String(p.created_by) === String(currentUser.id)
+    );
 
-  const defaultDemoPartnerships = [
-    {
-      id: 1,
-      projectTitle: isRtl
-        ? 'نظام إدارة المستودعات ونقاط البيع السحابي (POS)'
-        : 'Cloud Warehouse & POS Inventory Management System',
-      teamLead: 'أحمد منصور',
-      membersCount: 2,
-      supervisor: 'د. أسامة أمين مرعي',
-      progress: 75,
-      currentMilestone: isRtl ? 'وثيقة المتطلبات والهيكلية المعمارية (SRS)' : 'SRS & Architecture Specification',
-      nextDelivery: '2026-10-27',
-      status: 'active',
-      statusLabel: isRtl ? 'شراكة نشطة' : 'Active Partnership'
-    },
-    {
-      id: 2,
-      projectTitle: isRtl
-        ? 'محرك توصيات ذكي لمنتجات المتاجر بالذكاء الاصطناعي'
-        : 'AI-Powered E-Commerce Recommendation Engine',
-      teamLead: 'سارة خليل',
-      membersCount: 3,
-      supervisor: 'د. أسامة أمين مرعي',
-      progress: 50,
-      currentMilestone: isRtl ? 'النموذج الأولي واختبار التوافق' : 'Prototype & Model Benchmarking',
-      nextDelivery: '2026-11-17',
-      status: 'active',
-      statusLabel: isRtl ? 'شراكة نشطة' : 'Active Partnership'
-    }
-  ];
+    return myProjects.map((p) => {
+      const pApps = (applications || []).filter(
+        (a) => a.project_id === p.id && a.status === 'accepted'
+      );
+      const pReports = (reportsTimeline || []).filter((r) => r.project_id === p.id);
+      const approvedR = pReports.filter((r) => r.status === 'approved').length;
+      const progress = pReports.length > 0 ? Math.round((approvedR / pReports.length) * 100) : 0;
+      const leadApp = pApps[0];
+      const leadName = leadApp?.student_name || (isRtl ? 'فريق طلابي' : 'Student Team');
+      const latestMilestone = pReports[0];
 
-  const partnershipsList = isDemoCompany ? defaultDemoPartnerships : [];
+      return {
+        id: p.id,
+        projectTitle: p.title,
+        teamLead: leadName,
+        membersCount: p.current_members !== undefined ? p.current_members : pApps.length,
+        supervisor: p.supervisor_name || 'د. أسامة أمين مرعي',
+        progress: progress,
+        currentMilestone: latestMilestone ? latestMilestone.title : (isRtl ? 'بانتظار تسليم التقارير' : 'Awaiting Deliverables'),
+        nextDelivery: latestMilestone?.deadlineDate || latestMilestone?.deadline_date || (isRtl ? 'قيد التحديد' : 'TBD'),
+        status: p.status === 'approved' ? 'active' : 'pending',
+        statusLabel: p.status === 'approved' ? (isRtl ? 'شراكة نشطة' : 'Active Partnership') : (isRtl ? 'قيد المراجعة' : 'Pending Review')
+      };
+    });
+  }, [rawProjects, applications, reportsTimeline, currentUser, isRtl]);
 
   const handleOpenChat = (title) => {
     setSelectedChatProject({ title });

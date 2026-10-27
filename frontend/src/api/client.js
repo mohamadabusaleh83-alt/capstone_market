@@ -15,50 +15,7 @@ export const ACADEMIC_MAJORS = [
   'هندسة البرمجيات'
 ];
 
-export const INITIAL_FALLBACK_PROJECTS = [
-  {
-    id: 1,
-    title: 'نظام إدارة المستودعات ونقاط البيع السحابي (POS)',
-    description: 'نظام متكامل لمتجر تجزئة لربط عمليات البيع بالمخزون وإصدار تنبيهات عند نفاد البضائع، مع تقارير أرباح يومية.',
-    category: 'أنظمة المعلومات الحاسوبية (CIS)',
-    difficulty: 'متوسط',
-    hoursPerWeek: 12,
-    maxMembers: 4,
-    currentMembers: 1,
-    status: 'approved',
-    required_skills: 'Python, SQL, FastAPI, React',
-    skills: ['Python', 'SQL', 'FastAPI', 'React'],
-    created_by: 1
-  },
-  {
-    id: 2,
-    title: 'لوحة مؤشرات تنبؤية للمبيعات وسلوك المستهلك',
-    description: 'بناء داشبورد ذكاء أعمال (BI) لشركة توزيع لتحليل فواتير المبيعات السابقة والتنبؤ بالطلب للمواسم القادمة.',
-    category: 'أنظمة المعلومات الحاسوبية (CIS)',
-    difficulty: 'متقدم',
-    hoursPerWeek: 14,
-    maxMembers: 3,
-    currentMembers: 0,
-    status: 'pending',
-    required_skills: 'Python, Power BI, SQL, Machine Learning',
-    skills: ['Python', 'Power BI', 'SQL', 'Machine Learning'],
-    created_by: 1
-  },
-  {
-    id: 3,
-    title: 'بوابة تدقيق الثغرات واكتشاف الاختراقات للمتاجر الإلكترونية',
-    description: 'أداة فحص أمني لتقييم حماية بوابات الدفع الإلكتروني وتشفير بيانات بطاقات العملاء في المتاجر المحلية.',
-    category: 'أمن المعلومات والأدلة الرقمية (Cybersecurity)',
-    difficulty: 'متقدم',
-    hoursPerWeek: 15,
-    maxMembers: 3,
-    currentMembers: 0,
-    status: 'approved',
-    required_skills: 'Cybersecurity, Python, Docker, Linux',
-    skills: ['Cybersecurity', 'Python', 'Docker', 'Linux'],
-    created_by: 2
-  }
-];
+export const INITIAL_FALLBACK_PROJECTS = [];
 
 // دالة فحص هل الخطأ ناتج عن إلغاء الإشارة أو انقطاع المهلة (AbortError)
 export function isAbortError(err) {

@@ -34,122 +34,107 @@ export default function MyProjectsPage() {
     applications,
     setIsCreateModalOpen,
     reportsTimeline,
-    setActiveChatProject
+    setActiveChatProject,
+    myProject
   } = useApp();
 
-  // مراحل التسليم والتقارير الأكاديمية مع حماية ضد القيمة غير المعرفة
-  const milestones = reportsTimeline || [];
+  // فحص ما إذا كان الطالب مرشحاً من شركة بانتظار الاعتماد الأكاديمي
+  const nominatedApp = useMemo(() => {
+    if (!currentUser) return null;
+    return (applications || []).find(
+      (a) =>
+        (a?.student_id === currentUser?.id || String(a?.student_id) === String(currentUser?.id)) &&
+        (a?.status === 'company_accepted' || a?.status === 'pending_academic_approval')
+    );
+  }, [currentUser, applications]);
 
-  // جلب المشروع الفعلي التابع للطالب أو توفير مشروع تخرج مكتمل التفاصيل للحسابات التجريبية
+  // جلب المشروع الفعلي التابع للطالب من قاعدة البيانات حصراً دون أي بيانات وهمية
   const studentProject = useMemo(() => {
     if (!currentUser) return null;
 
-    // 1. التحقق أولاً مما إذا كان الطالب قد أنشأ مشروعاً في الباك إند
-    const createdByMe = (rawProjects || []).find(
-      (p) =>
-        p?.created_by === currentUser?.id ||
-        (currentUser?.id && String(p?.created_by) === String(currentUser?.id))
-    );
+    let baseProject = myProject;
 
-    if (createdByMe) {
-      const isApproved = createdByMe?.status === 'approved';
-      const isRejected = createdByMe?.status === 'rejected';
-
-      return {
-        id: createdByMe?.id,
-        title: createdByMe?.title || (isRtl ? 'مشروع تخرج بدون عنوان' : 'Untitled Project'),
-        description: createdByMe?.description || (isRtl ? 'لا يوجد وصف تفصيلي متوفر للمشروع.' : 'No description available.'),
-        supervisor: 'د. أسامة أمين مرعي',
-        status: createdByMe?.status || 'pending',
-        statusLabel: isApproved
-          ? (isRtl ? 'معتمد أكاديمياً' : 'Academically Approved')
-          : isRejected
-          ? (isRtl ? 'مرفوض' : 'Rejected')
-          : (isRtl ? 'قيد المراجعة والاعتماد' : 'Pending Approval'),
-        progress: isApproved ? 65 : 25,
-        members: [
-          {
-            name: currentUser?.name || (isRtl ? 'طالب خريج' : 'Student'),
-            role: isRtl ? 'قائد المشروع ومطور' : 'Project Lead & Developer',
-            avatar: '👨‍🎓'
-          }
-        ],
-        techStack: createdByMe?.skills || (
-          typeof createdByMe?.required_skills === 'string' && createdByMe?.required_skills
-            ? createdByMe.required_skills.split(',').map((s) => s.trim()).filter(Boolean)
-            : ['React', 'FastAPI', 'TailwindCSS']
-        ),
-        companyPartner: isRtl ? 'شركة النور للحلول البرمجية' : 'Al-Noor Software Solutions'
-      };
-    }
-
-    // 2. التحقق مما إذا كان الطالب قد انضم إلى مشروع وتم قبوله رسمياً
-    const acceptedApp = (applications || []).find(
-      (a) =>
-        (a?.student_id === currentUser?.id ||
-          (currentUser?.id && String(a?.student_id) === String(currentUser?.id))) &&
-        a?.status === 'accepted'
-    );
-
-    if (acceptedApp) {
-      const joinedProj = (rawProjects || []).find((p) => p?.id === acceptedApp?.project_id);
-      if (joinedProj) {
-        return {
-          id: joinedProj?.id,
-          title: joinedProj?.title || (isRtl ? 'مشروع التخرج المشترك' : 'Joined Capstone Project'),
-          description: joinedProj?.description || '',
-          supervisor: 'د. أسامة أمين مرعي',
-          status: joinedProj?.status || 'approved',
-          statusLabel: isRtl ? 'معتمد أكاديمياً' : 'Academically Approved',
-          progress: 70,
-          members: [
-            {
-              name: currentUser?.name || (isRtl ? 'طالب خريج' : 'Student'),
-              role: isRtl ? 'عضو فريق ومطور' : 'Team Member & Developer',
-              avatar: '👨‍🎓'
-            }
-          ],
-          techStack: joinedProj?.skills || ['React', 'FastAPI', 'PostgreSQL'],
-          companyPartner: isRtl ? 'شركة النور للحلول البرمجية' : 'Al-Noor Software Solutions'
-        };
+    // 1. فحص طلبات الانضمام المعتمدة أكاديمياً ورسمياً في حال لم يكن myProject محملاً بعد
+    if (!baseProject) {
+      const acceptedApp = (applications || []).find(
+        (a) =>
+          (a?.student_id === currentUser?.id ||
+            (currentUser?.id && String(a?.student_id) === String(currentUser?.id))) &&
+          (a?.status === 'accepted' || a?.status === 'academically_approved')
+      );
+      if (acceptedApp) {
+        baseProject = (rawProjects || []).find((p) => p?.id === acceptedApp?.project_id);
       }
     }
 
-    // 3. توفير بيانات افتراضية آمنة ومكتملة للحساب التجريبي للطالب (student@capstone.ps / أحمد منصور)
-    const isDemoStudent =
-      currentUser?.email?.includes('student') ||
-      currentUser?.email?.includes('mansour') ||
-      currentUser?.id === 'student-1';
-
-    const fallbackPosProject = (rawProjects || []).find(
-      (p) => p?.title?.includes('المستودعات') || p?.title?.includes('POS')
-    );
-
-    if (isDemoStudent && (fallbackPosProject || currentUser?.id === 'student-1' || currentUser?.email?.includes('student@capstone.ps'))) {
-      const base = fallbackPosProject || {};
-      return {
-        id: base?.id || 101,
-        title: base?.title || (isRtl
-          ? 'نظام إدارة المستودعات ونقاط البيع السحابي (POS)'
-          : 'Cloud Warehouse & POS Inventory Management System'),
-        description: base?.description || (isRtl
-          ? 'نظام متكامل يربط حركة المخزون بنقاط البيع السحابية مع خوارزميات التنبؤ باحتياجات التوريد والربط مع الفواتير الإلكترونية.'
-          : 'Comprehensive system connecting real-time inventory with cloud POS, featuring supply chain prediction algorithms and e-invoicing.'),
-        supervisor: 'د. أسامة أمين مرعي',
-        status: base?.status || 'approved',
-        statusLabel: isRtl ? 'معتمد أكاديمياً' : 'Academically Approved',
-        progress: 75,
-        members: [
-          { name: currentUser?.name || 'أحمد منصور', role: isRtl ? 'مطور واجهات ومحلل أعمال' : 'Frontend Lead & Analyst', avatar: '👨‍🎓' },
-          { name: isRtl ? 'محمد النجار' : 'Mohamed El-Naggar', role: isRtl ? 'مهندس نظم خلفية وقواعد بيانات' : 'Backend & DB Engineer', avatar: '👨‍💻' }
-        ],
-        techStack: ['React', 'FastAPI', 'PostgreSQL', 'Docker', 'TailwindCSS'],
-        companyPartner: isRtl ? 'شركة النور للحلول البرمجية' : 'Al-Noor Software Solutions'
-      };
+    // 2. فحص المشاريع التي أنشأها الطالب بنفسه
+    if (!baseProject) {
+      baseProject = (rawProjects || []).find(
+        (p) =>
+          p?.created_by === currentUser?.id ||
+          (currentUser?.id && String(p?.created_by) === String(currentUser?.id))
+      );
     }
 
-    return null;
-  }, [rawProjects, applications, currentUser, isRtl]);
+    if (!baseProject) return null;
+
+    const isApproved = baseProject?.status === 'approved';
+    const isRejected = baseProject?.status === 'rejected';
+
+    // احتساب تقارير ومراحل هذا المشروع حصراً
+    const projMilestones = (reportsTimeline || []).filter(
+      (r) => !r.project_id || r.project_id === baseProject.id
+    );
+    const totalReports = projMilestones.length;
+    const approvedReports = projMilestones.filter((r) => r.status === 'approved').length;
+    const calculatedProgress = totalReports > 0 ? Math.round((approvedReports / totalReports) * 100) : 0;
+
+    // جلب أعضاء الفريق المقبولين فعلياً بالمشروع
+    const acceptedTeam = (applications || [])
+      .filter((a) => a.project_id === baseProject.id && a.status === 'accepted')
+      .map((a) => ({
+        name: a.student_name || (isRtl ? `طالب #${a.student_id}` : `Student #${a.student_id}`),
+        role: a.message?.includes('Role:') ? a.message.split('Role:')[1]?.split(']')[0]?.trim() : (isRtl ? 'عضو فريق ومطور' : 'Team Developer'),
+        avatar: '👨‍🎓'
+      }));
+
+    if (acceptedTeam.length === 0) {
+      acceptedTeam.push({
+        name: currentUser?.name || (isRtl ? 'طالب خريج' : 'Student'),
+        role: isRtl ? 'قائد المشروع ومطور' : 'Project Lead & Developer',
+        avatar: '👨‍🎓'
+      });
+    }
+
+    return {
+      id: baseProject.id,
+      title: baseProject.title || (isRtl ? 'مشروع تخرج' : 'Capstone Project'),
+      description: baseProject.description || '',
+      supervisor: baseProject.supervisor_name || 'د. أسامة أمين مرعي',
+      status: baseProject.status || 'pending',
+      statusLabel: isApproved
+        ? (isRtl ? 'معتمد أكاديمياً' : 'Academically Approved')
+        : isRejected
+        ? (isRtl ? 'مرفوض' : 'Rejected')
+        : (isRtl ? 'قيد المراجعة والاعتماد' : 'Pending Approval'),
+      progress: calculatedProgress,
+      members: acceptedTeam,
+      techStack: Array.isArray(baseProject.skills) && baseProject.skills.length > 0
+        ? baseProject.skills
+        : (typeof baseProject.required_skills === 'string' && baseProject.required_skills
+          ? baseProject.required_skills.split(',').map((s) => s.trim()).filter(Boolean)
+          : ['React', 'FastAPI']),
+      companyPartner: baseProject.company_name || null
+    };
+  }, [currentUser, myProject, applications, rawProjects, reportsTimeline, isRtl]);
+
+  // مراحل التسليم والتقارير الأكاديمية الحقيقية الخاصة بمشروع الطالب
+  const milestones = useMemo(() => {
+    if (!studentProject?.id) return [];
+    return (reportsTimeline || []).filter(
+      (r) => !r.project_id || r.project_id === studentProject.id
+    );
+  }, [reportsTimeline, studentProject?.id]);
 
   // شاشة التحميل (Loading State)
   if (isLoadingProjects && (!rawProjects || rawProjects.length === 0)) {
@@ -204,6 +189,47 @@ export default function MyProjectsPage() {
           <span>{isRtl ? 'إضافة / اقتراح مشروع تخرج' : 'Add / Propose Project'}</span>
         </button>
       </div>
+
+      {/* في حال وجود ترشيح صناعي من شركة بانتظار الاعتماد الأكاديمي */}
+      {nominatedApp && (!studentProject || studentProject.status !== 'approved') && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-[#2499F2]/10 to-[#28C8C0]/10 border-2 border-amber-500/40 rounded-3xl p-6 sm:p-8 text-start shadow-md space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center text-xl shrink-0">
+              🌟
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/20 px-2.5 py-0.5 rounded-full">
+                {isRtl ? 'ترشيح صناعي من الشركة' : 'Company Nomination'}
+              </span>
+              <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-1">
+                {isRtl ? 'تم ترشيحك بنجاح من قِبل الشركة الراعية! ⏳ بانتظار الاعتماد الأكاديمي' : 'You have been nominated! ⏳ Awaiting Academic Approval'}
+              </h2>
+            </div>
+          </div>
+          <div className="p-4 rounded-2xl bg-white/60 dark:bg-[#101E42]/80 border border-amber-200/60 dark:border-amber-500/20 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500 dark:text-slate-400">{isRtl ? 'المشروع المرشح له:' : 'Nominated Project:'}</span>
+              <span className="font-bold text-slate-800 dark:text-white">{nominatedApp.project_title || (isRtl ? 'مشروع التخرج' : 'Capstone Project')}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500 dark:text-slate-400">{isRtl ? 'الشركة الراعية:' : 'Company:'}</span>
+              <span className="font-bold text-[#2499F2]">{nominatedApp.company_name || (isRtl ? 'شركة معتمدة' : 'Partner Company')}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500 dark:text-slate-400">{isRtl ? 'حالة الاعتماد الأكاديمي:' : 'Academic Status:'}</span>
+              <span className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 animate-spin" />
+                <span>{isRtl ? 'قيد المراجعة والاعتماد لدى المشرف الأكاديمي' : 'Pending Faculty Review'}</span>
+              </span>
+            </div>
+          </div>
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            {isRtl
+              ? 'قبول الشركة لطلبك هو ترشيح صناعي رسمي. ستُفتح مساحة العمل الفعالة ومراحل رفع التقارير تلقائياً فور اعتماد المشرف الأكاديمي للترشيح.'
+              : 'The company acceptance is an official industry nomination. Active workspace and report milestones will unlock automatically once your supervisor approves.'}
+          </p>
+        </div>
+      )}
 
       {/* في حال عدم وجود مشروع: عرض واجهة فارغة أنيقة ومنظمة (Empty State UI) */}
       {!studentProject ? (
@@ -341,7 +367,7 @@ export default function MyProjectsPage() {
                       {isRtl ? 'الجهة الراعية / الشريكة' : 'Partner Company'}
                     </div>
                     <div className="text-xs font-bold text-white truncate">
-                      {studentProject?.companyPartner || (isRtl ? 'شركة النور للحلول البرمجية' : 'Al-Noor Software Solutions')}
+                      {studentProject?.companyPartner || (isRtl ? 'رعاية أكاديمية مباشرة' : 'Direct Academic Track')}
                     </div>
                   </div>
                 </div>

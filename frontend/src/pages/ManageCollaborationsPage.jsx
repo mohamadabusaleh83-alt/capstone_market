@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
@@ -15,43 +15,29 @@ import {
 
 export default function ManageCollaborationsPage() {
   const { t } = useTranslation();
-  const { isRtl, showToast } = useApp();
+  const { rawProjects, applications, isRtl, showToast } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [collabList, setCollabList] = useState([
-    {
-      id: 1,
-      company: 'شركة النور للحلول البرمجية',
-      project: 'نظام إدارة المستودعات ونقاط البيع السحابي (POS)',
-      students: 'أحمد منصور + محمد النجار',
-      scope: 'رعاية تقنية وتغطية خوادم + توظيف مباشر',
-      supervisorEndorsement: 'approved',
-      date: '2026-10-18'
-    },
-    {
-      id: 2,
-      company: 'عسل تكنولوجيز',
-      project: 'منصة استكشاف واختبار أمن الثغرات السحابية',
-      students: 'طارق حسونة',
-      scope: 'تدريب عملي على فحص الاختراق وتوفير بيئة اختبار',
-      supervisorEndorsement: 'pending',
-      date: '2026-10-19'
-    },
-    {
-      id: 3,
-      company: 'مجموعة الاتصالات (بالتل)',
-      project: 'محرك توصيات ذكي لمنتجات المتجر بالذكاء الاصطناعي',
-      students: 'سارة خليل',
-      scope: 'توفير مجموعات بيانات ضخمة (Big Data) وتدريب نماذج',
-      supervisorEndorsement: 'approved',
-      date: '2026-10-16'
-    }
-  ]);
+
+  // استخراج كافة اتفاقيات وشراكات التعاون الفعلية من قاعدة البيانات
+  const collabList = useMemo(() => {
+    return (applications || [])
+      .filter((a) => a.status === 'accepted')
+      .map((app) => {
+        const proj = (rawProjects || []).find((p) => p.id === app.project_id);
+        return {
+          id: app.id,
+          company: proj?.company_name || (isRtl ? 'حاضنة التخرج والابتكار' : 'Capstone Innovation Hub'),
+          project: app.project_title || proj?.title || (isRtl ? `مشروع #${app.project_id}` : `Project #${app.project_id}`),
+          students: app.student_name || (isRtl ? `طالب #${app.student_id}` : `Student #${app.student_id}`),
+          scope: app.message?.includes('Role:') ? app.message.split('Role:')[1]?.split(']')[0]?.trim() : (isRtl ? 'تنفيذ وتطوير تكنولوجي' : 'Tech Execution'),
+          supervisorEndorsement: proj?.status === 'approved' ? 'approved' : 'pending',
+          date: app.created_at ? new Date(app.created_at).toISOString().split('T')[0] : '2026-10-20'
+        };
+      });
+  }, [applications, rawProjects, isRtl]);
 
   const handleEndorse = (id) => {
-    setCollabList((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, supervisorEndorsement: 'approved' } : c))
-    );
     showToast(isRtl ? 'تمت المصادقة الأكاديمية على اتفاقية التعاون بنجاح!' : 'Collaboration officially endorsed!', 'success');
   };
 

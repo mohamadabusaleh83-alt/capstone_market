@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
+import { apiFetch } from '../api/client';
 import {
   Building2,
   Search,
@@ -20,44 +21,39 @@ export default function ManageCompaniesPage() {
   const { isRtl, showToast } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [companiesList] = useState([
-    {
-      id: 1,
-      name: 'شركة النور للحلول البرمجية',
-      industry: 'تطوير النظم السحابية والذكاء الاصطناعي',
-      contactPerson: 'م. خالد العلمي',
-      email: 'company@capstone.ps',
-      phone: '+970 599 123 456',
-      opportunitiesCount: 2,
-      sponsoredProjectsCount: 2,
-      status: 'accredited',
-      accreditationDate: '2026-09-01'
-    },
-    {
-      id: 2,
-      name: 'مجموعة الاتصالات وتكنولوجيا المعلومات',
-      industry: 'البنية التحتية وإنترنت الأشياء (IoT)',
-      contactPerson: 'أ. ريم الشوا',
-      email: 'partners@paltelgroup.ps',
-      phone: '+970 599 654 321',
-      opportunitiesCount: 1,
-      sponsoredProjectsCount: 3,
-      status: 'accredited',
-      accreditationDate: '2026-09-15'
-    },
-    {
-      id: 3,
-      name: 'عسل تكنولوجيز (ASAL Technologies)',
-      industry: 'هندسة البرمجيات وجودة الأنظمة (QA)',
-      contactPerson: 'م. إياد قاسم',
-      email: 'hr@asaltech.com',
-      phone: '+970 599 987 654',
-      opportunitiesCount: 1,
-      sponsoredProjectsCount: 1,
-      status: 'accredited',
-      accreditationDate: '2026-10-01'
-    }
-  ]);
+  const [companiesList, setCompaniesList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiFetch('/users/?role=company')
+      .then((res) => (res && res.ok ? res.json() : []))
+      .then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setCompaniesList(
+            data.map((c) => ({
+              id: c.id,
+              name: c.full_name,
+              industry: c.bio || (isRtl ? 'حلول برمجية وتكنولوجيا' : 'Software & Tech Solutions'),
+              contactPerson: c.full_name,
+              email: c.email,
+              phone: '+970 599 000 000',
+              opportunitiesCount: 1,
+              sponsoredProjectsCount: 1,
+              status: 'accredited',
+              accreditationDate: c.created_at ? new Date(c.created_at).toISOString().split('T')[0] : '2026-09-01'
+            }))
+          );
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [isRtl]);
 
   const filtered = companiesList.filter(
     (c) =>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -20,64 +20,47 @@ import {
 export default function CollaborationRequestsPage() {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
-  const { isRtl, applications, showToast } = useApp();
+  const { isRtl, applications, rawProjects, updateApplicationStatus, showToast } = useApp();
 
   const [activeTab, setActiveTab] = useState('received'); // 'received' | 'sent'
-  
-  const isDemoAccount = currentUser?.id === 'student-1' || currentUser?.id === 'company-1';
 
-  const defaultDemoRequests = [
-    {
-      id: 1,
-      senderName: 'شركة النور للحلول البرمجية',
-      senderType: 'company',
-      targetProject: 'نظام إدارة المستودعات ونقاط البيع السحابي (POS)',
-      roleOffered: 'رعاية تقنية وتوظيف مباشر بعد التخرج',
-      message: 'نود رعاية هذا المشروع وتوفير بيئة اختبار سحابية ومكافأة شهرية للفريق الطلابي مع إمكانية التوظيف المباشر.',
-      createdAt: '2026-10-18T10:30:00Z',
-      status: 'pending'
-    },
-    {
-      id: 2,
-      senderName: 'أحمد منصور',
-      senderType: 'student',
-      targetProject: 'محرك توصيات ذكي لمنتجات المتاجر بالذكاء الاصطناعي',
-      roleOffered: 'مطور خوارزميات وربط API',
-      message: 'أرغب بالانضمام لفريق العمل في هذا المشروع، ولدي خبرة جيدة في FastAPI و Docker.',
-      createdAt: '2026-10-17T14:15:00Z',
-      status: 'approved'
-    },
-    {
-      id: 3,
-      senderName: 'شركة إبداع للأنظمة الذكية',
-      senderType: 'company',
-      targetProject: 'تطبيق الرعاية الصحية الذكي والمتابعة عن بُعد',
-      roleOffered: 'شراكة تجارية واستثمار',
-      message: 'نبحث عن نموذج عمل تطبيقي لتبني المشروع في حاضنة أعمال الشركة.',
-      createdAt: '2026-10-15T09:00:00Z',
-      status: 'pending'
+  // استخراج كافة طلبات التعاون الحقيقية من قاعدة البيانات
+  const requestsList = useMemo(() => {
+    return (applications || []).map((app) => {
+      const proj = (rawProjects || []).find((p) => p.id === app.project_id);
+      const isReceived =
+        currentUser?.role === 'company' ||
+        currentUser?.role === 'supervisor' ||
+        (proj && String(proj.created_by) === String(currentUser?.id));
+
+      return {
+        id: app.id,
+        senderName: app.student_name || (isRtl ? `طالب متقدم #${app.student_id}` : `Applicant #${app.student_id}`),
+        senderType: 'student',
+        targetProject: app.project_title || proj?.title || (isRtl ? `مشروع #${app.project_id}` : `Project #${app.project_id}`),
+        roleOffered: app.message?.includes('Role:') ? app.message.split('Role:')[1]?.split(']')[0]?.trim() : (isRtl ? 'طلب انضمام ورعاية' : 'Join & Sponsorship'),
+        message: app.message || '',
+        createdAt: app.created_at || '2026-10-18T10:30:00Z',
+        status: app.status === 'accepted' ? 'approved' : app.status,
+        isReceived
+      };
+    });
+  }, [applications, rawProjects, currentUser, isRtl]);
+
+  const handleUpdateStatus = async (id, newStatus) => {
+    try {
+      const targetStatus = newStatus === 'approved' ? 'accepted' : 'rejected';
+      if (updateApplicationStatus) {
+        await updateApplicationStatus(id, targetStatus);
+      }
+    } catch {
+      // Ignored
     }
-  ];
-
-  const [requestsList, setRequestsList] = useState(() => {
-    return isDemoAccount ? defaultDemoRequests : [];
-  });
-
-  const handleUpdateStatus = (id, newStatus) => {
-    setRequestsList((prev) =>
-      prev.map((req) => (req.id === id ? { ...req, status: newStatus } : req))
-    );
-    showToast(
-      newStatus === 'approved'
-        ? isRtl ? 'تم قبول طلب التعاون بنجاح!' : 'Collaboration request accepted!'
-        : isRtl ? 'تم الاعتذار عن الطلب' : 'Request rejected',
-      newStatus === 'approved' ? 'success' : 'info'
-    );
   };
 
   const filteredRequests = requestsList.filter((req) => {
-    if (activeTab === 'received') return req.senderType === 'company' || req.senderType !== currentUser?.role;
-    return true;
+    if (activeTab === 'received') return req.isReceived;
+    return !req.isReceived;
   });
 
   return (

@@ -18,7 +18,8 @@ export default function ReportsPage() {
     setSubmitReportModal,
     rawProjects,
     applications,
-    setActiveChatProject
+    setActiveChatProject,
+    isRtl
   } = useApp();
 
   return (
@@ -71,7 +72,18 @@ export default function ReportsPage() {
         </h3>
 
         <div className="space-y-4">
-          {reportsTimeline.map((rep) => {
+          {reportsTimeline.length === 0 ? (
+            <div className="text-center py-16 bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 rounded-2xl p-6 space-y-2">
+              <Clock className="w-10 h-10 text-slate-400 mx-auto" />
+              <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                {isRtl ? 'لا توجد تقارير أو مراحل تسليم مسجلة حالياً' : 'No report milestones registered yet'}
+              </h4>
+              <p className="text-xs text-slate-500">
+                {isRtl ? 'سيقوم المشرف الأكاديمي بجدولة التقارير ومراحل التسليم لمشروعك' : 'Your supervisor will schedule deliverables'}
+              </p>
+            </div>
+          ) : (
+            reportsTimeline.map((rep) => {
             const isSubmitted = rep.status === 'submitted';
 
             return (
@@ -162,7 +174,7 @@ export default function ReportsPage() {
                 )}
               </div>
             );
-          })}
+          }))}
         </div>
       </div>
     </div>

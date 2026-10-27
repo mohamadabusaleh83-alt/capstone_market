@@ -323,112 +323,15 @@ export function AppProvider({ children }) {
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
-  // التقارير والمتابعة الأكاديمية
-  const [reportsTimeline, setReportsTimeline] = useState([
-    {
-      id: 1,
-      title: 'وثيقة مقترح المشروع وتحليل المشكلة (Project Proposal & Problem Statement)',
-      deadlineDay: 'الثلاثاء القادم',
-      deadlineDate: '2026-10-13',
-      status: 'submitted',
-      submissionLink: 'https://docs.google.com/document/d/demo_proposal',
-      submittedAt: 'الأحد، 11 أكتوبر 2026',
-      supervisorFeedback: 'تم استلام المقترح المبدئي. يرجى التركيز أكثر على جزئية قاعدة بيانات المتجر وتوضيح الـ Schema.',
-      grade: '88/100'
-    },
-    {
-      id: 2,
-      title: 'وثيقة هندسة المتطلبات والنظام (SRS & Architecture Specification)',
-      deadlineDay: 'الثلاثاء 27 أكتوبر',
-      deadlineDate: '2026-10-27',
-      status: 'pending',
-      submissionLink: '',
-      submittedAt: '',
-      supervisorFeedback: 'بانتظار تسليم المخططات الـ UML ومسارات الـ REST API.',
-      grade: 'قيد الانتظار'
-    },
-    {
-      id: 3,
-      title: 'النموذج الأولي واختبار التوافق مع الشركة (Prototype & User Testing)',
-      deadlineDay: 'الثلاثاء 17 نوفمبر',
-      deadlineDate: '2026-11-17',
-      status: 'pending',
-      submissionLink: '',
-      submittedAt: '',
-      supervisorFeedback: 'سيتم فحص الكود المشترك على GitHub.',
-      grade: 'قيد الانتظار'
-    }
-  ]);
+  // التقارير والمتابعة الأكاديمية (بيانات حية من قاعدة البيانات 100%)
+  const [reportsTimeline, setReportsTimeline] = useState([]);
   const [submitReportModal, setSubmitReportModal] = useState(null);
 
-  // دليل الطلاب المتاحين
-  const [studentsList, setStudentsList] = useState([
-    {
-      id: 'st-1',
-      academicId: '12020412',
-      name: 'أحمد منصور',
-      major: 'أنظمة المعلومات الحاسوبية (CIS)',
-      course: 'مشروع تخرج 2',
-      role: 'محلل أعمال وقواعد بيانات',
-      skills: ['SQL', 'Power BI', 'Python', 'ETL'],
-      isFree: false,
-      projectTitle: 'نظام إدارة المستودعات ونقاط البيع السحابي (POS)',
-      supervisorNote: 'فريق ملتزم، تم تسليم مقترح المتطلبات بنجاح.',
-      avatar: '👨‍💼'
-    },
-    {
-      id: 'st-2',
-      academicId: '12020589',
-      name: 'سارة خليل',
-      major: 'علم الحاسوب (Computer Science)',
-      course: 'مشروع تخرج 2',
-      role: 'مهندسة ذكاء اصطناعي ونظم خلفية',
-      skills: ['Python', 'PyTorch', 'FastAPI', 'Docker'],
-      isFree: false,
-      projectTitle: 'محرك توصيات ذكي لمنتجات المتجر',
-      supervisorNote: 'تم تسليم المتطلبات بنجاح.',
-      avatar: '👩‍💻'
-    },
-    {
-      id: 'st-3',
-      academicId: '12020874',
-      name: 'طارق حسونة',
-      major: 'أمن المعلومات والأدلة الرقمية (Cybersecurity)',
-      course: 'مشروع تخرج 1',
-      role: 'مختبر اختراق وضمان جودة',
-      skills: ['PenTesting', 'OWASP', 'Linux', 'Network Security'],
-      isFree: true,
-      projectTitle: 'غير مرتبط بمشروع',
-      supervisorNote: 'يبحث عن فريق عمل لمشروع تخرج 1.',
-      avatar: '🛡️'
-    },
-    {
-      id: 'st-4',
-      academicId: '12020921',
-      name: 'منى درويش',
-      major: 'الوسائط الرقمية وتكنولوجيا الويب',
-      course: 'مشروع تخرج 1',
-      role: 'مصممة تجربة ومطورة واجهات (UI/UX & React)',
-      skills: ['Figma', 'React', 'TailwindCSS', 'JavaScript'],
-      isFree: true,
-      projectTitle: 'غير مرتبط بمشروع',
-      supervisorNote: '',
-      avatar: '🎨'
-    },
-    {
-      id: 'st-5',
-      academicId: '12021155',
-      name: 'كريم الشيخ',
-      major: 'تقنية المعلومات والاتصالات (IT)',
-      course: 'مشروع تخرج 1',
-      role: 'إدارة أنظمة وشبكات',
-      skills: ['Linux', 'Docker', 'System Admin', 'Bash'],
-      isFree: true,
-      projectTitle: 'غير مرتبط بمشروع',
-      supervisorNote: '',
-      avatar: '⚙️'
-    }
-  ]);
+  // دليل الطلاب المتاحين (بيانات حية من قاعدة البيانات 100%)
+  const [studentsList, setStudentsList] = useState([]);
+
+  // مشروع المستخدم الحالي (للطالب أو الشركة أو المشرف من /api/projects/my)
+  const [myProject, setMyProject] = useState(null);
 
   // مؤقت أمان يمنع بقاء حالة تحميل المشاريع معلقة لأكثر من 1.5 ثانية
   useEffect(() => {
@@ -436,7 +339,6 @@ export function AppProvider({ children }) {
     if (isLoadingProjects) {
       timer = setTimeout(() => {
         setIsLoadingProjects(false);
-        setRawProjects((prev) => (prev.length > 0 ? prev : INITIAL_FALLBACK_PROJECTS));
       }, 1500);
     }
     return () => clearTimeout(timer);
@@ -455,7 +357,7 @@ export function AppProvider({ children }) {
       clearTimeout(timeoutId);
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           const formatted = data.map((p, idx) => {
             const rawSkillList = p.required_skills
               ? p.required_skills.replace(/<spl/gi, ', SQL').split(',').map((s) => normalizeSkill(s)).filter(Boolean)
@@ -464,14 +366,19 @@ export function AppProvider({ children }) {
 
             return {
               id: p.id,
-              title: p.title || 'مشروع تخرج',
-              description: p.description || 'لا يوجد وصف متوفر حالياً.',
+              title: p.title || (isRtl ? 'مشروع تخرج' : 'Capstone Project'),
+              description: p.description || '',
               required_skills: projectSkills.join(', '),
               skills: projectSkills,
               created_by: p.created_by,
               created_at: p.created_at,
               status: p.status || 'pending',
-              category: ACADEMIC_MAJORS[idx % ACADEMIC_MAJORS.length],
+              category: p.category || ACADEMIC_MAJORS[idx % ACADEMIC_MAJORS.length],
+              stipend: p.stipend || null,
+              company_name: p.company_name || null,
+              supervisor_id: p.supervisor_id || null,
+              supervisor_name: p.supervisor_name || null,
+              supervisor_feedback: p.supervisor_feedback || null,
               difficulty: idx % 2 === 0 ? 'متوسط' : 'متقدم',
               hoursPerWeek: 10 + (idx % 3) * 2,
               maxMembers: p.max_members || 4,
@@ -492,14 +399,95 @@ export function AppProvider({ children }) {
           return;
         }
       }
-      setRawProjects((prev) => (prev.length > 0 ? prev : INITIAL_FALLBACK_PROJECTS));
+      setRawProjects([]);
     } catch {
-      setRawProjects((prev) => (prev.length > 0 ? prev : INITIAL_FALLBACK_PROJECTS));
+      setRawProjects((prev) => prev);
     } finally {
       clearTimeout(timeoutId);
       setIsLoadingProjects(false);
     }
-  }, []);
+  }, [isRtl]);
+
+  const fetchMyProject = useCallback(async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      setMyProject(null);
+      return;
+    }
+    try {
+      const res = await apiFetch('/projects/my');
+      if (res && res.ok) {
+        const data = await res.json();
+        setMyProject(data || null);
+      } else {
+        setMyProject(null);
+      }
+    } catch {
+      setMyProject(null);
+    }
+  }, [apiFetch]);
+
+  const fetchReports = useCallback(async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) return;
+    try {
+      const res = await apiFetch('/reports/');
+      if (res && res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setReportsTimeline(data.map((r) => ({
+            id: r.id,
+            project_id: r.project_id,
+            student_id: r.student_id,
+            student_name: r.student_name,
+            project_title: r.project_title,
+            title: r.title,
+            description: r.description || '',
+            deadlineDate: r.deadline_date || '',
+            deadlineDay: r.deadline_date ? new Date(r.deadline_date).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US', { weekday: 'long' }) : '',
+            status: r.status,
+            submissionLink: r.file_url || '',
+            submittedAt: r.created_at ? new Date(r.created_at).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US') : '',
+            supervisorFeedback: r.supervisor_feedback || '',
+            grade: r.grade || ''
+          })));
+        }
+      }
+    } catch (_err) {
+      // Ignored
+    }
+  }, [apiFetch, isRtl]);
+
+  const fetchStudents = useCallback(async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) return;
+    try {
+      const res = await apiFetch('/users/?role=student');
+      if (res && res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setStudentsList(data.map((u) => ({
+            id: u.id,
+            academicId: String(u.id),
+            name: u.full_name,
+            email: u.email,
+            major: u.major || 'أنظمة المعلومات الحاسوبية (CIS)',
+            course: u.course || 'مشروع تخرج 1',
+            role: 'طالب خريج',
+            skills: u.skills ? u.skills.split(',').map((s) => s.trim()).filter(Boolean) : [],
+            bio: u.bio || '',
+            portfolioUrl: u.portfolio_url || '',
+            isFree: true,
+            projectTitle: '',
+            supervisorNote: '',
+            avatar: '👨‍🎓'
+          })));
+        }
+      }
+    } catch (_err) {
+      // Ignored
+    }
+  }, [apiFetch]);
 
   const fetchApplications = useCallback(async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -578,10 +566,17 @@ export function AppProvider({ children }) {
   const refreshAllData = useCallback(async () => {
     const promises = [fetchProjects()];
     if (currentUser) {
-      promises.push(fetchApplications(), fetchNotifications(), fetchUserProfile());
+      promises.push(
+        fetchApplications(),
+        fetchNotifications(),
+        fetchUserProfile(),
+        fetchReports(),
+        fetchStudents(),
+        fetchMyProject()
+      );
     }
     await Promise.allSettled(promises);
-  }, [currentUser, fetchProjects, fetchApplications, fetchNotifications, fetchUserProfile]);
+  }, [currentUser, fetchProjects, fetchApplications, fetchNotifications, fetchUserProfile, fetchReports, fetchStudents, fetchMyProject]);
 
   const handleMarkNotificationRead = useCallback(async (notificationId) => {
     try {
@@ -793,15 +788,15 @@ export function AppProvider({ children }) {
   // ==========================================
   // اعتماد أو رفض مشروع من المشرف (مع التحديث الفوري المباشر Optimistic Update)
   // ==========================================
-  const approveProject = useCallback(async (projectId, targetStatus) => {
+  const approveProject = useCallback(async (projectId, targetStatus, feedback = null) => {
     // تحديث فوري مباشر للواجهة قبل انتظار الشبكة
     setRawProjects((prev) =>
-      prev.map((p) => (p.id === projectId ? { ...p, status: targetStatus } : p))
+      prev.map((p) => (p.id === projectId ? { ...p, status: targetStatus, supervisor_feedback: feedback } : p))
     );
     try {
       const res = await apiFetch(`/projects/${projectId}/status`, {
         method: 'PUT',
-        body: JSON.stringify({ status: targetStatus })
+        body: JSON.stringify({ status: targetStatus, feedback })
       });
       if (!res.ok) {
         // تراجع فوري في حال حدوث خطأ
@@ -861,13 +856,16 @@ export function AppProvider({ children }) {
   }, [apiFetch, studentCv.major, translateErrorMessage, isRtl, fetchApplications, fetchProjects, fetchNotifications, showToast, t]);
 
   // ==========================================
-  // تحديث حالة طلب الانضمام
+  // تحديث حالة طلب الانضمام مع دعم الملاحظات
   // ==========================================
-  const updateApplicationStatus = useCallback(async (applicationId, targetStatus) => {
+  const updateApplicationStatus = useCallback(async (applicationId, targetStatus, feedback = null) => {
     try {
+      const payload = { status: targetStatus };
+      if (feedback) payload.feedback = feedback;
+
       const res = await apiFetch(`/applications/${applicationId}/status`, {
         method: 'PUT',
-        body: JSON.stringify({ status: targetStatus })
+        body: JSON.stringify(payload)
       });
 
       if (!res.ok) {
@@ -876,40 +874,89 @@ export function AppProvider({ children }) {
       }
 
       setApplications((prev) =>
-        prev.map((app) => app.id === applicationId ? { ...app, status: targetStatus } : app)
+        prev.map((app) => app.id === applicationId ? { ...app, status: targetStatus, feedback } : app)
       );
       await fetchProjects();
+      await fetchApplications();
       fetchNotifications();
       showToast(t('toasts.status_updated', {
-        status: targetStatus === 'accepted' ? (isRtl ? 'مقبول' : 'Accepted') : (isRtl ? 'مرفوض' : 'Rejected')
+        status: (targetStatus === 'academically_approved' || targetStatus === 'accepted') 
+          ? (isRtl ? 'معتمد أكاديمياً' : 'Academically Approved') 
+          : (targetStatus === 'company_accepted' ? (isRtl ? 'مرشح من الشركة' : 'Company Nominated') : (isRtl ? 'مرفوض' : 'Rejected'))
       }), 'success');
       return true;
     } catch (err) {
       showToast(`${isRtl ? 'خطأ' : 'Error'}: ${err.message}`, 'error');
       throw err;
     }
-  }, [apiFetch, fetchProjects, fetchNotifications, translateErrorMessage, isRtl, showToast, t]);
+  }, [apiFetch, fetchProjects, fetchApplications, fetchNotifications, translateErrorMessage, isRtl, showToast, t]);
 
   // ==========================================
-  // تسليم تقرير الطالب
+  // تسليم تقرير الطالب وحفظه بقاعدة البيانات
   // ==========================================
-  const submitReport = useCallback((reportId, url) => {
-    if (!url?.trim()) return;
-    setReportsTimeline((prev) =>
-      prev.map((r) =>
-        r.id === reportId
-          ? {
-              ...r,
-              status: 'submitted',
-              submissionLink: url,
-              submittedAt: isRtl ? 'اليوم، تم التسليم بنجاح' : 'Today, submitted successfully'
-            }
-          : r
-      )
-    );
-    setSubmitReportModal(null);
-    showToast(t('toasts.report_submitted'), 'success');
-  }, [isRtl, showToast, t]);
+  const submitReport = useCallback(async (reportData, url) => {
+    try {
+      let body;
+      if (typeof reportData === 'object' && reportData !== null) {
+        body = reportData;
+      } else {
+        const existing = reportsTimeline.find((r) => r.id === reportData);
+        body = {
+          project_id: existing?.project_id || myProject?.id || 1,
+          title: existing?.title || (isRtl ? `تقرير تسليم مرحلي #${reportData}` : `Milestone Deliverable #${reportData}`),
+          description: existing?.description || null,
+          file_url: url || existing?.submissionLink || null,
+          deadline_date: existing?.deadlineDate || null
+        };
+      }
+
+      const res = await apiFetch('/reports/', {
+        method: 'POST',
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || (isRtl ? 'تعذر تسليم التقرير' : 'Failed to submit report'));
+      }
+
+      await fetchReports();
+      setSubmitReportModal(null);
+      showToast(t('toasts.report_submitted') || (isRtl ? 'تم تسليم التقرير بنجاح!' : 'Report submitted successfully!'), 'success');
+      return true;
+    } catch (err) {
+      showToast(`${isRtl ? 'خطأ' : 'Error'}: ${err.message}`, 'error');
+      throw err;
+    }
+  }, [apiFetch, fetchReports, reportsTimeline, myProject, isRtl, showToast, t]);
+
+  // ==========================================
+  // تحديث حالة تقرير الطالب من قبل المشرف
+  // ==========================================
+  const updateReportStatus = useCallback(async (reportId, targetStatus, feedback = null, grade = null) => {
+    try {
+      const res = await apiFetch(`/reports/${reportId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          status: targetStatus,
+          supervisor_feedback: feedback,
+          grade: grade
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || (isRtl ? 'تعذر تحديث حالة التقرير' : 'Failed to update report status'));
+      }
+
+      await fetchReports();
+      showToast(isRtl ? 'تم تحديث تقييم التقرير بنجاح' : 'Report evaluation updated successfully', 'success');
+      return true;
+    } catch (err) {
+      showToast(`${isRtl ? 'خطأ' : 'Error'}: ${err.message}`, 'error');
+      throw err;
+    }
+  }, [apiFetch, fetchReports, isRtl, showToast]);
 
   // ==========================================
   // حفظ السيرة الذاتية للطالب
@@ -997,11 +1044,16 @@ export function AppProvider({ children }) {
         handleMarkAllNotificationsRead,
         reportsTimeline,
         setReportsTimeline,
+        fetchReports,
+        updateReportStatus,
+        myProject,
+        fetchMyProject,
         submitReportModal,
         setSubmitReportModal,
         submitReport,
         studentsList,
         setStudentsList,
+        fetchStudents,
         matchedProjects,
         translateMajor,
         translateDifficulty,

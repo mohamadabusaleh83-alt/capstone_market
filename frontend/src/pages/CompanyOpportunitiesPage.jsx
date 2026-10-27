@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
+import { apiFetch } from '../api/client';
 import {
   Briefcase,
   Plus,
@@ -19,98 +20,71 @@ import {
 export default function CompanyOpportunitiesPage() {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
-  const { isRtl, showToast } = useApp();
+  const { rawProjects, applications, fetchProjects, isRtl, showToast } = useApp();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newStipend, setNewStipend] = useState('');
   const [newDescription, setNewDescription] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const defaultDemoOps = [
-    {
-      id: 1,
-      title: isRtl
-        ? 'برنامج رعاية مشاريع الذكاء الاصطناعي وهندسة البيانات'
-        : 'AI & Data Engineering Capstone Sponsorship Cohort',
-      description: isRtl
-        ? 'تمويل كامل لتكاليف السيرفرات السحابية ونماذج OpenAI لفرق التخرج في هندسة النظم، مع مكافأة شهرية.'
-        : 'Full cloud server coverage and monthly stipends for graduating AI & data engineering teams.',
-      stipend: '1,500$ + بيئة سحابية',
-      status: 'active',
-      applicantsCount: 6,
-      viewsCount: 142,
-      createdDate: '2026-10-10'
-    },
-    {
-      id: 2,
-      title: isRtl
-        ? 'فرصة تدريب وتوظيف لمطوري واجهات React و Tailwind'
-        : 'React & Front-End Graduate Internship Track',
-      description: isRtl
-        ? 'انضمام طالبين للعمل مع الفريق الهندسي في الشركة خلال الفصل الأخير من مشروع التخرج.'
-        : 'Internship placement for two students to collaborate with our enterprise engineering team.',
-      stipend: 'مكافأة تدريب شهرية 400$',
-      status: 'active',
-      applicantsCount: 9,
-      viewsCount: 210,
-      createdDate: '2026-10-12'
-    }
-  ];
+  // استخراج الفرص والتحديات الحقيقية المنشورة من قبل هذه الشركة
+  const opportunities = useMemo(() => {
+    if (!currentUser) return [];
+    const myProjects = (rawProjects || []).filter(
+      (p) => String(p.created_by) === String(currentUser.id)
+    );
 
-  const [opportunities, setOpportunities] = useState(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const user = localStorage.getItem('app_user_role');
-      const userId = user ? JSON.parse(user).id : 'guest';
-      const saved = localStorage.getItem(`company_opportunities_${userId}`);
-      if (saved) return JSON.parse(saved);
-      return userId === 'company-1' ? defaultDemoOps : [];
-    } catch {
-      return [];
-    }
-  });
+    return myProjects.map((p) => {
+      const pApps = (applications || []).filter((a) => a.project_id === p.id);
+      return {
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        stipend: p.stipend || (isRtl ? 'حزمة دعم ورعاية وتدريب' : 'Sponsorship & Training'),
+        status: p.status === 'rejected' ? 'rejected' : 'active',
+        applicantsCount: pApps.length,
+        viewsCount: (p.current_members || 0) * 8 + 12,
+        createdDate: p.created_at ? new Date(p.created_at).toISOString().split('T')[0] : '2026-10-15'
+      };
+    });
+  }, [rawProjects, applications, currentUser, isRtl]);
 
-  useEffect(() => {
-    if (!currentUser?.id) return;
-    try {
-      const saved = localStorage.getItem(`company_opportunities_${currentUser.id}`);
-      if (saved) {
-        setOpportunities(JSON.parse(saved));
-      } else if (currentUser.id === 'company-1') {
-        setOpportunities(defaultDemoOps);
-      } else {
-        setOpportunities([]);
-      }
-    } catch {
-      setOpportunities([]);
-    }
-  }, [currentUser?.id]);
-
-  const handleCreateOpportunity = (e) => {
+  const handleCreateOpportunity = async (e) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
 
-    const newOp = {
-      id: Date.now(),
-      title: newTitle,
-      description: newDescription,
-      stipend: newStipend || 'مكافأة ورعاية مميزة',
-      status: 'active',
-      applicantsCount: 0,
-      viewsCount: 1,
-      createdDate: new Date().toISOString().split('T')[0]
-    };
+    setIsSubmitting(true);
+    try {
+      const res = await apiFetch('/projects/', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: newTitle.trim(),
+          description: newDescription.trim() || 'فرصة تدريب ورعاية لمشاريع التخرج',
+          required_skills: 'React, Python, FastAPI',
+          category: 'أنظمة المعلومات الحاسوبية (CIS)',
+          stipend: newStipend.trim() || 'مكافأة ورعاية مميزة',
+          company_name: currentUser?.name || currentUser?.full_name || 'شركة شريكة',
+          max_members: 4
+        })
+      });
 
-    const updated = [newOp, ...opportunities];
-    setOpportunities(updated);
-    if (currentUser?.id && typeof window !== 'undefined') {
-      localStorage.setItem(`company_opportunities_${currentUser.id}`, JSON.stringify(updated));
+      if (res && res.ok) {
+        if (fetchProjects) await fetchProjects();
+        setIsModalOpen(false);
+        setNewTitle('');
+        setNewStipend('');
+        setNewDescription('');
+        showToast(isRtl ? 'تم نشر الفرصة الجديدة بنجاح في قاعدة البيانات!' : 'New opportunity published successfully!', 'success');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.detail || (isRtl ? 'تعذر نشر الفرصة' : 'Failed to publish opportunity'), 'error');
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsModalOpen(false);
-    setNewTitle('');
-    setNewStipend('');
-    setNewDescription('');
-    showToast(isRtl ? 'تم نشر الفرصة الجديدة بنجاح!' : 'New opportunity published successfully!', 'success');
   };
 
   return (

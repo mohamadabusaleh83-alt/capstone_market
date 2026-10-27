@@ -16,9 +16,10 @@ class User(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     profile = relationship("StudentProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
-    projects = relationship("Project", back_populates="creator")
+    projects = relationship("Project", back_populates="creator", foreign_keys="Project.created_by")
     messages = relationship("Message", back_populates="sender")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    reports = relationship("Report", back_populates="student", cascade="all, delete-orphan")
 
     @property
     def hashed_password(self):
@@ -54,12 +55,39 @@ class Project(Base):
     required_skills = Column(Text)
     status = Column(String, default="pending")  # pending, approved, rejected
     max_members = Column(Integer, default=4)
+    category = Column(String(100), nullable=True)
+    stipend = Column(String(100), nullable=True)
+    company_name = Column(String(150), nullable=True)
+    supervisor_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    supervisor_feedback = Column(Text, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-    creator = relationship("User", back_populates="projects")
-    applications = relationship("Application", back_populates="project")
-    messages = relationship("Message", back_populates="project")
+    creator = relationship("User", back_populates="projects", foreign_keys=[created_by])
+    supervisor = relationship("User", foreign_keys=[supervisor_id])
+    applications = relationship("Application", back_populates="project", cascade="all, delete-orphan")
+    messages = relationship("Message", back_populates="project", cascade="all, delete-orphan")
+    reports = relationship("Report", back_populates="project", cascade="all, delete-orphan")
+
+
+class Report(Base):
+    __tablename__ = "reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    student_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    file_url = Column(String(255), nullable=True)
+    status = Column(String(30), default="pending")  # pending, approved, needs_changes
+    supervisor_feedback = Column(Text, nullable=True)
+    grade = Column(String(50), nullable=True)
+    deadline_date = Column(String(50), nullable=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+
+    project = relationship("Project", back_populates="reports")
+    student = relationship("User", back_populates="reports")
 
 
 class Application(Base):
@@ -71,8 +99,9 @@ class Application(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     student_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    status = Column(String, default="pending")  # pending, accepted, rejected
+    status = Column(String, default="applied")  # applied, pending, company_accepted, academically_approved, accepted, rejected
     message = Column(String, nullable=True)
+    feedback = Column(String, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     
     project = relationship("Project", back_populates="applications")

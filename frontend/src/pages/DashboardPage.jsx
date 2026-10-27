@@ -47,6 +47,7 @@ export default function DashboardPage() {
     reportsTimeline = [],
     studentsList = [],
     userSkills = [],
+    myProject,
     favorites: appFavorites = [],
     savedProjects: appSavedProjects = [],
     toggleFavorite,
@@ -126,40 +127,32 @@ export default function DashboardPage() {
     return myApplications.filter((a) => a.status === 'accepted').length;
   }, [myApplications]);
 
-  // مشروع الطالب المعتمد أو المقترح (عزل ديناميكي صارم)
+  // مشروع الطالب المعتمد أو المقترح (عزل ديناميكي صارم دون أي بيانات وهمية)
   const studentAssignedProject = useMemo(() => {
     if (currentUser?.role !== 'student') return null;
+    if (myProject && (myProject.status === 'approved' || myProject.status === 'academically_approved')) return myProject;
     const acceptedApp = applications.find(
-      (a) => String(a.student_id) === String(currentUser.id) && a.status === 'accepted'
+      (a) => String(a.student_id) === String(currentUser.id) && 
+      (a.status === 'accepted' || a.status === 'academically_approved')
     );
     if (acceptedApp) {
       const proj = rawProjects.find((p) => p.id === acceptedApp.project_id);
-      if (proj) return proj;
+      if (proj && (proj.status === 'approved' || proj.status === 'academically_approved')) return proj;
     }
-    const myCreated = rawProjects.find((p) => String(p.created_by) === String(currentUser.id));
+    const myCreated = rawProjects.find((p) => String(p.created_by) === String(currentUser.id) && (p.status === 'approved' || p.status === 'academically_approved'));
     if (myCreated) return myCreated;
 
-    // للحساب التجريبي فقط (student-1 أو البريد التجريبي الافتراضي) للمعاينة
-    const isDemoStudent = currentUser?.id === 'student-1' || currentUser?.email === 'student@capstone.ps';
-    if (isDemoStudent) {
-      return (
-        rawProjects.find((p) => p.id === 1) || {
-          id: 1,
-          title: 'نظام إدارة المستودعات ونقاط البيع السحابي (POS)',
-          description: 'منصة ويب متكاملة لإدارة نقاط البيع، المخزون، والفوترة السحابية للمتاجر والمؤسسات الصغيرة والمتوسطة.',
-          category: 'أنظمة المعلومات الحاسوبية (CIS)',
-          status: 'approved',
-          currentMembers: 3,
-          maxMembers: 4,
-          skills: ['SQL', 'FastAPI', 'React', 'Docker'],
-          supervisor: 'د. أسامة أمين مرعي'
-        }
-      );
-    }
-
-    // الحساب الجديد يبدأ بـ null لعرض واجهة الـ Onboarding النظيفة
+    // الحساب غير المنضم لمشروع يبدأ بـ null لعرض واجهة الـ Onboarding النظيفة
     return null;
-  }, [currentUser, applications, rawProjects]);
+  }, [currentUser, myProject, applications, rawProjects]);
+
+  const studentNominatedApp = useMemo(() => {
+    if (currentUser?.role !== 'student') return null;
+    return applications.find(
+      (a) => String(a.student_id) === String(currentUser.id) &&
+      (a.status === 'company_accepted' || a.status === 'pending_academic_approval')
+    );
+  }, [currentUser, applications]);
 
   // دالة توحيد وتطهير مسميات المهارات والتقنيات (Skills Normalization)
   const normalizeSkill = (s) => {
@@ -776,6 +769,44 @@ export default function DashboardPage() {
                 </button>
               </div>
             </div>
+          </div>
+        ) : studentNominatedApp ? (
+          <div className="relative overflow-hidden bg-gradient-to-r from-amber-500/10 via-[#2499F2]/10 to-[#28C8C0]/10 border-2 border-amber-500/40 rounded-3xl p-6 sm:p-8 text-start shadow-md space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center text-xl shrink-0">
+                🌟
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/20 px-2.5 py-0.5 rounded-full">
+                  {isRtl ? 'ترشيح صناعي من الشركة' : 'Company Nomination'}
+                </span>
+                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-1">
+                  {isRtl ? 'تم ترشيحك بنجاح من قِبل الشركة الراعية! ⏳ بانتظار الاعتماد الأكاديمي' : 'You have been nominated! ⏳ Awaiting Academic Approval'}
+                </h3>
+              </div>
+            </div>
+            <div className="p-4 rounded-2xl bg-white/60 dark:bg-[#101E42]/80 border border-amber-200/60 dark:border-amber-500/20 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 dark:text-slate-400">{isRtl ? 'المشروع المرشح له:' : 'Nominated Project:'}</span>
+                <span className="font-bold text-slate-800 dark:text-white">{studentNominatedApp.project_title || (isRtl ? 'مشروع التخرج' : 'Capstone Project')}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 dark:text-slate-400">{isRtl ? 'الشركة الراعية:' : 'Company:'}</span>
+                <span className="font-bold text-[#2499F2]">{studentNominatedApp.company_name || (isRtl ? 'شركة معتمدة' : 'Partner Company')}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 dark:text-slate-400">{isRtl ? 'حالة الاعتماد الأكاديمي:' : 'Academic Status:'}</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 animate-spin" />
+                  <span>{isRtl ? 'قيد المراجعة والاعتماد لدى المشرف الأكاديمي' : 'Pending Faculty Review'}</span>
+                </span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              {isRtl
+                ? 'اختيار الشركة لطلبك يعتبر ترشيحاً صناعياً ولا يفعل المشروع رسمياً إلا بعد مصادقة المشرف الأكاديمي. ستُفتح مساحة العمل الفعالة وتتبع التقارير فور الاعتماد.'
+                : 'Company acceptance is an industry nomination. The active workspace and report submission will unlock upon official academic supervisor approval.'}
+            </p>
           </div>
         ) : (
           <div className="relative overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50/30 dark:from-[#101E42] dark:via-[#13234b] dark:to-[#101E42] border border-slate-300/80 dark:border-[#2499F2]/25 rounded-3xl p-8 sm:p-10 text-center shadow-sm">
@@ -1497,12 +1528,20 @@ export default function DashboardPage() {
                   </h4>
                   <Clock className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                 </div>
-                <p className="text-xs text-slate-900 dark:text-slate-200 font-bold leading-snug">
-                  {reportsTimeline[0]?.title}
-                </p>
-                <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-2 font-semibold">
-                  {isRtl ? `الموعد النهائي: ${reportsTimeline[0]?.deadlineDay} (${reportsTimeline[0]?.deadlineDate})` : `Deadline: ${reportsTimeline[0]?.deadlineDay} (${reportsTimeline[0]?.deadlineDate})`}
-                </p>
+                {reportsTimeline.length > 0 ? (
+                  <>
+                    <p className="text-xs text-slate-900 dark:text-slate-200 font-bold leading-snug">
+                      {reportsTimeline[0]?.title}
+                    </p>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-2 font-semibold">
+                      {isRtl ? `الموعد النهائي: ${reportsTimeline[0]?.deadlineDay || ''} (${reportsTimeline[0]?.deadlineDate || ''})` : `Deadline: ${reportsTimeline[0]?.deadlineDay || ''} (${reportsTimeline[0]?.deadlineDate || ''})`}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {isRtl ? 'لا توجد تقارير أو مراحل تسليم مجدولة حالياً.' : 'No upcoming milestones scheduled.'}
+                  </p>
+                )}
               </div>
               <div className="pt-4 mt-3 border-t border-slate-200 dark:border-white/5 flex items-center justify-between">
                 <Link
