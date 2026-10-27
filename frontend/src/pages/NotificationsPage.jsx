@@ -1,97 +1,34 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import {
   Bell,
   CheckCheck,
   CheckCircle2,
-  AlertCircle,
-  Briefcase,
-  Users,
   Clock,
   Sparkles,
-  ArrowRight,
-  ArrowLeft,
   ChevronRight
 } from 'lucide-react';
 
-const STATIC_FALLBACK_NOTIFICATIONS = [
-  {
-    id: 'notif-1',
-    titleAr: 'تم اعتماد مشروعك الأكاديمي بنجاح',
-    titleEn: 'Your Capstone Project was Approved',
-    messageAr: 'قام المشرف الأكاديمي د. أسامة أمين مرعي باعتماد مقترح مشروع تخرجك رسمياً.',
-    messageEn: 'Dr. Osama Amin Marie has approved your capstone project proposal.',
-    created_at: '2026-10-24T18:30:00Z',
-    is_read: false,
-    type: 'academic'
-  },
-  {
-    id: 'notif-2',
-    titleAr: 'طلب شراكة جديد من شركة النور للحلول البرمجية',
-    titleEn: 'New Partnership Request from Al-Noor Software',
-    messageAr: 'أرسلت شركة النور طلباً لرعاية مشروعك التقني ومطابقة المهارات المطلوبة.',
-    messageEn: 'Al-Noor Software sent a sponsorship and partnership request for your project.',
-    created_at: '2026-10-24T16:00:00Z',
-    is_read: false,
-    type: 'collab'
-  },
-  {
-    id: 'notif-3',
-    titleAr: 'تذكير: اقتراب موعد تسليم تقرير المتطلبات (SRS)',
-    titleEn: 'Reminder: SRS Requirements Report Deadline',
-    messageAr: 'بقي 48 ساعة على موعد التسليم الأكاديمي للتقرير الأول عبر المنصة.',
-    messageEn: '48 hours remaining for the official SRS milestone submission on the portal.',
-    created_at: '2026-10-24T12:00:00Z',
-    is_read: true,
-    type: 'academic'
-  },
-  {
-    id: 'notif-4',
-    titleAr: 'انضمام عضو جديد لفريق التخرج',
-    titleEn: 'New Member Joined the Project Team',
-    messageAr: 'تمت مصادقة انضمام الطالب أحمد منصور لفريق العمل بنجاح.',
-    messageEn: 'Student Ahmed Mansour has officially joined the project team.',
-    created_at: '2026-10-23T10:00:00Z',
-    is_read: true,
-    type: 'collab'
-  }
-];
-
 export default function NotificationsPage() {
   const { t } = useTranslation();
-  const { currentUser } = useAuth();
   const {
     isRtl,
     notifications,
-    unreadNotificationsCount,
     handleMarkNotificationRead,
-    handleMarkAllNotificationsRead,
-    showToast
+    handleMarkAllNotificationsRead
   } = useApp();
 
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'unread' | 'academic' | 'collab'
 
-  const fallbackNotifications = STATIC_FALLBACK_NOTIFICATIONS.map((n) => ({
-    id: n.id,
-    title: isRtl ? n.titleAr : n.titleEn,
-    message: isRtl ? n.messageAr : n.messageEn,
-    created_at: n.created_at,
-    is_read: n.is_read,
-    type: n.type
-  }));
-
-  const isDemoAccount = currentUser?.id === 'student-1' || currentUser?.id === 'supervisor-1';
-  const displayList = (notifications && notifications.length > 0)
-    ? notifications
-    : (isDemoAccount ? fallbackNotifications : []);
+  const displayList = notifications || [];
 
   const filteredNotifications = displayList.filter((notif) => {
     if (activeFilter === 'unread') return !notif.is_read;
-    if (activeFilter === 'academic') return notif.type === 'academic' || notif.title?.includes('أكاديم') || notif.title?.includes('تقرير');
-    if (activeFilter === 'collab') return notif.type === 'collab' || notif.title?.includes('شراكة') || notif.title?.includes('تعاون');
+    // التصنيف من رابط الإشعار (يعمل بالعربية والإنجليزية)
+    if (activeFilter === 'academic') return ['/reports', '/supervisor', '/my-projects'].includes(notif.link);
+    if (activeFilter === 'collab') return ['/company/opportunities', '/projects'].includes(notif.link);
     return true;
   });
 

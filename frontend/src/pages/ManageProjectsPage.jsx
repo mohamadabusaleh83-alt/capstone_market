@@ -7,14 +7,10 @@ import {
   Printer,
   Download,
   Search,
-  Filter,
   CheckCircle2,
   Clock,
-  XCircle,
   ChevronRight,
-  ShieldCheck,
-  Eye,
-  Sparkles
+  ShieldCheck
 } from 'lucide-react';
 
 export default function ManageProjectsPage() {
@@ -24,53 +20,12 @@ export default function ManageProjectsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const [projectsList, setProjectsList] = useState(() => {
-    return rawProjects && rawProjects.length > 0
-      ? rawProjects
-      : [
-          {
-            id: 1,
-            title: 'نظام إدارة المستودعات ونقاط البيع السحابي (POS)',
-            major: 'أنظمة المعلومات الحاسوبية (CIS)',
-            supervisor: 'د. أسامة أمين مرعي',
-            currentMembers: 2,
-            maxMembers: 4,
-            status: 'approved'
-          },
-          {
-            id: 2,
-            title: 'محرك توصيات ذكي لمنتجات المتجر بالذكاء الاصطناعي',
-            major: 'علم الحاسوب (Computer Science)',
-            supervisor: 'د. أسامة أمين مرعي',
-            currentMembers: 3,
-            maxMembers: 4,
-            status: 'approved'
-          },
-          {
-            id: 3,
-            title: 'منصة استكشاف واختبار أمن الثغرات السحابية',
-            major: 'أمن المعلومات (Cybersecurity)',
-            supervisor: 'د. أسامة أمين مرعي',
-            currentMembers: 1,
-            maxMembers: 3,
-            status: 'pending'
-          },
-          {
-            id: 4,
-            title: 'تطبيق التتبع الطبي الذكي للأجهزة القابلة للارتداء',
-            major: 'تقنية المعلومات والاتصالات (IT)',
-            supervisor: 'د. أسامة أمين مرعي',
-            currentMembers: 2,
-            maxMembers: 4,
-            status: 'pending'
-          }
-        ];
-  });
+  // المشاريع الحقيقية فقط (لا قائمة احتياطية مختلقة)، مع الحقول الفعلية القادمة من الـ API
+  const toRow = (p) => ({ ...p, major: p.category || '', supervisor: p.supervisor_name || '' });
+  const [projectsList, setProjectsList] = useState(() => (rawProjects || []).map(toRow));
 
   useEffect(() => {
-    if (rawProjects && rawProjects.length > 0) {
-      setProjectsList(rawProjects);
-    }
+    setProjectsList((rawProjects || []).map(toRow));
   }, [rawProjects]);
 
   const handleQuickApprove = async (id) => {
@@ -86,7 +41,16 @@ export default function ManageProjectsPage() {
   };
 
   const handleExportCSV = () => {
-    showToast(isRtl ? 'جاري تجهيز وتصدير ملف فهرس المشاريع بصيغة CSV...' : 'Exporting projects catalogue...', 'info');
+    const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['id', 'title', 'category', 'supervisor', 'members', 'max_members', 'status'];
+    const rows = filtered.map((p) => [p.id, p.title, p.major, p.supervisor, p.currentMembers, p.maxMembers, p.status]);
+    const csv = '\uFEFF' + [header, ...rows].map((r) => r.map(cell).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'capstone-projects.csv';
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const filtered = projectsList.filter((p) => {
@@ -223,7 +187,7 @@ export default function ManageProjectsPage() {
                   </td>
                   <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200 font-semibold flex items-center gap-1.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
-                    <span>{project.supervisor || 'د. أسامة أمين مرعي'}</span>
+                    <span>{project.supervisor || (isRtl ? 'لم يُسند بعد' : 'Not assigned yet')}</span>
                   </td>
                   <td className="py-3.5 px-4 text-center font-mono text-slate-500">
                     {project.currentMembers || 2} / {project.maxMembers || 4}

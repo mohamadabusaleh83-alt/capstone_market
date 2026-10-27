@@ -25,18 +25,17 @@ export default function OpportunitiesPage() {
         ? p.skills
         : (typeof p.required_skills === 'string' && p.required_skills
           ? p.required_skills.split(',').map((s) => s.trim()).filter(Boolean)
-          : ['React', 'FastAPI']);
+          : []);
 
       return {
         id: p.id,
-        company: p.company_name || (isRtl ? 'شراكة صناعية معتمدة' : 'Accredited Industry Partner'),
+        company: p.company_name || '—',
         title: p.title,
         description: p.description,
-        stipend: p.stipend || (isRtl ? 'حزمة دعم ورعاية وتدريب' : 'Sponsorship & Training Cohort'),
+        stipend: p.stipend || '—',
         track: p.category || 'CIS / CS',
         skills: skillsArr,
-        deadline: '2026-11-25',
-        slots: `${p.availableSeats !== undefined ? p.availableSeats : (p.available_seats !== undefined ? p.available_seats : 3)} ${isRtl ? 'مقاعد شاغرة' : 'open seats'}`
+        slots: `${p.availableSeats !== undefined ? p.availableSeats : (p.available_seats ?? '—')} ${isRtl ? 'مقاعد شاغرة' : 'open seats'}`
       };
     });
   }, [rawProjects, isRtl]);
@@ -45,7 +44,7 @@ export default function OpportunitiesPage() {
     try {
       const isObj = typeof companyOrOp === 'object' && companyOrOp !== null;
       const opTitle = isObj ? companyOrOp.title : title;
-      const opId = isObj ? companyOrOp.id : (rawProjects.find((p) => p.title === opTitle)?.id || 1);
+      const opId = isObj ? companyOrOp.id : rawProjects.find((p) => p.title === opTitle)?.id;
       if (applyToProject) {
         await applyToProject({
           projectId: opId,
@@ -175,9 +174,6 @@ export default function OpportunitiesPage() {
             </div>
 
             <div className="pt-2 border-t border-slate-100 dark:border-white/10 flex items-center justify-between gap-2">
-              <span className="text-[10px] text-slate-400">
-                {isRtl ? 'الموعد النهائي:' : 'Deadline:'} {op.deadline}
-              </span>
 
               <button
                 type="button"

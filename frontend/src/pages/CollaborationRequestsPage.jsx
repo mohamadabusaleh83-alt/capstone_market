@@ -10,11 +10,9 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Sparkles,
   ChevronRight,
   Building2,
-  GraduationCap,
-  MessageSquare
+  GraduationCap
 } from 'lucide-react';
 
 export default function CollaborationRequestsPage() {
@@ -40,7 +38,7 @@ export default function CollaborationRequestsPage() {
         targetProject: app.project_title || proj?.title || (isRtl ? `مشروع #${app.project_id}` : `Project #${app.project_id}`),
         roleOffered: app.message?.includes('Role:') ? app.message.split('Role:')[1]?.split(']')[0]?.trim() : (isRtl ? 'طلب انضمام ورعاية' : 'Join & Sponsorship'),
         message: app.message || '',
-        createdAt: app.created_at || '2026-10-18T10:30:00Z',
+        createdAt: app.created_at || null,
         status: app.status === 'accepted' ? 'approved' : app.status,
         isReceived
       };
@@ -213,7 +211,7 @@ export default function CollaborationRequestsPage() {
             {/* أزرار الإجراءات التفاعلية */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
               <div className="text-[11px] text-slate-400 font-mono">
-                {isRtl ? 'تاريخ الإرسال:' : 'Submitted:'} {new Date(req.createdAt).toLocaleDateString()}
+                {isRtl ? 'تاريخ الإرسال:' : 'Submitted:'} {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : '—'}
               </div>
 
               {req.status === 'pending' && (

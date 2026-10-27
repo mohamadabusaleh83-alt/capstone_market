@@ -452,7 +452,7 @@ def create_user(user: schemas.UserCreate, request: Request, db: Session = Depend
         if user_role == "student":
             student_profile = models.StudentProfile(
                 user_id=new_user.id,
-                major="أنظمة المعلومات الحاسوبية (CIS)",
+                major=None,
                 skills="",
                 interests=""
             )
@@ -791,8 +791,8 @@ def format_project_item(p: models.Project, db: Session):
     if p.supervisor_id:
         sup = db.query(models.User).filter(models.User.id == p.supervisor_id).first()
         p.supervisor_name = sup.full_name if sup else None
-    elif not getattr(p, "supervisor_name", None):
-        p.supervisor_name = "د. أسامة أمين مرعي"
+    else:
+        p.supervisor_name = None  # لا مشرف مسند بعد - لا اسم افتراضي مختلق
     if not p.company_name and p.creator and (p.creator.role or "").lower() in ["company", "partner", "business"]:
         p.company_name = p.creator.full_name
     return p
@@ -1122,7 +1122,7 @@ def format_application_item(app_item: models.Application, db: Session):
         return None
     student = db.query(models.User).filter(models.User.id == app_item.student_id).first()
     project = db.query(models.Project).filter(models.Project.id == app_item.project_id).first()
-    app_item.student_name = student.full_name if student else f"طالب #{app_item.student_id}"
+    app_item.student_name = student.full_name if student else f"#{app_item.student_id}"
     app_item.student_email = student.email if student else None
     # بيانات التخصص والنبذة والسيرة الذاتية محفوظة في StudentProfile وليس في جدول المستخدمين
     profile = student.profile if student else None
@@ -1131,8 +1131,8 @@ def format_application_item(app_item: models.Application, db: Session):
     app_item.student_bio = profile.bio if profile else None
     app_item.student_portfolio_url = public_portfolio_url(profile)
     app_item.student_has_cv = bool(profile and profile.cv_key)
-    app_item.project_title = project.title if project else f"مشروع #{app_item.project_id}"
-    app_item.company_name = (getattr(project, "company_name", None) or "شركة شريكة") if project else "شركة شريكة"
+    app_item.project_title = project.title if project else f"#{app_item.project_id}"
+    app_item.company_name = getattr(project, "company_name", None) if project else None
     app_item.feedback = getattr(app_item, "feedback", None)
     return app_item
 
@@ -1406,7 +1406,7 @@ def update_application_status(
 
     student = db.query(models.User).filter(models.User.id == application.student_id).first()
     student_name = student.full_name if student else ""
-    proj_title = project.title if project else "المشروع"
+    proj_title = project.title if project else f"#{application.project_id}"
     feedback_note = f"ملاحظات: {feedback_text}" if feedback_text else ""
     feedback_note_en = f"Feedback: {feedback_text}" if feedback_text else ""
 
@@ -1621,7 +1621,7 @@ def get_project_messages(
 
     results = []
     for m in messages:
-        sender_name = m.sender.full_name if m.sender else f"مستخدم #{m.sender_id}"
+        sender_name = m.sender.full_name if m.sender else f"#{m.sender_id}"
         sender_role = m.sender.role if m.sender else "user"
         results.append(schemas.MessageResponse(
             id=m.id,
@@ -1734,8 +1734,8 @@ def format_report_item(r: models.Report, db: Session, viewer: Optional[models.Us
         return None
     st = db.query(models.User).filter(models.User.id == r.student_id).first()
     pj = db.query(models.Project).filter(models.Project.id == r.project_id).first()
-    r.student_name = st.full_name if st else f"طالب #{r.student_id}"
-    r.project_title = pj.title if pj else f"مشروع #{r.project_id}"
+    r.student_name = st.full_name if st else f"#{r.student_id}"
+    r.project_title = pj.title if pj else f"#{r.project_id}"
     r.has_file = bool(r.file_key)
     r.can_review = bool(viewer) and can_review_report(pj, viewer)
     return r

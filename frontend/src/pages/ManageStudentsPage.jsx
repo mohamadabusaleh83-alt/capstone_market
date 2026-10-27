@@ -5,14 +5,9 @@ import { useApp } from '../context/AppContext';
 import {
   GraduationCap,
   Search,
-  Filter,
-  CheckCircle2,
-  Clock,
   ChevronRight,
-  ShieldCheck,
   UserCheck,
-  UserX,
-  Mail
+  UserX
 } from 'lucide-react';
 
 export default function ManageStudentsPage() {

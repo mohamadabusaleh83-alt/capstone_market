@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './AuthContext';
 import { useTheme } from './ThemeContext';
-import { API_URL, INITIAL_FALLBACK_PROJECTS, ACADEMIC_MAJORS } from '../api/client';
+import { API_URL, INITIAL_FALLBACK_PROJECTS } from '../api/client';
 
 const CANONICAL_SKILL_MAP = {
   spl: 'SQL', sql: 'SQL', python: 'Python', react: 'React', fastapi: 'FastAPI',
@@ -241,7 +241,7 @@ export function AppProvider({ children }) {
 
   // السيرة الذاتية للطالب - معزولة بنسبة 100%
   const [studentCv, setStudentCv] = useState(() => {
-    if (typeof window === 'undefined') return { major: 'أنظمة المعلومات الحاسوبية (CIS)', course: 'مشروع تخرج 1', portfolioUrl: '', bio: '' };
+    if (typeof window === 'undefined') return { major: '', course: '', portfolioUrl: '', bio: '' };
     try {
       const user = localStorage.getItem('app_user_role');
       const userId = user ? JSON.parse(user).id : 'guest';
@@ -256,13 +256,13 @@ export function AppProvider({ children }) {
         };
       }
       return {
-        major: 'أنظمة المعلومات الحاسوبية (CIS)',
-        course: 'مشروع تخرج 1',
+        major: '',
+        course: '',
         portfolioUrl: '',
         bio: ''
       };
     } catch {
-      return { major: 'أنظمة المعلومات الحاسوبية (CIS)', course: 'مشروع تخرج 1', portfolioUrl: '', bio: '' };
+      return { major: '', course: '', portfolioUrl: '', bio: '' };
     }
   });
 
@@ -281,8 +281,8 @@ export function AppProvider({ children }) {
         });
       } else {
         setStudentCv({
-          major: 'أنظمة المعلومات الحاسوبية (CIS)',
-          course: 'مشروع تخرج 1',
+          major: '',
+          course: '',
           portfolioUrl: '',
           bio: ''
         });
@@ -384,10 +384,10 @@ export function AppProvider({ children }) {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          const formatted = data.map((p, idx) => {
+          const formatted = data.map((p) => {
             const rawSkillList = p.required_skills
               ? p.required_skills.split(/[,<]/).map((s) => normalizeSkill(s)).filter(Boolean)
-              : ['Python', 'SQL', 'FastAPI', 'React'];
+              : [];
             const projectSkills = Array.from(new Set(rawSkillList));
 
             return {
@@ -399,14 +399,12 @@ export function AppProvider({ children }) {
               created_by: p.created_by,
               created_at: p.created_at,
               status: p.status || 'pending',
-              category: p.category || ACADEMIC_MAJORS[idx % ACADEMIC_MAJORS.length],
+              category: p.category || null,
               stipend: p.stipend || null,
               company_name: p.company_name || null,
               supervisor_id: p.supervisor_id || null,
               supervisor_name: p.supervisor_name || null,
               supervisor_feedback: p.supervisor_feedback || null,
-              difficulty: idx % 2 === 0 ? 'متوسط' : 'متقدم',
-              hoursPerWeek: 10 + (idx % 3) * 2,
               maxMembers: p.max_members || 4,
               currentMembers: p.current_members !== undefined ? p.current_members : 0,
               availableSeats: p.available_seats !== undefined ? p.available_seats : Math.max(0, (p.max_members || 4) - (p.current_members || 0))
@@ -505,13 +503,12 @@ export function AppProvider({ children }) {
             academicId: String(u.id),
             name: u.full_name,
             email: u.email,
-            major: u.major || 'أنظمة المعلومات الحاسوبية (CIS)',
-            course: u.course || 'مشروع تخرج 1',
+            major: u.major || '',
+            course: u.course || '',
             role: 'طالب خريج',
             skills: u.skills ? u.skills.split(',').map((s) => s.trim()).filter(Boolean) : [],
             bio: u.bio || '',
             portfolioUrl: u.portfolio_url || '',
-            isFree: true,
             projectTitle: '',
             supervisorNote: '',
             avatar: '👨‍🎓'
@@ -581,8 +578,8 @@ export function AppProvider({ children }) {
         }
         if (data.major || data.bio || data.portfolio_url || data.course) {
           const cvObj = {
-            major: data.major || 'أنظمة المعلومات الحاسوبية (CIS)',
-            course: data.course || 'مشروع تخرج 1',
+            major: data.major || '',
+            course: data.course || '',
             portfolioUrl: data.portfolio_url || '',
             bio: data.bio || '',
             hasCv: Boolean(data.has_cv)
@@ -647,6 +644,12 @@ export function AppProvider({ children }) {
     }
   }, [currentUser, fetchNotifications]);
 
+  // الطالب "حر" إذا لم يكن عضواً معتمداً في أي مشروع (من بيانات الطلبات الحقيقية)
+  const studentsWithStatus = useMemo(() => studentsList.map((st) => ({
+    ...st,
+    isFree: !applications.some((a) => a.student_id === st.id && ['academically_approved', 'accepted'].includes(a.status))
+  })), [studentsList, applications]);
+
   // حساب نسبة التطابق الذكية
   const matchedProjects = useMemo(() => {
     const list = rawProjects.length > 0 ? rawProjects : INITIAL_FALLBACK_PROJECTS;
@@ -655,7 +658,7 @@ export function AppProvider({ children }) {
         ? p.skills
         : (typeof p.required_skills === 'string' && p.required_skills
             ? p.required_skills.split(',').map((s) => s.trim()).filter(Boolean)
-            : ['Python', 'FastAPI']);
+            : []);
 
       const matchedSkills = projectSkills.filter((s) =>
         userSkills.map((u) => u.toLowerCase()).includes(s.toLowerCase())
@@ -665,9 +668,10 @@ export function AppProvider({ children }) {
         !userSkills.map((u) => u.toLowerCase()).includes(s.toLowerCase())
       );
 
+      // بدون مهارات مطلوبة لا توجد نسبة تطابق حقيقية
       const matchPercent = projectSkills.length > 0
         ? Math.round((matchedSkills.length / projectSkills.length) * 100)
-        : 60;
+        : 0;
 
       return {
         ...p,
@@ -1137,7 +1141,7 @@ export function AppProvider({ children }) {
         fetchMyProject,
         submitReport,
         uploadReportFile,
-        studentsList,
+        studentsList: studentsWithStatus,
         setStudentsList,
         fetchStudents,
         matchedProjects,

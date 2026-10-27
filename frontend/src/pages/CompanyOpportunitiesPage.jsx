@@ -10,10 +10,8 @@ import {
   Users,
   Eye,
   CheckCircle2,
-  Clock,
   Sparkles,
   ChevronRight,
-  Send,
   X
 } from 'lucide-react';
 
@@ -45,7 +43,7 @@ export default function CompanyOpportunitiesPage() {
         status: p.status === 'rejected' ? 'rejected' : 'active',
         applicantsCount: pApps.length,
         viewsCount: (p.current_members || 0) * 8 + 12,
-        createdDate: p.created_at ? new Date(p.created_at).toISOString().split('T')[0] : '2026-10-15'
+        createdDate: p.created_at ? new Date(p.created_at).toISOString().split('T')[0] : '—'
       };
     });
   }, [rawProjects, applications, currentUser, isRtl]);

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -6,14 +6,11 @@ import { useApp } from '../context/AppContext';
 import {
   Users,
   CheckCircle2,
-  Clock,
-  Sparkles,
   ChevronRight,
   MessageSquare,
   FileText,
   ShieldCheck,
   Calendar,
-  ExternalLink,
   Handshake
 } from 'lucide-react';
 
@@ -44,7 +41,7 @@ export default function CompanyPartnershipsPage() {
         projectTitle: p.title,
         teamLead: leadName,
         membersCount: p.current_members !== undefined ? p.current_members : pApps.length,
-        supervisor: p.supervisor_name || 'د. أسامة أمين مرعي',
+        supervisor: p.supervisor_name || (isRtl ? 'لم يُسند بعد' : 'Not assigned yet'),
         progress: progress,
         currentMilestone: latestMilestone ? latestMilestone.title : (isRtl ? 'بانتظار تسليم التقارير' : 'Awaiting Deliverables'),
         nextDelivery: latestMilestone?.deadlineDate || latestMilestone?.deadline_date || (isRtl ? 'قيد التحديد' : 'TBD'),

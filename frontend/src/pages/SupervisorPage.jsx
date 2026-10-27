@@ -26,10 +26,7 @@ import {
   Search,
   RotateCcw,
   Sparkles,
-  GraduationCap,
-  Building2,
-  FileText,
-  Send
+  Building2
 } from 'lucide-react';
 
 export default function SupervisorPage() {
@@ -102,7 +99,7 @@ export default function SupervisorPage() {
             required_skills: p.required_skills || '',
             skills: p.required_skills
               ? p.required_skills.split(',').map((s) => s.trim()).filter(Boolean)
-              : ['React', 'FastAPI'],
+              : [],
             created_by: p.created_by,
             supervisor_id: p.supervisor_id || null,
             maxMembers: p.max_members || 4,
@@ -279,7 +276,7 @@ export default function SupervisorPage() {
             <ShieldCheck className="w-6 h-6 text-amber-500 dark:text-amber-400" />
             <span>{isRtl ? 'لوحة متابعة ومراجعة المشاريع الأكاديمية' : 'Academic Supervisor Review Hub'}</span>
             <span className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 px-2.5 py-0.5 rounded-full">
-              {currentUser?.name || (isRtl ? 'د. أسامة أمين مرعي' : 'Dr. Osama Marei')}
+              {currentUser?.name || ''}
             </span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">

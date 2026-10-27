@@ -111,7 +111,7 @@ export default function MyProjectsPage() {
       id: baseProject.id,
       title: baseProject.title || (isRtl ? 'مشروع تخرج' : 'Capstone Project'),
       description: baseProject.description || '',
-      supervisor: baseProject.supervisor_name || 'د. أسامة أمين مرعي',
+      supervisor: baseProject.supervisor_name || null,
       status: baseProject.status || 'pending',
       statusLabel: isApproved
         ? (isRtl ? 'معتمد أكاديمياً' : 'Academically Approved')
@@ -124,7 +124,7 @@ export default function MyProjectsPage() {
         ? baseProject.skills
         : (typeof baseProject.required_skills === 'string' && baseProject.required_skills
           ? baseProject.required_skills.split(',').map((s) => s.trim()).filter(Boolean)
-          : ['React', 'FastAPI']),
+          : []),
       companyPartner: baseProject.company_name || null
     };
   }, [currentUser, myProject, applications, rawProjects, reportsTimeline, isRtl]);
@@ -354,7 +354,7 @@ export default function MyProjectsPage() {
                       {isRtl ? 'المشرف الأكاديمي' : 'Supervisor'}
                     </div>
                     <div className="text-xs font-bold text-white truncate">
-                      {studentProject?.supervisor || (isRtl ? 'د. أسامة أمين مرعي' : 'Dr. Osama Amin Marei')}
+                      {studentProject?.supervisor || (isRtl ? 'لم يُسند بعد' : 'Not assigned yet')}
                     </div>
                   </div>
                 </div>

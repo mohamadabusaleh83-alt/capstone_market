@@ -3,8 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import {
   Star,
-  Layers,
-  Clock,
   Sparkles,
   ArrowUpRight,
   Users,
@@ -23,7 +21,6 @@ export default function ProjectCard({ project }) {
     setActiveChatProject,
     openApplicationsModal,
     translateMajor,
-    translateDifficulty,
     isRtl
   } = useApp() || {};
 
@@ -144,18 +141,6 @@ export default function ProjectCard({ project }) {
           {project.description}
         </p>
 
-        {/* معطيات الصعوبة وساعات العمل */}
-        <div className="flex items-center gap-3 text-[11px] text-slate-800 dark:text-slate-300 mb-3 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-300/80 dark:border-slate-800/60">
-          <span className="flex items-center gap-1.5 font-semibold">
-            <Layers className="w-3.5 h-3.5 text-cyan-700 dark:text-cyan-400 shrink-0" />
-            {translateDifficulty(project.difficulty)}
-          </span>
-          <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-          <span className="flex items-center gap-1.5 font-semibold">
-            <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-            {t('projects.hours_per_week', { hours: project.hoursPerWeek })}
-          </span>
-        </div>
 
         {/* تحليل مطابقة المهارات */}
         <div className="space-y-2 mb-4 bg-slate-50 dark:bg-slate-950/80 p-3 rounded-xl border border-slate-300/80 dark:border-slate-800/80">

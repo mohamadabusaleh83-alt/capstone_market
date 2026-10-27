@@ -5,13 +5,8 @@ import { useApp } from '../context/AppContext';
 import {
   Activity,
   Search,
-  CheckCircle2,
-  Clock,
-  ShieldAlert,
   ChevronRight,
   RefreshCw,
-  Filter,
-  User,
   ShieldCheck,
   Building2,
   GraduationCap
@@ -19,7 +14,7 @@ import {
 
 export default function ActivityLogsPage() {
   const { t } = useTranslation();
-  const { isRtl, notifications, applications, rawProjects, showToast } = useApp();
+  const { isRtl, notifications, applications, rawProjects, showToast, refreshAllData } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -36,7 +31,6 @@ export default function ActivityLogsPage() {
         user: isRtl ? 'النظام الأكاديمي' : 'System',
         role: 'supervisor',
         details: n.message,
-        ip: '127.0.0.1',
         status: 'success',
         timestamp: n.created_at ? new Date(n.created_at).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US') : (isRtl ? 'اليوم' : 'Today')
       });
@@ -49,7 +43,6 @@ export default function ActivityLogsPage() {
         user: a.student_name || (isRtl ? `طالب #${a.student_id}` : `Student #${a.student_id}`),
         role: 'student',
         details: isRtl ? `طلب انضمام لمشروع: ${a.project_title || `#${a.project_id}`}` : `Applied to project #${a.project_id}`,
-        ip: '127.0.0.1',
         status: a.status === 'accepted' ? 'success' : 'info',
         timestamp: a.created_at ? new Date(a.created_at).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US') : (isRtl ? 'مؤخراً' : 'Recently')
       });
@@ -62,7 +55,6 @@ export default function ActivityLogsPage() {
         user: p.supervisor_name || p.company_name || (isRtl ? 'منسق المشاريع' : 'Coordinator'),
         role: p.company_name ? 'company' : 'supervisor',
         details: p.title,
-        ip: '127.0.0.1',
         status: p.status === 'approved' ? 'success' : 'info',
         timestamp: p.created_at ? new Date(p.created_at).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US') : (isRtl ? 'مؤخراً' : 'Recently')
       });
@@ -71,12 +63,11 @@ export default function ActivityLogsPage() {
     return list;
   }, [notifications, applications, rawProjects, isRtl]);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      showToast(isRtl ? 'تم تحديث سجل النشاطات الأخير' : 'Audit logs refreshed', 'success');
-    }, 500);
+    await refreshAllData();
+    setIsRefreshing(false);
+    showToast(isRtl ? 'تم تحديث سجل النشاطات الأخير' : 'Audit logs refreshed', 'success');
   };
 
   const filtered = logsList.filter((log) => {
@@ -196,7 +187,6 @@ export default function ActivityLogsPage() {
                 <th className="py-3.5 px-4 text-start">{isRtl ? 'نوع العملية' : 'Action Type'}</th>
                 <th className="py-3.5 px-4 text-start">{isRtl ? 'المستخدم المنفذ' : 'Actor'}</th>
                 <th className="py-3.5 px-4 text-start">{isRtl ? 'التفاصيل' : 'Details'}</th>
-                <th className="py-3.5 px-4 text-center">{isRtl ? 'عنوان IP' : 'IP'}</th>
                 <th className="py-3.5 px-4 text-end">{isRtl ? 'التوقيت' : 'Time'}</th>
               </tr>
             </thead>
@@ -224,9 +214,6 @@ export default function ActivityLogsPage() {
                   </td>
                   <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 max-w-sm truncate">
                     {log.details}
-                  </td>
-                  <td className="py-3.5 px-4 text-center font-mono text-[11px] text-slate-400">
-                    {log.ip}
                   </td>
                   <td className="py-3.5 px-4 text-end font-mono text-slate-500 text-[11px]">
                     {log.timestamp}

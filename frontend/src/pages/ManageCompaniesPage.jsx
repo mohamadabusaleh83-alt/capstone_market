@@ -7,12 +7,7 @@ import {
   Building2,
   Search,
   CheckCircle2,
-  Sparkles,
   ChevronRight,
-  Globe,
-  Briefcase,
-  Users,
-  ShieldCheck,
   Plus
 } from 'lucide-react';
 
@@ -41,7 +36,7 @@ export default function ManageCompaniesPage() {
               opportunitiesCount: 1,
               sponsoredProjectsCount: 1,
               status: 'accredited',
-              accreditationDate: c.created_at ? new Date(c.created_at).toISOString().split('T')[0] : '2026-09-01'
+              accreditationDate: c.created_at ? new Date(c.created_at).toISOString().split('T')[0] : '—'
             }))
           );
         }

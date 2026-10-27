@@ -3,14 +3,12 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import {
-  Users,
   Building2,
   CheckCircle2,
   Clock,
   ChevronRight,
   ShieldCheck,
-  Search,
-  MessageSquare
+  Search
 } from 'lucide-react';
 
 export default function ManageCollaborationsPage() {
@@ -32,7 +30,7 @@ export default function ManageCollaborationsPage() {
           students: app.student_name || (isRtl ? `طالب #${app.student_id}` : `Student #${app.student_id}`),
           scope: app.message?.includes('Role:') ? app.message.split('Role:')[1]?.split(']')[0]?.trim() : (isRtl ? 'تنفيذ وتطوير تكنولوجي' : 'Tech Execution'),
           supervisorEndorsement: proj?.status === 'approved' ? 'approved' : 'pending',
-          date: app.created_at ? new Date(app.created_at).toISOString().split('T')[0] : '2026-10-20'
+          date: app.created_at ? new Date(app.created_at).toISOString().split('T')[0] : '—'
         };
       });
   }, [applications, rawProjects, isRtl]);

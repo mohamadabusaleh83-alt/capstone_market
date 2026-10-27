@@ -23,9 +23,7 @@ import {
   Send,
   Check,
   Eye,
-  Bookmark,
-  ArrowRight,
-  ArrowLeft
+  Bookmark
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -217,7 +215,7 @@ export default function DashboardPage() {
         ? p.skills
         : (typeof p.required_skills === 'string'
             ? p.required_skills.split(',').map((s) => s.trim()).filter(Boolean)
-            : ['Python', 'FastAPI']);
+            : []);
 
       skills.forEach((s) => {
         const key = normalizeSkill(s);
@@ -318,7 +316,7 @@ export default function DashboardPage() {
               
               <span>
                 {currentUser.role === 'supervisor'
-                  ? (isRtl ? `مرحباً بك، ${currentUser.name || 'د. أسامة أمين مرعي'} 👋` : `Welcome back, ${currentUser.name || 'Dr. Osama Amin Marie'} 👋`)
+                  ? (isRtl ? `مرحباً بك، ${currentUser.name || ''} 👋` : `Welcome back, ${currentUser.name || 'Dr. Osama Amin Marie'} 👋`)
                   : currentUser.role === 'company'
                     ? (isRtl ? `أهلاً، ${currentUser.name || 'شريكنا العزيز'} 👋` : `Welcome, ${currentUser.name || 'Partner'} 👋`)
                     : (isRtl ? `مرحباً بك، ${currentUser.name || 'mohamad'} 👋` : `Welcome back, ${currentUser.name || 'mohamad'} 👋`)}
@@ -741,7 +739,7 @@ export default function DashboardPage() {
                 <span className="text-[10px] text-slate-600 dark:text-slate-400 block mb-1 font-semibold">{isRtl ? 'المشرف الأكاديمي' : 'Supervisor'}</span>
                 <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-amber-500" />
-                  {studentAssignedProject.supervisor || 'د. أسامة أمين مرعي'}
+                  {studentAssignedProject.supervisor || (isRtl ? 'لم يُسند بعد' : 'Not assigned yet')}
                 </span>
               </div>
 
@@ -1372,7 +1370,7 @@ export default function DashboardPage() {
               <span>{isRtl ? 'إجراءات ومتابعة المشرف الأكاديمي' : 'Supervisor Quick Actions'}</span>
             </h3>
             <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">
-              {isRtl ? 'إشراف د. أسامة أمين مرعي' : 'Dr. Osama Amin Marie'}
+              {currentUser?.name || ''}
             </span>
           </div>
 
