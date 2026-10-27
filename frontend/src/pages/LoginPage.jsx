@@ -102,7 +102,7 @@ export default function LoginPage() {
       <header className="w-full bg-white/80 dark:bg-[#101E42]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-[#2499F2]/20 px-4 sm:px-8 py-3.5 flex items-center justify-between z-20">
         <div className="flex items-center gap-3">
           <Link
-            to="/"
+            to="/about"
             title={t('nav.back_home', 'العودة للصفحة الرئيسية')}
             className="flex items-center gap-2.5 group cursor-pointer"
           >
@@ -117,7 +117,7 @@ export default function LoginPage() {
 
         <div className="flex items-center gap-3">
           <Link
-            to="/"
+            to="/about"
             className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-[#2499F2] dark:hover:text-[#28C8C0] px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 hover:border-[#2499F2]/30 transition"
           >
             {isRtl ? (
@@ -224,7 +224,7 @@ export default function LoginPage() {
             {/* أسفل البطاقة: رابط العودة وتوثيق المطور */}
             <div className="pt-6 relative z-10 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 mt-6">
               <Link
-                to="/"
+                to="/about"
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-[#0B152E]/90 hover:bg-[#0B152E] text-slate-200 hover:text-white border border-[#2499F2]/30 hover:border-[#28C8C0]/50 transition-all active:scale-95 group cursor-pointer shadow-md"
               >
                 {isRtl ? (

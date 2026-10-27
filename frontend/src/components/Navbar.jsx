@@ -46,7 +46,7 @@ export default function Navbar() {
         )}
 
         <Link
-          to="/"
+          to={currentUser ? '/' : '/about'}
           title={t('nav.back_home')}
           className="flex items-center gap-2.5 cursor-pointer hover:scale-105 transition-transform duration-200 select-none group"
         >
