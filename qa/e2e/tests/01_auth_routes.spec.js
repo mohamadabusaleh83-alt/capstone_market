@@ -58,21 +58,27 @@ test.describe('known navigation issues', () => {
     await page.goto('/login');
     await page.evaluate(() => localStorage.clear());
     await page.reload();
-    const link = page.locator('header a[href="/"]').last();
+    const link = page.locator('header a[href="/about"]').last();
     await link.click();
     await settle(page);
     const finalPath = new URL(page.url()).pathname;
-    writeResult('nav_back_loop', { clicked: 'header a[href="/"]', finalPath });
+    writeResult('nav_back_loop', { clicked: 'header a[href="/about"]', finalPath });
     expect(finalPath, 'anonymous "/" is a protected route -> redirected back to /login').not.toBe('/login');
   });
 
   test('About page "Browse Projects" works for a visitor', async ({ page }) => {
+    // Phase 3 (I-24): visitors are sent to sign in and land on /projects afterwards (no redirect loop)
     await page.goto('/about');
-    await page.evaluate(() => localStorage.clear());
+    await page.evaluate(() => { localStorage.clear(); localStorage.setItem('app_language', 'en'); });
     await page.reload();
     await page.getByRole('link', { name: /تصفح المشاريع|Browse Projects/ }).click();
     await settle(page);
-    expect(new URL(page.url()).pathname).not.toBe('/login');
+    expect(new URL(page.url()).pathname).toBe('/login');
+    await page.locator('input[type="email"]').fill(USERS.student);
+    await page.locator('input[type="password"]').first().fill(PASSWORD);
+    await page.locator('form button[type="submit"]').click();
+    await page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 15000 });
+    expect(new URL(page.url()).pathname).toBe('/projects');
   });
 });
 

@@ -102,7 +102,7 @@ test.describe('meta, title, mobile header', () => {
       await page.goto('/login');
       await page.evaluate((l) => { localStorage.clear(); localStorage.setItem('app_language', l); }, lang);
       await page.reload(); await settle(page);
-      const link = page.locator('header a[href="/"]').last();
+      const link = page.locator('header a[href="/about"]').last();
       const m = await link.evaluate((el) => {
         const span = el.querySelector('span');
         const lh = parseFloat(getComputedStyle(span).lineHeight) || 16;
