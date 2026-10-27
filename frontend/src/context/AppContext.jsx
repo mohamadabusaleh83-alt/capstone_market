@@ -22,7 +22,17 @@ function normalizeSkill(s) {
   return CANONICAL_SKILL_MAP[lower] || (clean.charAt(0).toUpperCase() + clean.slice(1));
 }
 
-let projectsMemoryCache = null;
+// قائمة المشاريع تختلف حسب دور المستخدم، لذا يُفصل الكاش لكل مستخدم
+let projectsMemoryCache = null; // { key, list }
+
+function projectsCacheKey() {
+  try {
+    const user = JSON.parse(localStorage.getItem('app_user_role') || 'null');
+    return `capstone_projects_cache_${user?.id ?? 'guest'}`;
+  } catch {
+    return 'capstone_projects_cache_guest';
+  }
+}
 
 const AppContext = createContext(null);
 
@@ -97,14 +107,16 @@ export function AppProvider({ children }) {
   // مع طبقة التخزين المؤقت الذكي (Zero-Latency Instant UI Caching)
   // ==========================================
   const [rawProjects, setRawProjects] = useState(() => {
-    if (projectsMemoryCache && projectsMemoryCache.length > 0) return projectsMemoryCache;
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return INITIAL_FALLBACK_PROJECTS;
+    const cacheKey = projectsCacheKey();
+    if (projectsMemoryCache?.key === cacheKey && projectsMemoryCache.list.length > 0) return projectsMemoryCache.list;
+    {
       try {
-        const cached = sessionStorage.getItem('capstone_projects_cache');
+        const cached = sessionStorage.getItem(cacheKey);
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            projectsMemoryCache = parsed;
+            projectsMemoryCache = { key: cacheKey, list: parsed };
             return parsed;
           }
         }
@@ -353,7 +365,12 @@ export function AppProvider({ children }) {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const res = await fetch(`${API_URL}/projects/`, { signal: controller.signal });
+      // التوكن يحدد المشاريع المرئية (الزائر/الطالب: المعتمدة فقط، الشركة: + مشاريعها، المشرف: الكل)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const res = await fetch(`${API_URL}/projects/`, {
+        signal: controller.signal,
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       clearTimeout(timeoutId);
       if (res.ok) {
         const data = await res.json();
@@ -387,10 +404,11 @@ export function AppProvider({ children }) {
             };
           });
 
-          projectsMemoryCache = formatted;
+          const cacheKey = projectsCacheKey();
+          projectsMemoryCache = { key: cacheKey, list: formatted };
           if (typeof window !== 'undefined') {
             try {
-              sessionStorage.setItem('capstone_projects_cache', JSON.stringify(formatted));
+              sessionStorage.setItem(cacheKey, JSON.stringify(formatted));
             } catch (_err) {
               // Ignore session storage error
             }

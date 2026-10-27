@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import text, or_
 
 import models
 import schemas
@@ -150,6 +150,32 @@ def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login", auto_error=False)
+
+
+def get_optional_user(
+    token: Optional[str] = Depends(optional_oauth2_scheme),
+    db: Session = Depends(get_db)
+) -> Optional[models.User]:
+    """المستخدم الحالي إن وُجد توكن صالح، وإلا None (زائر). التوكن غير الصالح يُعامل كزائر"""
+    if not token:
+        return None
+    user_id = utils.verify_access_token(token)
+    if user_id is None:
+        return None
+    return db.query(models.User).filter(models.User.id == user_id).first()
+
+
+def visible_projects_query(query, user: Optional[models.User]):
+    """قواعد ظهور المشاريع: الزائر والطالب يرون المعتمد فقط، الشركة ترى المعتمد ومشاريعها، المشرف والأدمن يرون الكل"""
+    user_role = (user.role or "").lower() if user else ""
+    if user_role in ("supervisor", "admin"):
+        return query
+    if user_role in COMPANY_ROLES:
+        return query.filter(or_(models.Project.status == "approved", models.Project.created_by == user.id))
+    return query.filter(models.Project.status == "approved")
 
 
 def require_role(allowed_roles: List[str]):
@@ -655,10 +681,11 @@ def get_my_assigned_project(
 def get_projects(
     status: Optional[str] = None,
     created_by: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[models.User] = Depends(get_optional_user)
 ):
-    """جلب المشاريع المتاحة في المنصة مع التحديث الديناميكي للمقاعد المحجوزة والمتاحة ودعم الفلترة بمالك المشروع"""
-    query = db.query(models.Project)
+    """جلب المشاريع المسموح للمستخدم برؤيتها (حسب دوره) مع المقاعد المحجوزة والمتاحة ودعم الفلترة"""
+    query = visible_projects_query(db.query(models.Project), current_user)
     if status:
         query = query.filter(models.Project.status == status.strip().lower())
     if created_by:
@@ -670,9 +697,13 @@ def get_projects(
 
 @app.get("/projects/{id}", response_model=schemas.ProjectResponse)
 @app.get("/api/projects/{id}", response_model=schemas.ProjectResponse)
-def get_project(id: int, db: Session = Depends(get_db)):
-    """جلب تفاصيل مشروع محدد بواسطة معرّفه مع عدد المقاعد المحجوزة والمتاحة"""
-    project = db.query(models.Project).filter(models.Project.id == id).first()
+def get_project(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: Optional[models.User] = Depends(get_optional_user)
+):
+    """جلب تفاصيل مشروع محدد (404 إن لم يكن مسموحاً للمستخدم برؤيته)"""
+    project = visible_projects_query(db.query(models.Project), current_user).filter(models.Project.id == id).first()
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 

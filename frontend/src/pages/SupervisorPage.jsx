@@ -83,7 +83,12 @@ export default function SupervisorPage() {
 
     try {
       // محاولة استدعاء الباك إند
-      const res = await fetch(`${API_URL}/projects/`, { signal: controller.signal });
+      // المشرف يحتاج التوكن لرؤية المشاريع المعلقة والمرفوضة
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/projects/`, {
+        signal: controller.signal,
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       clearTimeout(timeoutId);
 
       if (res.ok) {
