@@ -16,7 +16,8 @@
     "switch_light": "Switch to Light Mode",
     "switch_dark": "Switch to Dark Mode",
     "show_more": "Show more ({{count}} left)",
-    "load_more": "Load more"
+    "load_more": "Load more",
+    "verifying_permissions": "Verifying your permissions..."
   },
   "roles": {
     "student": "Graduate Student",

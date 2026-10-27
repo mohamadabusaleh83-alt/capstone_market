@@ -1,53 +1,48 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 
+function VerifyingScreen() {
+  const { t } = useTranslation();
+  return (
+    <div className="min-h-screen bg-[#070D1E] flex flex-col items-center justify-center text-slate-300 gap-3">
+      <div className="w-8 h-8 border-2 border-[#28C8C0] border-t-transparent rounded-full animate-spin" />
+      <span className="text-xs font-semibold text-slate-400">{t('common.verifying_permissions')}</span>
+    </div>
+  );
+}
+
 export default function ProtectedRoute({ children, allowedRoles }) {
-  const { currentUser, isLoadingAuth } = useAuth();
+  const { currentUser, isRoleVerified } = useAuth();
   const location = useLocation();
-  const [safetyTimedOut, setSafetyTimedOut] = useState(false);
 
-  // مؤقت أمان يضمن عدم تعليق الواجهة في شاشة التحميل لأكثر من 1.2 ثانية
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSafetyTimedOut(true);
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // التحقق المباشر من التخزين المحلي لمنع حدوث Race Condition أثناء التوجيه
-  const activeUser = useMemo(() => {
+  // الصفحات المشتركة تُعرض فوراً من بيانات الجلسة المخزنة لتفادي الوميض
+  const cachedUser = useMemo(() => {
     if (currentUser) return currentUser;
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('app_user_role');
-      const token = localStorage.getItem('token');
-      if (saved && token) {
-        try {
-          return JSON.parse(saved);
-        } catch {
-          return null;
-        }
-      }
+    if (typeof window === 'undefined') return null;
+    const saved = localStorage.getItem('app_user_role');
+    const token = localStorage.getItem('token');
+    if (!saved || !token) return null;
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return null;
     }
-    return null;
   }, [currentUser]);
 
-  // لا يتم حجب الواجهة بالـ Spinner إذا كانت بيانات المستخدم موجودة في الـ State أو localStorage
-  if (isLoadingAuth && !activeUser && !safetyTimedOut) {
-    return (
-      <div className="min-h-screen bg-[#070D1E] flex flex-col items-center justify-center text-slate-300 gap-3">
-        <div className="w-8 h-8 border-2 border-[#28C8C0] border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-semibold text-slate-400">جاري التحقق من الصلاحيات...</span>
-      </div>
-    );
-  }
-
-  if (!activeUser) {
+  if (!cachedUser) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(activeUser.role)) {
-    return <Navigate to="/" replace />;
+  // الصفحات الخاصة بدور معيّن: لا نثق بالدور المخزن في localStorage حتى يؤكده الخادم (I-36)
+  if (allowedRoles && allowedRoles.length > 0) {
+    if (!isRoleVerified || !currentUser) {
+      return <VerifyingScreen />;
+    }
+    if (!allowedRoles.includes(currentUser.role)) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return children;

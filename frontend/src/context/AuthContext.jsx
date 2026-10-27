@@ -40,6 +40,9 @@ export function AuthProvider({ children }) {
   });
 
   const [isLoadingAuth, setIsLoadingAuth] = useState(false);
+  // هل أكّد الخادم (/me) دور المستخدم في هذه الجلسة؟ الصفحات الخاصة بالأدوار تنتظره (I-36)
+  const [isRoleVerified, setIsRoleVerified] = useState(false);
+  const [verifyAttempt, setVerifyAttempt] = useState(0);
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState('');
 
@@ -58,6 +61,7 @@ export function AuthProvider({ children }) {
       localStorage.removeItem('app_user_role');
     }
     setCurrentUser(null);
+    setIsRoleVerified(false);
   }, []);
 
   // تسجيل الدخول التجريبي الفوري بنقرة واحدة (Mock / Demo Auth Bypass)
@@ -97,6 +101,11 @@ export function AuthProvider({ children }) {
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
+      let retryTimer = null;
+      // عند تعذر الوصول للخادم (مثل الإقلاع البارد) نعيد المحاولة بدل الوثوق بالدور المخزن محلياً
+      const scheduleRetry = () => {
+        retryTimer = setTimeout(() => setVerifyAttempt((n) => n + 1), 5000);
+      };
 
       fetch(`${API_URL}/me`, {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -125,19 +134,25 @@ export function AuthProvider({ children }) {
 
             localStorage.setItem('app_user_role', JSON.stringify(userObj));
             setCurrentUser(userObj);
+            setIsRoleVerified(true);
           } else if (res.status === 401) {
             logout();
+          } else {
+            scheduleRetry();
           }
         })
-        .catch(() => {})
+        .catch(scheduleRetry)
         .finally(() => {
           clearTimeout(timeoutId);
           setIsLoadingAuth(false);
         });
-    } else {
-      setIsLoadingAuth(false);
+      return () => {
+        clearTimeout(retryTimer);
+        clearTimeout(timeoutId);
+      };
     }
-  }, [logout]);
+    setIsLoadingAuth(false);
+  }, [logout, verifyAttempt]);
 
   const login = async (email, password) => {
     setAuthError('');
@@ -206,6 +221,7 @@ export function AuthProvider({ children }) {
 
       localStorage.setItem('app_user_role', JSON.stringify(userObj));
       setCurrentUser(userObj);
+      setIsRoleVerified(true);
       setIsLoadingAuth(false);
       return userObj;
     } catch (err) {
@@ -270,6 +286,7 @@ export function AuthProvider({ children }) {
         currentUser,
         setCurrentUser,
         isLoadingAuth,
+        isRoleVerified,
         authError,
         setAuthError,
         authSuccess,

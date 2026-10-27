@@ -2,11 +2,11 @@ import { test, expect } from '@playwright/test';
 import { USERS, PASSWORD, openAs, loginViaUI, settle, writeResult, shotName, watch } from './helpers.js';
 
 const ROUTES = {
-  shared: ['/', '/projects', '/dashboard', '/notifications', '/profile', '/settings', '/about'],
+  shared: ['/', '/projects', '/dashboard', '/notifications', '/profile', '/settings', '/about', '/reports'],
   student: ['/my-projects', '/collaboration-requests', '/opportunities', '/cv'],
   company: ['/saved-projects', '/company/opportunities', '/company/partnerships'],
   supervisor: ['/supervisor', '/supervisor/reviews', '/manage/projects', '/manage/students', '/manage/companies',
-    '/manage/collaborations', '/reports', '/supervisor/reports', '/manage/logs', '/teams'],
+    '/manage/collaborations', '/supervisor/reports', '/manage/logs', '/teams'],
 };
 const ALLOWED = {
   student: [...ROUTES.shared, ...ROUTES.student],
@@ -144,8 +144,13 @@ test.describe('frontend route protection', () => {
     await settle(page, 1500);
     const landed = new URL(page.url()).pathname;
     await page.screenshot({ path: shotName('tampered_role_supervisor_page') });
-    writeResult('role_tamper', { landed });
-    expect(landed, 'supervisor UI rendered for a student by editing localStorage').not.toBe('/supervisor');
+    // Phase 3 (I-36): while /me is unreachable the page waits on a "verifying" screen; it must never
+    // render supervisor content from the tampered localStorage role.
+    const supervisorUi = await page.getByText(/Academic Supervisor Review Hub|Pending Academic Approvals/).count();
+    const verifying = await page.getByText(/Verifying your permissions|جاري التحقق من الصلاحيات/).count();
+    writeResult('role_tamper', { landed, supervisorUi, verifying });
+    expect(supervisorUi, 'supervisor UI rendered for a student by editing localStorage').toBe(0);
+    expect(landed === '/supervisor' ? verifying : 1).toBeGreaterThan(0);
   });
 
   test('logout clears session and blocks protected pages', async ({ page }) => {

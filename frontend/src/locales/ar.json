@@ -16,7 +16,8 @@
     "switch_light": "التبديل إلى الوضع النهاري",
     "switch_dark": "التبديل إلى الوضع الليلي",
     "show_more": "عرض المزيد (متبقٍ {{count}})",
-    "load_more": "تحميل المزيد"
+    "load_more": "تحميل المزيد",
+    "verifying_permissions": "جاري التحقق من الصلاحيات..."
   },
   "roles": {
     "student": "طالب خريج",
