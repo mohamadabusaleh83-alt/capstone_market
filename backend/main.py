@@ -37,6 +37,7 @@ with engine.connect() as conn:
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS supervisor_feedback TEXT",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS skills TEXT DEFAULT ''",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS bio TEXT",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS portfolio_url VARCHAR(255)",
         "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS course VARCHAR(100)",
@@ -133,6 +134,24 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 # توابع التحقق من الهوية والصلاحيات (Auth & RBAC)
 # ==========================================
 
+def user_from_token(token: Optional[str], db: Session) -> Optional[models.User]:
+    """المستخدم صاحب التوكن إن كان صالحاً وغير مُبطَل (token_version يطابق قاعدة البيانات)"""
+    if not token:
+        return None
+    payload = utils.decode_access_token(token)
+    if not payload:
+        return None
+    user_id = utils.user_id_from_payload(payload)
+    if user_id is None:
+        return None
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user is None:
+        return None
+    if int(payload.get("tv", 0) or 0) != (user.token_version or 0):
+        return None
+    return user
+
+
 def get_current_user(
     token: str = Depends(oauth2_scheme), 
     db: Session = Depends(get_db)
@@ -143,11 +162,7 @@ def get_current_user(
         detail="جلسة غير صالحة أو منتهية، يرجى تسجيل الدخول مجدداً",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    user_id = utils.verify_access_token(token)
-    if user_id is None:
-        raise credentials_exception
-
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = user_from_token(token, db)
     if user is None:
         raise credentials_exception
     return user
@@ -163,10 +178,7 @@ def get_optional_user(
     """المستخدم الحالي إن وُجد توكن صالح، وإلا None (زائر). التوكن غير الصالح يُعامل كزائر"""
     if not token:
         return None
-    user_id = utils.verify_access_token(token)
-    if user_id is None:
-        return None
-    return db.query(models.User).filter(models.User.id == user_id).first()
+    return user_from_token(token, db)
 
 
 def visible_projects_query(query, user: Optional[models.User]):
@@ -289,9 +301,7 @@ def login(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        access_token = utils.create_access_token(
-            data={"sub": str(user.id), "user_id": user.id, "email": user.email, "role": user.role}
-        )
+        access_token = issue_token(user)
 
         return {"access_token": access_token, "token_type": "bearer"}
     except HTTPException:
@@ -304,9 +314,18 @@ def login(
         )
 
 
+def issue_token(user: models.User) -> str:
+    return utils.create_access_token(
+        data={"sub": str(user.id), "user_id": user.id, "email": user.email, "role": user.role,
+              "tv": user.token_version or 0}
+    )
+
+
 @app.post("/logout", summary="تسجيل الخروج")
-def logout(current_user: models.User = Depends(get_current_user)):
-    """تأكيد تسجيل الخروج وإنهاء جلسة المستخدم"""
+def logout(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """تسجيل الخروج: يُبطل كل التوكنات الصادرة لهذا الحساب (على جميع الأجهزة)"""
+    current_user.token_version = (current_user.token_version or 0) + 1
+    db.commit()
     return {"message": "تم تسجيل الخروج بنجاح", "user_id": current_user.id}
 
 
@@ -528,8 +547,11 @@ def change_my_password(
             detail="يجب أن تتكون كلمة المرور الجديدة من 6 خانات على الأقل"
         )
     current_user.password_hash = utils.hash_password(pwd_data.new_password.strip())
+    # إبطال كل التوكنات القديمة وإصدار توكن جديد للجلسة الحالية
+    current_user.token_version = (current_user.token_version or 0) + 1
     db.commit()
-    return {"message": "تم تحديث كلمة المرور بنجاح"}
+    db.refresh(current_user)
+    return {"message": "تم تحديث كلمة المرور بنجاح", "access_token": issue_token(current_user), "token_type": "bearer"}
 
 
 def format_user_item(u: models.User):

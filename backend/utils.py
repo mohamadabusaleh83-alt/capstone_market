@@ -136,7 +136,10 @@ def verify_access_token(token: str) -> Optional[int]:
     payload = decode_access_token(token)
     if not payload:
         return None
+    return user_id_from_payload(payload)
 
+
+def user_id_from_payload(payload: dict) -> Optional[int]:
     user_id = payload.get("user_id")
     if user_id is None:
         sub = payload.get("sub")

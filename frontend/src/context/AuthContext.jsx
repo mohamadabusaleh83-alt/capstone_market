@@ -45,6 +45,15 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     if (typeof window !== 'undefined') {
+      // إبطال التوكن على الخادم (I-19)؛ طلب مستقل لا ينتظره المستخدم ولا يعيد استدعاء logout
+      const token = localStorage.getItem('token');
+      if (token) {
+        fetch(`${API_URL}/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          keepalive: true
+        }).catch(() => {});
+      }
       localStorage.removeItem('token');
       localStorage.removeItem('app_user_role');
     }

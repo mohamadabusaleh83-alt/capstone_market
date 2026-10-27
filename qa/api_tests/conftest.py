@@ -20,6 +20,8 @@ if urlparse(BASE_URL).hostname not in ("127.0.0.1", "localhost"):
     raise SystemExit(f"QA suite refuses to run against a non-local API: {BASE_URL}")
 
 PASSWORD = "QaTest#2026"
+# signing key of the local QA server (I-41: the API no longer starts without SECRET_KEY)
+QA_SECRET_KEY = os.environ.get("QA_SECRET_KEY", "qa-local-secret-key-0123456789abcdef-0123456789")
 ACCOUNTS = {
     "student": "qa_student@test.local",
     "student2": "qa_student2@test.local",

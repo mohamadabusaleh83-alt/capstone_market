@@ -13,6 +13,8 @@ class User(Base):
     role = Column(String(20), nullable=False)  # student, supervisor, partner, admin
     skills = Column(String, default="")
     phone = Column(String(50), nullable=True)
+    # يزداد عند تسجيل الخروج أو تغيير كلمة المرور فيُبطل كل التوكنات السابقة (I-19)
+    token_version = Column(Integer, nullable=False, default=0, server_default="0")
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     profile = relationship("StudentProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")

@@ -6,10 +6,18 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from jose import jwt
 
-from conftest import ACCOUNTS, PASSWORD, RUN
+from conftest import ACCOUNTS, PASSWORD, QA_SECRET_KEY, RUN
 
-# Copied verbatim from backend/utils.py: the fallback key used when SECRET_KEY is unset.
+# Copied verbatim from backend/utils.py: the public development key (only used with DEV_INSECURE_KEY=1).
 DEV_DEFAULT_SECRET = "your-super-secret-key-change-this-in-production"
+
+
+def qa_token(client, email, **claims):
+    """A token signed with the QA server key, carrying the account's current token version."""
+    real = client.post("/login", data={"username": email, "password": PASSWORD}).json()["access_token"]
+    base = jwt.get_unverified_claims(real)
+    base.update(claims)
+    return jwt.encode(base, QA_SECRET_KEY, algorithm="HS256")
 
 
 def email(tag):
@@ -151,9 +159,8 @@ def test_token_expiry_is_24h(tokens):
 
 
 def test_expired_token_rejected(client, ids):
-    """Needs the signing key - in dev mode it is the hardcoded default from utils.py."""
-    tok = jwt.encode({"user_id": ids["student"], "exp": datetime.now(timezone.utc) - timedelta(minutes=1)},
-                     DEV_DEFAULT_SECRET, algorithm="HS256")
+    """Correctly signed (QA server key) but expired."""
+    tok = qa_token(client, ACCOUNTS["student"], exp=int((datetime.now(timezone.utc) - timedelta(minutes=1)).timestamp()))
     assert client.get("/me", headers={"Authorization": f"Bearer {tok}"}).status_code == 401
 
 
@@ -167,8 +174,7 @@ def test_cannot_forge_admin_token_with_public_default_key(client, ids):
 
 
 def test_token_for_deleted_or_unknown_user_rejected(client):
-    tok = jwt.encode({"user_id": 999999, "exp": datetime.now(timezone.utc) + timedelta(hours=1)},
-                     DEV_DEFAULT_SECRET, algorithm="HS256")
+    tok = qa_token(client, ACCOUNTS["student"], user_id=999999, sub="999999")
     assert client.get("/me", headers={"Authorization": f"Bearer {tok}"}).status_code == 401
 
 
@@ -182,8 +188,7 @@ def test_logout_invalidates_token(client):
 
 def test_role_comes_from_db_not_token(client, ids):
     """A token whose 'role' claim says admin must not grant admin to a student."""
-    tok = jwt.encode({"user_id": ids["student"], "role": "admin",
-                      "exp": datetime.now(timezone.utc) + timedelta(hours=1)}, DEV_DEFAULT_SECRET, algorithm="HS256")
+    tok = qa_token(client, ACCOUNTS["student"], role="admin")
     r = client.get("/users/", headers={"Authorization": f"Bearer {tok}"})
     me = client.get("/me", headers={"Authorization": f"Bearer {tok}"}).json()
     assert me["role"] == "student"

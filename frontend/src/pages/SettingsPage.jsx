@@ -58,6 +58,9 @@ export default function SettingsPage() {
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData.detail || (isRtl ? 'كلمة المرور الحالية غير صحيحة' : 'Current password incorrect'));
         }
+        // تغيير كلمة المرور يُبطل التوكنات السابقة؛ نحفظ التوكن الجديد للجلسة الحالية
+        const data = await res.json().catch(() => ({}));
+        if (data.access_token) localStorage.setItem('token', data.access_token);
       }
       setCurrentPassword('');
       setNewPassword('');
