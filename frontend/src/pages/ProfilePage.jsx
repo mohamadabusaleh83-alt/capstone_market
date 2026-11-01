@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
+import MajorSelect from '../components/MajorSelect';
 import {
   User,
   Save,
@@ -272,21 +273,26 @@ export default function ProfilePage() {
             )}
           </div>
 
-          <div>
-            <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-semibold">
-              {currentUser?.role === 'company'
-                ? isRtl ? 'مجال النشاط والقطاع' : 'Industry & Domain'
-                : isRtl ? 'التخصص الأكاديمي' : 'Major / Specialization'}
-            </label>
-            <input
-              type="text"
-              value={currentUser?.role === 'company' ? companyIndustry : major}
-              onChange={(e) =>
-                currentUser?.role === 'company' ? setCompanyIndustry(e.target.value) : setMajor(e.target.value)
-              }
-              className="w-full bg-slate-50 dark:bg-[#0B152E] border border-slate-300 dark:border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#2499F2]"
+          {currentUser?.role === 'company' ? (
+            <div>
+              <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-semibold">
+                {isRtl ? 'مجال النشاط والقطاع' : 'Industry & Domain'}
+              </label>
+              <input
+                type="text"
+                value={companyIndustry}
+                onChange={(e) => setCompanyIndustry(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-[#0B152E] border border-slate-300 dark:border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#2499F2]"
+              />
+            </div>
+          ) : (
+            <MajorSelect
+              value={major}
+              onChange={setMajor}
+              id="profile-student-major"
+              label={isRtl ? 'التخصص الأكاديمي' : 'Academic Major'}
             />
-          </div>
+          )}
 
           <div>
             <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-semibold">

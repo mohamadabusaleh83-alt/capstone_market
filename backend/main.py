@@ -458,16 +458,18 @@ def create_user(user: schemas.UserCreate, request: Request, db: Session = Depend
 
         # إنشاء سجل ملف أكاديمي مبدئي للطلبة
         if user_role == "student":
+            clean_major = user.major.strip() if user.major and isinstance(user.major, str) and user.major.strip() else None
             student_profile = models.StudentProfile(
                 user_id=new_user.id,
-                major=None,
+                major=clean_major,
                 skills="",
                 interests=""
             )
             db.add(student_profile)
             db.commit()
+            db.refresh(new_user)
 
-        return new_user
+        return format_user_item(new_user)
     except HTTPException:
         raise
     except Exception:
@@ -1125,7 +1127,7 @@ def delete_project(
     db: Session = Depends(get_db), 
     current_user: models.User = Depends(get_current_user)
 ):
-    """حذف مشروع - مسموح فقط لمالك المشروع أو المشرف أو الأدمن"""
+    """حذف مشروع بشكل نهائي مع الحذف المتسلسل لجميع السجلات المرتبطة به - مسموح للمالك والمشرف والأدمن"""
     project = db.query(models.Project).filter(models.Project.id == id).first()
     if not project:
         raise HTTPException(
@@ -1133,22 +1135,76 @@ def delete_project(
             detail=f"المشروع برقم {id} غير موجود"
         )
 
+    user_role = (current_user.role or "").lower()
     is_owner = project.created_by == current_user.id
-    is_supervisor_or_admin = supervisor_can_manage(project, current_user)
+    is_supervisor = user_role == "supervisor"
+    is_admin = user_role == "admin"
 
-    if not (is_owner or is_supervisor_or_admin):
+    if not (is_owner or is_supervisor or is_admin):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
-            detail="ليس لديك الصلاحية لحذف هذا المشروع، فقط المالك أو المشرف يمكنه ذلك"
+            detail="ليس لديك الصلاحية لحذف هذا المشروع، فقط المالك أو المشرف أو المسؤول يمكنه ذلك"
         )
 
-    # حذف الرسائل والطلبات المرتبطة بالمشروع لتفادي تعارض المفاتيح الخارجية
-    db.query(models.Notification).filter(models.Notification.project_id == id).delete(synchronize_session=False)
-    db.query(models.Message).filter(models.Message.project_id == id).delete(synchronize_session=False)
-    db.query(models.Application).filter(models.Application.project_id == id).delete(synchronize_session=False)
-    db.query(models.Project).filter(models.Project.id == id).delete(synchronize_session=False)
-    db.commit()
+    try:
+        # تسجيل سجل التدقيق الأمني (Audit Trail)
+        logger.info(
+            f"AUDIT TRAIL: Project ID={id} ('{project.title}') permanently deleted by "
+            f"user ID={current_user.id} ({current_user.email}, role={current_user.role})"
+        )
+
+        # الحذف المتسلسل (Cascading Deletion) الآمن داخل معاملة ذرية تمنع أي تعارض قيود خارجية
+        db.query(models.Notification).filter(models.Notification.project_id == id).delete(synchronize_session=False)
+        db.query(models.Message).filter(models.Message.project_id == id).delete(synchronize_session=False)
+        db.query(models.Report).filter(models.Report.project_id == id).delete(synchronize_session=False)
+        db.query(models.Favorite).filter(models.Favorite.project_id == id).delete(synchronize_session=False)
+        db.query(models.Application).filter(models.Application.project_id == id).delete(synchronize_session=False)
+        db.delete(project)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.error(f"Error during cascading delete of project {id}: {exc}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="حدث خطأ أثناء حذف المشروع وسجلاته المرتبطة"
+        )
+
     return None
+
+
+@app.get("/projects/{id}/members", response_model=List[schemas.ProjectMemberOut])
+@app.get("/api/projects/{id}/members", response_model=List[schemas.ProjectMemberOut])
+def get_project_members(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: Optional[models.User] = Depends(get_optional_user)
+):
+    """جلب قائمة الطلاب المقبولين بالمشروع مع تخصصاتهم الأكاديمية وسجلاتهم"""
+    project = db.query(models.Project).filter(models.Project.id == id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"المشروع برقم {id} غير موجود"
+        )
+    apps = db.query(models.Application).filter(
+        models.Application.project_id == id,
+        models.Application.status.in_(["accepted", "academically_approved"])
+    ).all()
+    members = []
+    for a in apps:
+        student = db.query(models.User).filter(models.User.id == a.student_id).first()
+        if student:
+            prof = student.profile
+            members.append(schemas.ProjectMemberOut(
+                id=a.id,
+                user_id=student.id,
+                full_name=student.full_name,
+                email=student.email,
+                role="student",
+                major=prof.major if prof else None,
+                skills=(prof.skills if prof and prof.skills else student.skills) or ""
+            ))
+    return members
 
 
 # ==========================================
@@ -1166,6 +1222,7 @@ def format_application_item(app_item: models.Application, db: Session):
     # بيانات التخصص والنبذة والسيرة الذاتية محفوظة في StudentProfile وليس في جدول المستخدمين
     profile = student.profile if student else None
     app_item.student_major = profile.major if profile else None
+    app_item.major = profile.major if profile else None
     app_item.student_skills = (student.skills or (profile.skills if profile else None)) if student else None
     app_item.student_bio = profile.bio if profile else None
     app_item.student_portfolio_url = public_portfolio_url(profile)

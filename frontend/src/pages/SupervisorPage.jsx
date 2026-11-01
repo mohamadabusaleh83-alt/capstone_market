@@ -26,8 +26,13 @@ import {
   Search,
   RotateCcw,
   Sparkles,
-  Building2
+  Building2,
+  Trash2,
+  GraduationCap
 } from 'lucide-react';
+import MajorBadge from '../components/MajorBadge';
+import DeleteProjectModal from '../components/DeleteProjectModal';
+import { STANDARDIZED_IT_MAJORS, matchStandardMajor } from '../api/majors';
 
 export default function SupervisorPage() {
   const { t } = useTranslation();
@@ -38,6 +43,7 @@ export default function SupervisorPage() {
     fetchProjects: appFetchProjects,
     fetchApplications,
     approveProject,
+    deleteProject,
     updateApplicationStatus,
     setActiveChatProject,
     showToast,
@@ -52,6 +58,9 @@ export default function SupervisorPage() {
   const [projectFeedbackMap, setProjectFeedbackMap] = useState({});
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
   const [approvalsActiveTab, setApprovalsActiveTab] = useState('nominations'); // 'nominations' | 'projects'
+  const [nominationMajorFilter, setNominationMajorFilter] = useState('all');
+  const [projectToDelete, setProjectToDelete] = useState(null);
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
 
   // ========================================================
   // 1. مؤقت أمان تلقائي (Safety Timeout):
@@ -224,6 +233,32 @@ export default function SupervisorPage() {
       (a) => a.status === 'company_accepted' || a.status === 'pending_academic_approval'
     );
   }, [applications]);
+
+  const filteredNominatedApplications = useMemo(() => {
+    return nominatedApplications.filter((app) => {
+      if (nominationMajorFilter === 'all') return true;
+      const appMajor = (app.major || app.student_major || '').trim().toLowerCase();
+      if (nominationMajorFilter === 'other') {
+        return appMajor && !matchStandardMajor(appMajor);
+      }
+      const matched = matchStandardMajor(appMajor);
+      return matched?.key === nominationMajorFilter;
+    });
+  }, [nominatedApplications, nominationMajorFilter]);
+
+  const handleConfirmDeleteProject = async () => {
+    if (!projectToDelete) return;
+    setIsDeletingProject(true);
+    try {
+      const ok = await deleteProject(projectToDelete.id);
+      if (ok) {
+        setLocalProjects((prev) => prev.filter((p) => p.id !== projectToDelete.id));
+        setProjectToDelete(null);
+      }
+    } finally {
+      setIsDeletingProject(false);
+    }
+  };
 
   // المشرف يدير المشاريع غير المسندة أو المسندة إليه فقط (الأدمن يدير الكل) - مطابق لقواعد الخادم
   const canManage = useCallback((project) => {
@@ -450,20 +485,51 @@ export default function SupervisorPage() {
 
         {/* محتوى التبويب الأول: ترشيحات الشركات للطلاب */}
         {approvalsActiveTab === 'nominations' && (
-          <div>
-            {nominatedApplications.length === 0 ? (
+          <div className="space-y-4">
+            {/* شريط الفلترة حسب التخصص الأكاديمي */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50/80 dark:bg-[#152550]/40 border border-slate-200/80 dark:border-white/5">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                <GraduationCap className="w-4 h-4 text-[#2499F2]" />
+                <span>{t('majors.filter_by_major', isRtl ? 'تصفية حسب التخصص:' : 'Filter by Major:')}</span>
+              </div>
+              <div className="w-full sm:w-64">
+                <select
+                  value={nominationMajorFilter}
+                  onChange={(e) => setNominationMajorFilter(e.target.value)}
+                  className="w-full bg-white dark:bg-[#0B152E] border border-slate-300 dark:border-white/15 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-[#2499F2] transition cursor-pointer"
+                >
+                  <option value="all">{t('majors.all', isRtl ? 'جميع التخصصات' : 'All Majors')} ({nominatedApplications.length})</option>
+                  {STANDARDIZED_IT_MAJORS.map((m) => (
+                    <option key={m.key} value={m.key}>
+                      {isRtl ? m.ar : m.en}
+                    </option>
+                  ))}
+                  <option value="other">{t('majors.other', isRtl ? 'أخرى / تحديد تخصص آخر' : 'Other / Add Custom')}</option>
+                </select>
+              </div>
+            </div>
+
+            {filteredNominatedApplications.length === 0 ? (
               <div className="text-center py-8 px-4 rounded-2xl bg-slate-50 dark:bg-[#152550]/40 border border-slate-200/80 dark:border-white/5 text-slate-500 dark:text-slate-400 text-xs space-y-1.5">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                 <p className="font-bold text-slate-800 dark:text-slate-200">
-                  {isRtl ? 'لا توجد ترشيحات طلاب معلقة من الشركات حالياً' : 'No pending student nominations from companies'}
+                  {nominatedApplications.length === 0
+                    ? (isRtl ? 'لا توجد ترشيحات طلاب معلقة من الشركات حالياً' : 'No pending student nominations from companies')
+                    : (isRtl ? 'لا توجد ترشيحات مطابقة للتخصص المحدد' : 'No nominations matching the selected major')}
                 </p>
-                <p className="text-[11px]">
-                  {isRtl ? 'عندما تقبل شركة طلباً من طالب، سيظهر هنا فوراً لاعتمادك الأكاديمي الرسمي وتفعيل مساحة العمل.' : 'When a company nominates a student, it appears here for your final academic sign-off.'}
-                </p>
+                {nominationMajorFilter !== 'all' && (
+                  <button
+                    type="button"
+                    onClick={() => setNominationMajorFilter('all')}
+                    className="text-xs text-[#2499F2] dark:text-[#28C8C0] font-bold hover:underline cursor-pointer"
+                  >
+                    {isRtl ? 'عرض جميع التخصصات' : 'Show All Majors'}
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {nominatedApplications.map((app) => (
+                {filteredNominatedApplications.map((app) => (
                   <div
                     key={app.id}
                     className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-[#152550]/60 border border-amber-300/80 dark:border-amber-500/30 flex flex-col justify-between space-y-4 hover:border-amber-400 transition shadow-sm"
@@ -475,9 +541,12 @@ export default function SupervisorPage() {
                             🎓
                           </div>
                           <div>
-                            <h3 className="font-bold text-sm text-slate-900 dark:text-white leading-tight">
-                              {app.student_name || `#${app.student_id}`}
-                            </h3>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-bold text-sm text-slate-900 dark:text-white leading-tight">
+                                {app.student_name || `#${app.student_id}`}
+                              </h3>
+                              <MajorBadge major={app.major || app.student_major} />
+                            </div>
                             <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
                               {app.student_email}
                             </span>
@@ -863,6 +932,17 @@ export default function SupervisorPage() {
                         <RotateCcw className="w-3.5 h-3.5" />
                       </button>
                     )}
+
+                    {/* زر الحذف النهائي للمشروع للمشرف */}
+                    <button
+                      type="button"
+                      onClick={() => setProjectToDelete(project)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 dark:hover:text-white border border-rose-200 dark:border-rose-800 transition cursor-pointer active:scale-95 shadow-sm"
+                      title={t('delete_project.tooltip', 'حذف المشروع نهائياً')}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{t('delete_project.button', 'حذف المشروع')}</span>
+                    </button>
                   </div>
                   ) : assignedElsewhereNote}
 
@@ -887,6 +967,15 @@ export default function SupervisorPage() {
         {filteredProjects.length > listVisible && showMoreButton(filteredProjects.length - listVisible, () => setListVisible((n) => n + PAGE_SIZE))}
         </>
       )}
+
+      {/* مودال التأكيد الصارم لحذف المشروع نهائياً للمشرف */}
+      <DeleteProjectModal
+        isOpen={Boolean(projectToDelete)}
+        onClose={() => setProjectToDelete(null)}
+        project={projectToDelete}
+        isDeleting={isDeletingProject}
+        onConfirm={handleConfirmDeleteProject}
+      />
     </div>
   );
 }

@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
+import DeleteProjectModal from './DeleteProjectModal';
 import {
   Star,
   Sparkles,
   ArrowUpRight,
   Users,
-  MessageSquare
+  MessageSquare,
+  Trash2
 } from 'lucide-react';
 
 export default function ProjectCard({ project }) {
@@ -21,8 +24,24 @@ export default function ProjectCard({ project }) {
     setActiveChatProject,
     openApplicationsModal,
     translateMajor,
+    deleteProject,
     isRtl
   } = useApp() || {};
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const ok = await deleteProject(project.id);
+      if (ok) {
+        setIsDeleteModalOpen(false);
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const isFav = Array.isArray(favorites) && favorites.includes(project.id);
   // الشات متاح فقط لمن يملك الوصول على الخادم: الأدمن، المالك، المشرف المسند، والأعضاء المعتمدون (I-44)
@@ -238,7 +257,28 @@ export default function ProjectCard({ project }) {
             <MessageSquare className="w-4 h-4" />
           </button>
         )}
+
+        {['supervisor', 'admin'].includes(currentUser?.role) && (
+          <button
+            type="button"
+            onClick={() => setIsDeleteModalOpen(true)}
+            title={t('delete_project.tooltip', 'حذف المشروع نهائياً')}
+            className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 text-rose-600 dark:text-rose-400 transition-all duration-200 cursor-pointer border border-rose-200 dark:border-rose-800 shadow-sm active:scale-90"
+            aria-label={t('delete_project.tooltip', 'حذف المشروع نهائياً')}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
       </div>
+
+      {/* مودال تأكيد حذف المشروع للمشرف والأدمن */}
+      <DeleteProjectModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        project={project}
+        isDeleting={isDeleting}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

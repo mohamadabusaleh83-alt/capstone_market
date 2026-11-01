@@ -15,13 +15,16 @@ function resolveApiUrl() {
 const rawApiUrl = resolveApiUrl();
 export const API_URL = rawApiUrl.replace(/\/+$/, '');
 
+export { STANDARDIZED_IT_MAJORS, OTHER_MAJOR_KEY, matchStandardMajor } from './majors';
+
 export const ACADEMIC_MAJORS = [
-  'أنظمة المعلومات الحاسوبية (CIS)',
-  'علم الحاسوب (Computer Science)',
-  'تقنية المعلومات والاتصالات (IT)',
-  'أمن المعلومات والأدلة الرقمية (Cybersecurity)',
-  'الوسائط الرقمية وتكنولوجيا الويب',
-  'هندسة البرمجيات'
+  'هندسة أنظمة الحاسوب',
+  'علم الحاسوب',
+  'هندسة البرمجيات',
+  'نظم المعلومات الحاسوبية / الإدارية',
+  'الأمن السيبراني',
+  'الذكاء الاصطناعي وعلم البيانات',
+  'شبكات الحاسوب والاتصالات'
 ];
 
 export const INITIAL_FALLBACK_PROJECTS = [];

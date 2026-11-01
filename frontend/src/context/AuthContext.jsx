@@ -185,7 +185,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const register = async ({ fullName, email, password, role }) => {
+  const register = async ({ fullName, email, password, role, major }) => {
     setAuthError('');
     setAuthSuccess('');
     setIsLoadingAuth(true);
@@ -202,7 +202,8 @@ export function AuthProvider({ children }) {
           full_name: fullName || email.split('@')[0],
           email,
           password,
-          role
+          role,
+          major: major ? String(major).trim() : null
         }),
         signal: controller.signal
       });

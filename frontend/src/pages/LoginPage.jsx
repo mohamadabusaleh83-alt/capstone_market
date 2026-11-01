@@ -6,6 +6,7 @@ import { useApp } from '../context/AppContext';
 import { formatFriendlyError } from '../api/client';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import ThemeToggle from '../components/ThemeToggle';
+import MajorSelect from '../components/MajorSelect';
 import {
   AlertCircle,
   CheckCircle2,
@@ -43,7 +44,8 @@ export default function LoginPage() {
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authConfirmPassword, setAuthConfirmPassword] = useState('');
-  const [authExtraField, setAuthExtraField] = useState(''); // University/Major for student, Industry/Field for company
+  const [authExtraField, setAuthExtraField] = useState(''); // Industry/Field for company
+  const [studentMajor, setStudentMajor] = useState(''); // Standardized IT major for student
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -77,7 +79,8 @@ export default function LoginPage() {
           fullName: authFullName.trim(),
           email: authEmail.trim(),
           password: authPassword,
-          role: authRole === 'company' ? 'partner' : 'student'
+          role: authRole === 'company' ? 'partner' : 'student',
+          major: authRole === 'student' ? studentMajor : null
         });
       } else {
         userObj = await login(authEmail.trim(), authPassword);
@@ -386,26 +389,31 @@ export default function LoginPage() {
                       />
                     </div>
 
-                    {/* حقل الجامعة أو مجال الشركة */}
-                    <div>
-                      <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-semibold">
-                        {authRole === 'student' ? t('auth.student_field_label', 'الجامعة والتخصص') : t('auth.company_field_label', 'مجال النشاط والقطاع')}
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder={authRole === 'student' ? t('auth.student_field_placeholder', 'مثال: جامعة القدس المفتوحة - هندسة أنظمة معلومات') : t('auth.company_field_placeholder', 'مثال: تطوير البرمجيات والذكاء الاصطناعي')}
-                          value={authExtraField}
-                          onChange={(e) => setAuthExtraField(e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-[#0B152E] border border-slate-300 dark:border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2] focus:ring-1 focus:ring-[#2499F2] transition ps-3 pe-9"
-                        />
-                        {authRole === 'student' ? (
-                          <School className="w-4 h-4 text-slate-400 absolute end-3 top-3 pointer-events-none" />
-                        ) : (
+                    {/* حقل التخصص الأكاديمي للطالب أو قطاع الشركة */}
+                    {authRole === 'student' ? (
+                      <MajorSelect
+                        value={studentMajor}
+                        onChange={setStudentMajor}
+                        id="register-student-major"
+                        required
+                      />
+                    ) : (
+                      <div>
+                        <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-semibold">
+                          {t('auth.company_field_label', 'مجال النشاط والقطاع')}
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder={t('auth.company_field_placeholder', 'مثال: تطوير البرمجيات والذكاء الاصطناعي')}
+                            value={authExtraField}
+                            onChange={(e) => setAuthExtraField(e.target.value)}
+                            className="w-full bg-slate-50 dark:bg-[#0B152E] border border-slate-300 dark:border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2] focus:ring-1 focus:ring-[#2499F2] transition ps-3 pe-9"
+                          />
                           <Briefcase className="w-4 h-4 text-slate-400 absolute end-3 top-3 pointer-events-none" />
-                        )}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </>
                 )}
 

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { ACADEMIC_MAJORS } from '../api/client';
+import MajorSelect from '../components/MajorSelect';
 import { FileText, Award, CheckCircle, Sparkles, Upload, Download } from 'lucide-react';
 
 export default function StudentCvPage() {
@@ -103,22 +104,12 @@ export default function StudentCvPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-slate-700 dark:text-slate-400 block mb-1">
-                {t('student_cv.major')}
-              </label>
-              <select
-                value={studentCv.major}
-                onChange={(e) => setStudentCv({ ...studentCv, major: e.target.value })}
-                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500 cursor-pointer"
-              >
-                {ACADEMIC_MAJORS.map((m, idx) => (
-                  <option key={idx} value={m}>
-                    {translateMajor(m)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <MajorSelect
+              value={studentCv.major}
+              onChange={(newMajor) => setStudentCv({ ...studentCv, major: newMajor })}
+              label={t('student_cv.major')}
+              selectClassName="py-2 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700"
+            />
 
             <div>
               <label className="text-xs text-slate-700 dark:text-slate-400 block mb-1">

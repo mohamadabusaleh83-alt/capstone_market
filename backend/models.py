@@ -38,6 +38,26 @@ class User(Base):
     def hashed_password(self, value):
         self.password_hash = value
 
+    @property
+    def major(self):
+        return self.profile.major if self.profile else None
+
+    @property
+    def bio(self):
+        return self.profile.bio if self.profile else None
+
+    @property
+    def portfolio_url(self):
+        return self.profile.portfolio_url if self.profile else None
+
+    @property
+    def course(self):
+        return self.profile.course if self.profile else None
+
+    @property
+    def university(self):
+        return self.profile.university if self.profile else None
+
 
 class StudentProfile(Base):
     __tablename__ = "student_profiles"

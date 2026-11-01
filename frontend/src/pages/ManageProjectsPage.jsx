@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
+import MajorBadge from '../components/MajorBadge';
+import DeleteProjectModal from '../components/DeleteProjectModal';
 import {
   FileSpreadsheet,
   Printer,
@@ -10,15 +13,21 @@ import {
   CheckCircle2,
   Clock,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Trash2
 } from 'lucide-react';
 
 export default function ManageProjectsPage() {
   const { t } = useTranslation();
-  const { isRtl, rawProjects, showToast, approveProject } = useApp();
+  const { user } = useAuth();
+  const { isRtl, rawProjects, showToast, approveProject, deleteProject } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [projectToDelete, setProjectToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const isSupervisorOrAdmin = user?.role === 'supervisor' || user?.role === 'admin';
 
   // المشاريع الحقيقية فقط (لا قائمة احتياطية مختلقة)، مع الحقول الفعلية القادمة من الـ API
   const toRow = (p) => ({ ...p, major: p.category || '', supervisor: p.supervisor_name || '' });
@@ -38,6 +47,18 @@ export default function ManageProjectsPage() {
       // Ignored
     }
     showToast(isRtl ? 'تم اعتماد المشروع وتحديث سجله الأكاديمي بنجاح!' : 'Project approved successfully!', 'success');
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!projectToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteProject(projectToDelete.id);
+      setProjectsList((prev) => prev.filter((p) => p.id !== projectToDelete.id));
+    } finally {
+      setIsDeleting(false);
+      setProjectToDelete(null);
+    }
   };
 
   const handleExportCSV = () => {
@@ -183,7 +204,7 @@ export default function ManageProjectsPage() {
                     {project.title}
                   </td>
                   <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">
-                    {project.major || '—'}
+                    {project.major ? <MajorBadge major={project.major} /> : '—'}
                   </td>
                   <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200 font-semibold flex items-center gap-1.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
@@ -214,22 +235,35 @@ export default function ManageProjectsPage() {
                     </span>
                   </td>
                   <td className="py-3.5 px-4 text-end">
-                    {project.status === 'pending' ? (
-                      <button
-                        type="button"
-                        onClick={() => handleQuickApprove(project.id)}
-                        className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow-sm transition cursor-pointer active:scale-95"
-                      >
-                        {isRtl ? 'اعتماد فوري' : 'Approve'}
-                      </button>
-                    ) : (
-                      <Link
-                        to="/reports"
-                        className="text-xs text-[#2499F2] hover:underline font-semibold"
-                      >
-                        {isRtl ? 'عرض التقارير' : 'Reports'}
-                      </Link>
-                    )}
+                    <div className="flex items-center justify-end gap-2">
+                      {project.status === 'pending' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleQuickApprove(project.id)}
+                          className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow-sm transition cursor-pointer active:scale-95"
+                        >
+                          {isRtl ? 'اعتماد فوري' : 'Approve'}
+                        </button>
+                      ) : (
+                        <Link
+                          to="/reports"
+                          className="text-xs text-[#2499F2] hover:underline font-semibold"
+                        >
+                          {isRtl ? 'عرض التقارير' : 'Reports'}
+                        </Link>
+                      )}
+                      {isSupervisorOrAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => setProjectToDelete(project)}
+                          className="p-1.5 rounded-lg text-rose-500 hover:text-white hover:bg-rose-600 dark:hover:bg-rose-600/80 transition-colors cursor-pointer"
+                          title={t('delete_project.button', isRtl ? 'حذف المشروع' : 'Delete Project')}
+                          aria-label={t('delete_project.button', isRtl ? 'حذف المشروع' : 'Delete Project')}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -237,6 +271,15 @@ export default function ManageProjectsPage() {
           </table>
         </div>
       </div>
+
+      {/* مودال تأكيد الحذف النهائي */}
+      <DeleteProjectModal
+        isOpen={Boolean(projectToDelete)}
+        projectTitle={projectToDelete?.title}
+        onClose={() => setProjectToDelete(null)}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

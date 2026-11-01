@@ -1,7 +1,10 @@
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
-import { Users, RefreshCw, X, Check, MessageSquare, FileText } from 'lucide-react';
+import { Users, RefreshCw, X, Check, MessageSquare, FileText, GraduationCap } from 'lucide-react';
+import MajorBadge from './MajorBadge';
+import { STANDARDIZED_IT_MAJORS, matchStandardMajor } from '../api/majors';
 
 // حالة الطلب -> مفتاح الترجمة ولون الشارة
 const STATUS_META = {
@@ -32,15 +35,28 @@ export default function ApplicationsModal() {
     rawProjects,
     updateApplicationStatus,
     setActiveChatProject,
-    openUserCv
+    openUserCv,
+    isRtl
   } = useApp();
+
+  const [majorFilter, setMajorFilter] = useState('all');
 
   if (!showApplicationsModal) return null;
 
   const modalProject = applicationsModalProjectId ? rawProjects.find((p) => p.id === applicationsModalProjectId) : null;
-  const visible = applicationsModalProjectId
+  const baseList = applicationsModalProjectId
     ? applications.filter((a) => a.project_id === applicationsModalProjectId)
     : applications;
+
+  const visible = baseList.filter((app) => {
+    if (majorFilter === 'all') return true;
+    const appMajor = (app.major || app.student_major || '').trim().toLowerCase();
+    if (majorFilter === 'other') {
+      return appMajor && !matchStandardMajor(appMajor);
+    }
+    const matched = matchStandardMajor(appMajor);
+    return matched?.key === majorFilter;
+  });
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -72,6 +88,27 @@ export default function ApplicationsModal() {
           </button>
         </div>
 
+        {/* شريط الفلترة حسب التخصص للمرشحين والمتقدمين */}
+        <div className="flex items-center justify-between gap-3 mb-3 p-2.5 rounded-xl bg-slate-50 dark:bg-[#152550]/40 border border-slate-200 dark:border-white/5">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <GraduationCap className="w-3.5 h-3.5 text-[#2499F2]" />
+            <span>{t('majors.filter_by_major', isRtl ? 'تصفية حسب التخصص:' : 'Filter by Major:')}</span>
+          </div>
+          <select
+            value={majorFilter}
+            onChange={(e) => setMajorFilter(e.target.value)}
+            className="bg-white dark:bg-[#0B152E] border border-slate-300 dark:border-white/15 rounded-lg px-2.5 py-1 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-[#2499F2] transition cursor-pointer"
+          >
+            <option value="all">{t('majors.all', isRtl ? 'جميع التخصصات' : 'All Majors')} ({baseList.length})</option>
+            {STANDARDIZED_IT_MAJORS.map((m) => (
+              <option key={m.key} value={m.key}>
+                {isRtl ? m.ar : m.en}
+              </option>
+            ))}
+            <option value="other">{t('majors.other', isRtl ? 'أخرى / تحديد تخصص آخر' : 'Other / Add Custom')}</option>
+          </select>
+        </div>
+
         {isLoadingApplications ? (
           <div className="text-center py-8 text-xs text-slate-400 flex items-center justify-center gap-2">
             <RefreshCw className="w-4 h-4 animate-spin text-[#2499F2] dark:text-[#28C8C0]" />
@@ -99,6 +136,7 @@ export default function ApplicationsModal() {
                       <span className="font-bold text-slate-900 dark:text-white">
                         {app.student_name || t('applications_management.student_ref', { id: app.student_id })}
                       </span>
+                      <MajorBadge major={app.major || app.student_major} />
                       <span className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded font-medium">
                         {t('applications_management.project_ref', {
                           id: app.project_id,
@@ -106,7 +144,6 @@ export default function ApplicationsModal() {
                         })}
                       </span>
                     </div>
-                    {app.student_major && <p className="text-[11px] text-slate-500 dark:text-slate-400">{app.student_major}</p>}
                     <p className="text-slate-600 dark:text-slate-300 text-xs leading-relaxed break-words">
                       {app.message || t('applications_management.no_message')}
                     </p>

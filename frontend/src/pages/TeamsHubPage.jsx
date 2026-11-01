@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
+import MajorBadge from '../components/MajorBadge';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -92,10 +93,10 @@ export default function TeamsHubPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{st.avatar}</span>
                         <div>
-                          <span className="font-bold text-slate-900 dark:text-white block">{st.name}</span>
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                            {translateMajor(st.major)}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-slate-900 dark:text-white">{st.name}</span>
+                            <MajorBadge major={st.major} />
+                          </div>
                         </div>
                       </div>
                     </td>

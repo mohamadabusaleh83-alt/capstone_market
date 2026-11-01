@@ -17,6 +17,7 @@ class UserCreate(BaseModel):
     email: EmailStr = Field(max_length=120)
     password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
     role: Optional[str] = Field(default="student", max_length=20)
+    major: Optional[str] = Field(default=None, max_length=100)
 
     @field_validator("full_name", mode="before")
     @classmethod
@@ -40,6 +41,11 @@ class UserResponse(BaseModel):
     university: Optional[str] = None
     is_active: bool = True
     created_at: Optional[datetime] = None
+
+
+class UserOut(UserResponse):
+    """المخطط المعياري لبيانات المستخدم المسترجعة"""
+    pass
 
 
 class UserProfileResponse(BaseModel):
@@ -223,12 +229,31 @@ class ApplicationResponse(BaseModel):
     student_name: Optional[str] = None
     student_email: Optional[str] = None
     student_major: Optional[str] = None
+    major: Optional[str] = None
     student_skills: Optional[str] = None
     student_bio: Optional[str] = None
     student_portfolio_url: Optional[str] = None
     student_has_cv: bool = False
     project_title: Optional[str] = None
     company_name: Optional[str] = None
+
+
+class StudentApplicationOut(ApplicationResponse):
+    """المخطط المعياري لطلبات الطلاب المتقدمين للمشاريع"""
+    pass
+
+
+class ProjectMemberOut(BaseModel):
+    """المخطط المعياري لبيانات أعضاء الفريق بالمشروع"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+    full_name: str
+    email: str
+    role: str = "student"
+    major: Optional[str] = None
+    skills: Optional[str] = None
 
 
 # ==========================================

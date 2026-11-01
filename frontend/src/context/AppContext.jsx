@@ -710,12 +710,16 @@ export function AppProvider({ children }) {
   // مساعد لترجمة مسميات التخصصات
   const translateMajor = useCallback((major) => {
     if (!major) return '';
-    if (major.includes('CIS') || major.includes('أنظمة المعلومات')) return t('majors.cis');
-    if (major.includes('Computer Science') || major.includes('علم الحاسوب')) return t('majors.cs');
-    if (major.includes('IT') || major.includes('تقنية المعلومات')) return t('majors.it');
-    if (major.includes('Cybersecurity') || major.includes('أمن المعلومات')) return t('majors.cybersecurity');
-    if (major.includes('الوسائط') || major.includes('Media')) return t('majors.web');
-    if (major.includes('هندسة البرمجيات') || major.includes('Software')) return t('majors.se');
+    const m = String(major).trim().toLowerCase();
+    if (m.includes('system') || m.includes('أنظمة الحاسوب')) return t('majors.cse');
+    if (m.includes('software') || m.includes('برمجيات')) return t('majors.se');
+    if (m.includes('artificial') || m.includes('ai') || m.includes('بيانات') || m.includes('ذكاء')) return t('majors.ai_ds');
+    if (m.includes('network') || m.includes('telecom') || m.includes('شبكات') || m.includes('اتصالات')) return t('majors.networks_telecom');
+    if (m.includes('cyber') || m.includes('سيبران') || m.includes('أمن المعلومات')) return t('majors.cybersecurity');
+    if (m.includes('cis') || m.includes('mis') || m.includes('نظم المعلومات') || m.includes('أنظمة المعلومات')) return t('majors.cis_mis');
+    if (m.includes('computer science') || m.includes('علم الحاسوب') || m.includes('علوم الحاسوب')) return t('majors.cs');
+    if (m.includes('وسائط') || m.includes('media')) return t('majors.web');
+    if (m.includes('it') || m.includes('تقنية المعلومات')) return t('majors.it');
     return major;
   }, [t]);
 
@@ -877,6 +881,31 @@ export function AppProvider({ children }) {
       throw err;
     }
   }, [apiFetch, fetchProjects, fetchNotifications, translateErrorMessage, isRtl, showToast, t]);
+
+  // ==========================================
+  // حذف مشروع نهائياً (متاح للمشرف والأدمن والمالك)
+  // ==========================================
+  const deleteProject = useCallback(async (projectId) => {
+    try {
+      const res = await apiFetch(`/projects/${projectId}`, {
+        method: 'DELETE'
+      });
+      if (res && (res.status === 204 || res.status === 200 || res.ok)) {
+        setRawProjects((prev) => prev.filter((p) => p.id !== projectId));
+        setApplications((prev) => prev.filter((a) => a.project_id !== projectId));
+        showToast(t('delete_project.success', 'تم حذف المشروع وجميع سجلاته المرتبطة بنجاح.'), 'success');
+        if (fetchProjects) fetchProjects();
+        if (fetchApplications) fetchApplications();
+        return true;
+      }
+      const errData = await res.json().catch(() => ({}));
+      showToast(errData.detail || t('delete_project.failed', 'فشل حذف المشروع، يرجى المحاولة لاحقاً.'), 'error');
+      return false;
+    } catch (err) {
+      showToast(formatFriendlyError(err), 'error');
+      return false;
+    }
+  }, [apiFetch, fetchProjects, fetchApplications, showToast, t]);
 
   // ==========================================
   // تقديم طلب انضمام لمشروع
@@ -1129,6 +1158,7 @@ export function AppProvider({ children }) {
         createProject,
         approveProject,
         updateProjectStatus: approveProject,
+        deleteProject,
         refreshAllData,
         isApplyModalOpen,
         setIsApplyModalOpen,

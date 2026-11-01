@@ -216,6 +216,14 @@ def test_delete_missing_404(api):
     assert api.call("admin", "DELETE", "/projects/99999999").status_code == 404
 
 
+def test_supervisor_can_hard_delete_project(api):
+    pid = api.make_project("company")
+    api.make_member("student", pid)
+    api.make_report("student", pid)
+    assert api.call("supervisor", "DELETE", f"/projects/{pid}").status_code == 204
+    assert api.call("anon", "GET", f"/projects/{pid}").status_code == 404
+
+
 def test_student_sees_own_non_approved_projects_only(api):
     pid = api.make_project("student", status="pending")
     assert pid in [p["id"] for p in api.call("student", "GET", "/projects/").json()]

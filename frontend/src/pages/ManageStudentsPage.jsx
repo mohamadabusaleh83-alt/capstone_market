@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
+import MajorBadge from '../components/MajorBadge';
+import { STANDARDIZED_IT_MAJORS, matchStandardMajor } from '../api/majors';
 import {
   GraduationCap,
   Search,
   ChevronRight,
   UserCheck,
-  UserX
+  UserX,
+  Filter
 } from 'lucide-react';
 
 export default function ManageStudentsPage() {
@@ -16,15 +19,30 @@ export default function ManageStudentsPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all' | 'linked' | 'free'
+  const [majorFilter, setMajorFilter] = useState('all');
 
   const filtered = studentsList.filter((st) => {
     const matchesSearch =
       st.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       st.academicId.includes(searchTerm) ||
-      st.major.toLowerCase().includes(searchTerm.toLowerCase());
-    if (filterType === 'linked') return matchesSearch && !st.isFree;
-    if (filterType === 'free') return matchesSearch && st.isFree;
-    return matchesSearch;
+      (st.major && st.major.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    let matchesType = true;
+    if (filterType === 'linked') matchesType = !st.isFree;
+    else if (filterType === 'free') matchesType = st.isFree;
+
+    let matchesMajor = true;
+    if (majorFilter !== 'all') {
+      const stMajor = (st.major || '').trim().toLowerCase();
+      if (majorFilter === 'other') {
+        matchesMajor = stMajor && !matchStandardMajor(stMajor);
+      } else {
+        const matched = matchStandardMajor(stMajor);
+        matchesMajor = matched?.key === majorFilter;
+      }
+    }
+
+    return matchesSearch && matchesType && matchesMajor;
   });
 
   return (
@@ -74,42 +92,62 @@ export default function ManageStudentsPage() {
           <Search className="w-4 h-4 text-slate-400 absolute start-3 top-2.5 pointer-events-none" />
         </div>
 
-        <div className="flex gap-1.5 w-full sm:w-auto">
-          <button
-            type="button"
-            onClick={() => setFilterType('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-              filterType === 'all'
-                ? 'bg-[#2499F2] text-white shadow-sm'
-                : 'bg-slate-100 dark:bg-[#0B152E] text-slate-600 dark:text-slate-300'
-            }`}
-          >
-            {isRtl ? 'جميع الطلاب' : 'All'} ({studentsList.length})
-          </button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {/* فلتر التخصص الأكاديمي */}
+          <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#0B152E] border border-slate-300 dark:border-white/10 rounded-xl px-2.5 py-1 text-xs">
+            <GraduationCap className="w-3.5 h-3.5 text-[#2499F2]" />
+            <select
+              value={majorFilter}
+              onChange={(e) => setMajorFilter(e.target.value)}
+              className="bg-transparent text-xs text-slate-800 dark:text-white focus:outline-none cursor-pointer"
+            >
+              <option value="all">{t('majors.all', isRtl ? 'جميع التخصصات' : 'All Majors')} ({studentsList.length})</option>
+              {STANDARDIZED_IT_MAJORS.map((m) => (
+                <option key={m.key} value={m.key}>
+                  {isRtl ? m.ar : m.en}
+                </option>
+              ))}
+              <option value="other">{t('majors.other', isRtl ? 'أخرى / تحديد تخصص آخر' : 'Other / Add Custom')}</option>
+            </select>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => setFilterType('linked')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-              filterType === 'linked'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-slate-100 dark:bg-[#0B152E] text-slate-600 dark:text-slate-300'
-            }`}
-          >
-            {isRtl ? 'مرتبط بفريق' : 'Assigned'}
-          </button>
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => setFilterType('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                filterType === 'all'
+                  ? 'bg-[#2499F2] text-white shadow-sm'
+                  : 'bg-slate-100 dark:bg-[#0B152E] text-slate-600 dark:text-slate-300'
+              }`}
+            >
+              {isRtl ? 'جميع الطلاب' : 'All'}
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setFilterType('free')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-              filterType === 'free'
-                ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
-                : 'bg-slate-100 dark:bg-[#0B152E] text-slate-600 dark:text-slate-300'
-            }`}
-          >
-            {isRtl ? 'يبحث عن فريق' : 'Looking for Team'}
-          </button>
+            <button
+              type="button"
+              onClick={() => setFilterType('linked')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                filterType === 'linked'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'bg-slate-100 dark:bg-[#0B152E] text-slate-600 dark:text-slate-300'
+              }`}
+            >
+              {isRtl ? 'مرتبط بفريق' : 'Assigned'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFilterType('free')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                filterType === 'free'
+                  ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
+                  : 'bg-slate-100 dark:bg-[#0B152E] text-slate-600 dark:text-slate-300'
+              }`}
+            >
+              {isRtl ? 'يبحث عن فريق' : 'Looking for Team'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -136,9 +174,12 @@ export default function ManageStudentsPage() {
                   <td className="py-3.5 px-4 font-mono text-slate-500 font-semibold">
                     {st.academicId}
                   </td>
-                  <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span className="text-base">{st.avatar}</span>
-                    <span>{st.name}</span>
+                  <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-base">{st.avatar}</span>
+                      <span>{st.name}</span>
+                      <MajorBadge major={st.major} />
+                    </div>
                   </td>
                   <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">
                     <div>{st.major}</div>

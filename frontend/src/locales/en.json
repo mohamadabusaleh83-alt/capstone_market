@@ -31,12 +31,33 @@
     "admin": "System Administrator"
   },
   "majors": {
+    "all": "All Majors",
+    "filter_by_major": "Filter by Major",
+    "select_major": "Select academic major...",
+    "custom_major_label": "Specify your academic major:",
+    "custom_major_placeholder": "Enter your specific academic major...",
+    "cse": "Computer Systems Engineering",
+    "cs": "Computer Science",
+    "se": "Software Engineering",
+    "cis_mis": "Computer Information Systems / MIS",
+    "cybersecurity": "Cybersecurity",
+    "ai_ds": "Artificial Intelligence & Data Science",
+    "networks_telecom": "Networks & Telecommunications",
+    "other": "Other / Add Custom",
     "cis": "Computer Information Systems (CIS)",
-    "cs": "Computer Science (CS)",
     "it": "Information & Communication Tech (IT)",
-    "cybersecurity": "Cybersecurity & Digital Forensics",
-    "web": "Digital Media & Web Technology",
-    "se": "Software Engineering"
+    "web": "Digital Media & Web Technology"
+  },
+  "delete_project": {
+    "button": "Delete Project",
+    "tooltip": "Permanently delete project",
+    "modal_title": "Confirm Permanent Project Deletion",
+    "modal_message": "Are you sure you want to permanently delete this project? This action cannot be undone and will delete all related applications and records.",
+    "confirm_button": "Yes, Delete Permanently",
+    "cancel_button": "Cancel",
+    "deleting": "Deleting...",
+    "success": "Project and all related records deleted successfully.",
+    "failed": "Failed to delete project, please try again later."
   },
   "nav": {
     "platform_title": "Capstone Market",
