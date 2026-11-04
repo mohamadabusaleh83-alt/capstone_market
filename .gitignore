@@ -52,3 +52,8 @@ qa/api_tests/permission_matrix.json
 
 # Runtime file uploads (user CVs / report files) - never commit
 backend/uploads/
+
+# Database dumps & migration backups
+backups/
+*.sql
+
