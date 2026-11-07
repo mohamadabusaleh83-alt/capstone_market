@@ -17,7 +17,7 @@ import {
 export default function CompanyPartnershipsPage() {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
-  const { rawProjects, applications, reportsTimeline, isRtl, setSelectedChatProject, showToast } = useApp();
+  const { rawProjects, applications, reportsTimeline, isRtl, setActiveChatProject, showToast } = useApp();
 
   const partnershipsList = useMemo(() => {
     if (!currentUser) return [];
@@ -27,7 +27,7 @@ export default function CompanyPartnershipsPage() {
 
     return myProjects.map((p) => {
       const pApps = (applications || []).filter(
-        (a) => a.project_id === p.id && a.status === 'accepted'
+        (a) => a.project_id === p.id && (a.status === 'accepted' || a.status === 'academically_approved')
       );
       const pReports = (reportsTimeline || []).filter((r) => r.project_id === p.id);
       const approvedR = pReports.filter((r) => r.status === 'approved').length;
@@ -51,8 +51,11 @@ export default function CompanyPartnershipsPage() {
     });
   }, [rawProjects, applications, reportsTimeline, currentUser, isRtl]);
 
-  const handleOpenChat = (title) => {
-    setSelectedChatProject({ title });
+  const handleOpenChat = (projectId, title) => {
+    const proj = (rawProjects || []).find((p) => p.id === projectId);
+    if (proj && setActiveChatProject) {
+      setActiveChatProject(proj);
+    }
     showToast(isRtl ? `تم فتح غرفة التواصل مع فريق (${title})` : `Opened chat with team`, 'info');
   };
 
@@ -177,7 +180,7 @@ export default function CompanyPartnershipsPage() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => handleOpenChat(item.projectTitle)}
+                  onClick={() => handleOpenChat(item.id, item.projectTitle)}
                   className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#2499F2] to-[#28C8C0] text-[#101E42] font-black text-xs shadow-md transition cursor-pointer active:scale-95 flex items-center gap-1.5"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />

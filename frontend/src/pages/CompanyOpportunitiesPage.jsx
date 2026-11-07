@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Sparkles,
   ChevronRight,
+  Clock,
   X
 } from 'lucide-react';
 
@@ -39,7 +40,7 @@ export default function CompanyOpportunitiesPage() {
         title: p.title,
         description: p.description,
         stipend: p.stipend || '—',
-        status: p.status === 'rejected' ? 'rejected' : 'active',
+        status: p.status || 'pending',
         applicantsCount: pApps.length,
         createdDate: p.created_at ? new Date(p.created_at).toISOString().split('T')[0] : '—'
       };
@@ -149,10 +150,22 @@ export default function CompanyOpportunitiesPage() {
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{isRtl ? 'نشطة ومتاحة للتقديم' : 'Active'}</span>
-                </span>
+                {op.status === 'approved' ? (
+                  <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-1.5 border border-emerald-500/30">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{isRtl ? 'معتمدة ومتاحة للتقديم' : 'Approved & Active'}</span>
+                  </span>
+                ) : op.status === 'rejected' ? (
+                  <span className="px-3 py-1 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-1.5 border border-rose-500/30">
+                    <X className="w-3.5 h-3.5" />
+                    <span>{isRtl ? 'مرفوضة من المشرف' : 'Rejected'}</span>
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center gap-1.5 border border-amber-500/30 animate-pulse">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{isRtl ? 'بانتظار الاعتماد الأكاديمي' : 'Pending Academic Review'}</span>
+                  </span>
+                )}
 
                 <div className="flex items-center gap-3 text-xs text-slate-500">
                 </div>
@@ -257,9 +270,10 @@ export default function CompanyOpportunitiesPage() {
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#2499F2] to-[#28C8C0] text-[#101E42] font-black text-xs shadow-md transition cursor-pointer active:scale-95"
+                disabled={isSubmitting}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#2499F2] to-[#28C8C0] text-[#101E42] font-black text-xs shadow-md transition cursor-pointer active:scale-95 disabled:opacity-50"
               >
-                {isRtl ? 'تأكيد ونشر الفرصة فوراً' : 'Confirm & Publish'}
+                {isSubmitting ? (isRtl ? 'جاري النشر...' : 'Publishing...') : (isRtl ? 'تأكيد ونشر الفرصة فوراً' : 'Confirm & Publish')}
               </button>
             </form>
           </div>

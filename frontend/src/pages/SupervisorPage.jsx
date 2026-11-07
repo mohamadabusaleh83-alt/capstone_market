@@ -24,11 +24,11 @@ import {
   Filter,
   Layers,
   Search,
-  RotateCcw,
   Sparkles,
   Building2,
   Trash2,
-  GraduationCap
+  GraduationCap,
+  FileText
 } from 'lucide-react';
 import MajorBadge from '../components/MajorBadge';
 import DeleteProjectModal from '../components/DeleteProjectModal';
@@ -43,9 +43,11 @@ export default function SupervisorPage() {
     fetchProjects: appFetchProjects,
     fetchApplications,
     approveProject,
+    updateProjectSeats,
     deleteProject,
     updateApplicationStatus,
     setActiveChatProject,
+    openUserCv,
     showToast,
     isRtl
   } = useApp();
@@ -56,6 +58,7 @@ export default function SupervisorPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [appFeedbackMap, setAppFeedbackMap] = useState({});
   const [projectFeedbackMap, setProjectFeedbackMap] = useState({});
+  const [projectSeatsMap, setProjectSeatsMap] = useState({});
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
   const [approvalsActiveTab, setApprovalsActiveTab] = useState('nominations'); // 'nominations' | 'projects'
   const [nominationMajorFilter, setNominationMajorFilter] = useState('all');
@@ -100,21 +103,37 @@ export default function SupervisorPage() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          const formatted = data.map((p) => ({
-            id: p.id,
-            title: p.title || (isRtl ? 'مشروع تخرج' : 'Capstone Project'),
-            description: p.description || '',
-            status: p.status || 'pending',
-            required_skills: p.required_skills || '',
-            skills: p.required_skills
-              ? p.required_skills.split(',').map((s) => s.trim()).filter(Boolean)
-              : [],
-            created_by: p.created_by,
-            supervisor_id: p.supervisor_id || null,
-            maxMembers: p.max_members || 4,
-            currentMembers: p.current_members !== undefined ? p.current_members : 0,
-            availableSeats: Math.max(0, (p.max_members || 4) - (p.current_members || 0))
-          }));
+          const formatted = data.map((p) => {
+            const totalSeats = p.total_seats ?? p.seats ?? p.max_members ?? 4;
+            const acceptedStudents = p.accepted_students_count ?? p.current_members ?? 0;
+            const remainingSeats = p.remaining_seats ?? p.available_seats ?? Math.max(0, totalSeats - acceptedStudents);
+            return {
+              id: p.id,
+              title: p.title || (isRtl ? 'مشروع تخرج' : 'Capstone Project'),
+              description: p.description || '',
+              status: p.status || 'pending',
+              required_skills: p.required_skills || '',
+              skills: p.required_skills
+                ? p.required_skills.split(',').map((s) => s.trim()).filter(Boolean)
+                : [],
+              created_by: p.created_by,
+              supervisor_id: p.supervisor_id || null,
+              supervisor_feedback: p.supervisor_feedback || null,
+              seats: totalSeats,
+              total_seats: totalSeats,
+              maxMembers: totalSeats,
+              max_members: totalSeats,
+              currentMembers: acceptedStudents,
+              current_members: acceptedStudents,
+              accepted_students_count: acceptedStudents,
+              availableSeats: remainingSeats,
+              available_seats: remainingSeats,
+              remaining_seats: remainingSeats,
+              submitted_applications_count: p.submitted_applications_count ?? 0,
+              decided_at: p.decided_at || null,
+              rejected_at: p.rejected_at || null
+            };
+          });
           setLocalProjects(formatted);
           return;
         }
@@ -145,17 +164,28 @@ export default function SupervisorPage() {
   // ========================================================
   const handleApprove = async (projectId) => {
     const feedback = projectFeedbackMap[projectId] || '';
+    const rawSeats = projectSeatsMap[projectId];
+    const seats = rawSeats ? parseInt(rawSeats, 10) : null;
+
     setLocalProjects((prev) =>
-      prev.map((p) => (p.id === projectId ? { ...p, status: 'approved', supervisor_feedback: feedback } : p))
+      prev.map((p) => (p.id === projectId ? {
+        ...p,
+        status: 'approved',
+        supervisor_feedback: feedback,
+        seats: seats || p.seats || p.maxMembers || 4,
+        total_seats: seats || p.total_seats || p.maxMembers || 4,
+        maxMembers: seats || p.maxMembers || 4
+      } : p))
     );
     try {
-      if (approveProject) await approveProject(projectId, 'approved', feedback);
+      if (approveProject) await approveProject(projectId, 'approved', feedback, seats);
       if (appFetchProjects) await appFetchProjects();
+      await loadSupervisorData();
+      if (showToast) {
+        showToast(isRtl ? 'تم اعتماد المشروع أكاديمياً بنجاح!' : 'Project approved successfully!', 'success');
+      }
     } catch {
-      // Ignored - local state already updated
-    }
-    if (showToast) {
-      showToast(isRtl ? 'تم اعتماد المشروع أكاديمياً بنجاح!' : 'Project approved successfully!', 'success');
+      // Ignored - error toast shown by context
     }
   };
 
@@ -167,25 +197,30 @@ export default function SupervisorPage() {
     try {
       if (approveProject) await approveProject(projectId, 'rejected', feedback);
       if (appFetchProjects) await appFetchProjects();
+      await loadSupervisorData();
+      if (showToast) {
+        showToast(isRtl ? 'تم رفض المشروع وإرسال الملاحظات' : 'Project marked as rejected', 'info');
+      }
     } catch {
       // Ignored
-    }
-    if (showToast) {
-      showToast(isRtl ? 'تم رفض المشروع وإرسال الملاحظات للطلبة' : 'Project marked as rejected', 'info');
     }
   };
 
-  const handleResetPending = async (projectId) => {
-    setLocalProjects((prev) =>
-      prev.map((p) => (p.id === projectId ? { ...p, status: 'pending' } : p))
-    );
+  const handleUpdateSeats = async (projectId) => {
+    const rawSeats = projectSeatsMap[projectId];
+    const seats = parseInt(rawSeats, 10);
+    if (!seats || seats < 1) {
+      showToast(isRtl ? 'يرجى إدخال عدد مقاعد صحيح وموجب' : 'Please enter a valid positive integer for seats', 'error');
+      return;
+    }
     try {
-      if (approveProject) await approveProject(projectId, 'pending');
+      if (updateProjectSeats) {
+        await updateProjectSeats(projectId, seats);
+        if (appFetchProjects) await appFetchProjects();
+        await loadSupervisorData();
+      }
     } catch {
       // Ignored
-    }
-    if (showToast) {
-      showToast(isRtl ? 'تمت إعادة المشروع لحالة قيد المراجعة' : 'Project reset to pending review', 'info');
     }
   };
 
@@ -228,14 +263,14 @@ export default function SupervisorPage() {
   const rejectedCount = useMemo(() => localProjects.filter((p) => p.status === 'rejected').length, [localProjects]);
   const totalCount = localProjects.length;
 
-  const nominatedApplications = useMemo(() => {
+  const studentApplications = useMemo(() => {
     return (applications || []).filter(
-      (a) => a.status === 'company_accepted' || a.status === 'pending_academic_approval'
+      (a) => ['applied', 'pending', 'company_accepted', 'pending_academic_approval'].includes(a.status)
     );
   }, [applications]);
 
-  const filteredNominatedApplications = useMemo(() => {
-    return nominatedApplications.filter((app) => {
+  const filteredStudentApplications = useMemo(() => {
+    return studentApplications.filter((app) => {
       if (nominationMajorFilter === 'all') return true;
       const appMajor = (app.major || app.student_major || '').trim().toLowerCase();
       if (nominationMajorFilter === 'other') {
@@ -244,7 +279,7 @@ export default function SupervisorPage() {
       const matched = matchStandardMajor(appMajor);
       return matched?.key === nominationMajorFilter;
     });
-  }, [nominatedApplications, nominationMajorFilter]);
+  }, [studentApplications, nominationMajorFilter]);
 
   const handleConfirmDeleteProject = async () => {
     if (!projectToDelete) return;
@@ -433,21 +468,21 @@ export default function SupervisorPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                  {isRtl ? 'طلبات اعتماد المشاريع والترشيحات المعلقة' : 'Pending Academic Approvals & Nominations'}
+                  {isRtl ? 'طلبات انضمام الطلاب ومقترحات المشاريع المعلقة' : 'Pending Academic Approvals & Student Applications'}
                 </h2>
                 <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-mono">
-                  {nominatedApplications.length + pendingProjectsList.length}
+                  {studentApplications.length + pendingProjectsList.length}
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {isRtl
-                  ? 'المشرف الأكاديمي يملك الصلاحية الحصرية لمنح الاعتماد النهائي وتفعيل مساحات العمل ومراحل تسليم التقارير.'
-                  : 'Faculty supervisor holds exclusive authority to grant final academic approval and activate project workspaces.'}
+                  ? 'المشرف الأكاديمي يملك الصلاحية الحصرية لمنح الاعتماد النهائي للطلبات وتحديد مقاعد المشاريع وتفعيل مساحات العمل.'
+                  : 'Faculty supervisor holds exclusive authority to evaluate student applications, set seat capacities, and grant final project approval.'}
               </p>
             </div>
           </div>
 
-          {/* تبديل التبويبات بين ترشيحات الشركات ومقترحات المشاريع */}
+          {/* تبديل التبويبات بين طلبات الطلاب ومقترحات المشاريع */}
           <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-[#152550] rounded-2xl border border-slate-200 dark:border-white/5 shrink-0">
             <button
               type="button"
@@ -459,9 +494,9 @@ export default function SupervisorPage() {
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>{isRtl ? 'ترشيحات الشركات للطلاب' : 'Company Nominations'}</span>
+              <span>{isRtl ? 'طلبات الطلاب الأكاديمية' : 'Student Applications'}</span>
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/40 text-slate-900 font-bold">
-                {nominatedApplications.length}
+                {studentApplications.length}
               </span>
             </button>
 
@@ -483,7 +518,7 @@ export default function SupervisorPage() {
           </div>
         </div>
 
-        {/* محتوى التبويب الأول: ترشيحات الشركات للطلاب */}
+        {/* محتوى التبويب الأول: طلبات الطلاب الأكاديمية */}
         {approvalsActiveTab === 'nominations' && (
           <div className="space-y-4">
             {/* شريط الفلترة حسب التخصص الأكاديمي */}
@@ -498,7 +533,7 @@ export default function SupervisorPage() {
                   onChange={(e) => setNominationMajorFilter(e.target.value)}
                   className="w-full bg-white dark:bg-[#0B152E] border border-slate-300 dark:border-white/15 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-[#2499F2] transition cursor-pointer"
                 >
-                  <option value="all">{t('majors.all', isRtl ? 'جميع التخصصات' : 'All Majors')} ({nominatedApplications.length})</option>
+                  <option value="all">{t('majors.all', isRtl ? 'جميع التخصصات' : 'All Majors')} ({studentApplications.length})</option>
                   {STANDARDIZED_IT_MAJORS.map((m) => (
                     <option key={m.key} value={m.key}>
                       {isRtl ? m.ar : m.en}
@@ -509,13 +544,13 @@ export default function SupervisorPage() {
               </div>
             </div>
 
-            {filteredNominatedApplications.length === 0 ? (
+            {filteredStudentApplications.length === 0 ? (
               <div className="text-center py-8 px-4 rounded-2xl bg-slate-50 dark:bg-[#152550]/40 border border-slate-200/80 dark:border-white/5 text-slate-500 dark:text-slate-400 text-xs space-y-1.5">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                 <p className="font-bold text-slate-800 dark:text-slate-200">
-                  {nominatedApplications.length === 0
-                    ? (isRtl ? 'لا توجد ترشيحات طلاب معلقة من الشركات حالياً' : 'No pending student nominations from companies')
-                    : (isRtl ? 'لا توجد ترشيحات مطابقة للتخصص المحدد' : 'No nominations matching the selected major')}
+                  {studentApplications.length === 0
+                    ? (isRtl ? 'لا توجد طلبات انضمام طلاب معلقة حالياً' : 'No pending student applications')
+                    : (isRtl ? 'لا توجد طلبات مطابقة للتخصص المحدد' : 'No applications matching the selected major')}
                 </p>
                 {nominationMajorFilter !== 'all' && (
                   <button
@@ -529,7 +564,7 @@ export default function SupervisorPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredNominatedApplications.map((app) => (
+                {filteredStudentApplications.map((app) => (
                   <div
                     key={app.id}
                     className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-[#152550]/60 border border-amber-300/80 dark:border-amber-500/30 flex flex-col justify-between space-y-4 hover:border-amber-400 transition shadow-sm"
@@ -555,7 +590,7 @@ export default function SupervisorPage() {
 
                         <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 flex items-center gap-1 shrink-0 animate-pulse">
                           <Clock className="w-3 h-3" />
-                          <span>{isRtl ? 'ترشيح صناعي بانتظارك' : 'Nominated'}</span>
+                          <span>{isRtl ? 'طلب انضمام بانتظارك' : 'Pending Review'}</span>
                         </span>
                       </div>
 
@@ -567,13 +602,15 @@ export default function SupervisorPage() {
                             {app.project_title}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500 dark:text-slate-400">{isRtl ? 'الشركة الراعية:' : 'Company:'}</span>
-                          <span className="font-bold text-[#2499F2] flex items-center gap-1">
-                            <Building2 className="w-3.5 h-3.5" />
-                            <span>{app.company_name || '—'}</span>
-                          </span>
-                        </div>
+                        {app.company_name && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 dark:text-slate-400">{isRtl ? 'الشركة الراعية:' : 'Company:'}</span>
+                            <span className="font-bold text-[#2499F2] flex items-center gap-1">
+                              <Building2 className="w-3.5 h-3.5" />
+                              <span>{app.company_name}</span>
+                            </span>
+                          </div>
+                        )}
                         {app.student_major && (
                           <div className="flex items-center justify-between">
                             <span className="text-slate-500 dark:text-slate-400">{isRtl ? 'التخصص:' : 'Major:'}</span>
@@ -587,10 +624,24 @@ export default function SupervisorPage() {
                         )}
                       </div>
 
+                      {/* عرض السيرة الذاتية للطالب إن وجدت للمشرف */}
+                      {app.student_has_cv && (
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => openUserCv(app.student_id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#152550] hover:bg-slate-200 dark:hover:bg-[#182b5c] text-slate-800 dark:text-slate-200 text-xs font-bold transition cursor-pointer border border-slate-200 dark:border-white/10 shadow-sm"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-[#2499F2]" />
+                            <span>{isRtl ? 'عرض السيرة الذاتية الأكاديمية (CV)' : 'View Academic CV'}</span>
+                          </button>
+                        </div>
+                      )}
+
                       {/* حقل ملاحظات وتوجيهات المشرف */}
                       <div>
                         <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                          {isRtl ? 'ملاحظات وتوجيهات المشرف الأكاديمي (تظهر للطالب والشركة):' : 'Supervisor Notes & Guidance:'}
+                          {isRtl ? 'ملاحظات وتوجيهات المشرف الأكاديمي:' : 'Supervisor Notes & Guidance:'}
                         </label>
                         <input
                           type="text"
@@ -674,18 +725,33 @@ export default function SupervisorPage() {
                         {project.description || (isRtl ? 'مشروع تخرج مقترح يربط بين الجانب الأكاديمي وسوق العمل.' : 'Proposed graduation project.')}
                       </p>
 
-                      {/* حقل ملاحظات وتوجيهات المشرف للمشروع */}
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                          {isRtl ? 'ملاحظات وتوجيهات المشرف على المشروع:' : 'Supervisor Feedback & Notes:'}
-                        </label>
-                        <input
-                          type="text"
-                          value={projectFeedbackMap[project.id] || ''}
-                          onChange={(e) => setProjectFeedbackMap((prev) => ({ ...prev, [project.id]: e.target.value }))}
-                          placeholder={isRtl ? 'اكتب ملاحظات التعديل أو شروط القبول...' : 'Enter feedback notes...'}
-                          className="w-full bg-white dark:bg-[#101E42] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2] transition"
-                        />
+                      {/* تحديد المقاعد والملاحظات */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="sm:col-span-1">
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            {isRtl ? 'عدد المقاعد:' : 'Seats Capacity:'}
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="20"
+                            value={projectSeatsMap[project.id] ?? (project.seats || project.maxMembers || 4)}
+                            onChange={(e) => setProjectSeatsMap((prev) => ({ ...prev, [project.id]: e.target.value }))}
+                            className="w-full bg-white dark:bg-[#101E42] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-white font-mono font-bold focus:outline-none focus:border-[#2499F2] transition"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            {isRtl ? 'ملاحظات المشرف على المشروع:' : 'Supervisor Feedback & Notes:'}
+                          </label>
+                          <input
+                            type="text"
+                            value={projectFeedbackMap[project.id] || ''}
+                            onChange={(e) => setProjectFeedbackMap((prev) => ({ ...prev, [project.id]: e.target.value }))}
+                            placeholder={isRtl ? 'اكتب ملاحظات التعديل أو شروط القبول...' : 'Enter feedback notes...'}
+                            className="w-full bg-white dark:bg-[#101E42] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2] transition"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -836,14 +902,20 @@ export default function SupervisorPage() {
             const isPending = !isApproved && !isRejected;
             const manageable = canManage(project);
 
+            const totalSeats = project.total_seats ?? project.seats ?? project.maxMembers ?? 4;
+            const acceptedCount = project.accepted_students_count ?? project.currentMembers ?? 0;
+            const remainingSeats = project.remaining_seats ?? project.availableSeats ?? Math.max(0, totalSeats - acceptedCount);
+            const submittedCount = project.submitted_applications_count ?? 0;
+            const isSeatsFull = remainingSeats <= 0 || acceptedCount >= totalSeats;
+
             return (
               <div
                 key={project.id}
                 className="bg-white dark:bg-[#101E42] border border-slate-200 dark:border-[#2499F2]/20 p-5 sm:p-6 rounded-3xl flex flex-col justify-between hover:border-[#2499F2]/40 transition shadow-sm dark:shadow-[0_4px_25px_-5px_rgba(16,30,66,0.6)] space-y-4"
               >
-                <div>
+                <div className="space-y-3">
                   {/* شارة الحالة والمقاعد */}
-                  <div className="flex justify-between items-start mb-3 gap-2">
+                  <div className="flex justify-between items-start gap-2">
                     <span
                       className={`text-[10px] px-2.5 py-1 rounded-full font-bold border ${
                         isApproved
@@ -854,29 +926,65 @@ export default function SupervisorPage() {
                       }`}
                     >
                       {isApproved
-                        ? (isRtl ? 'معتمد أكاديمياً' : 'Academically Approved')
+                        ? (isRtl ? 'معتمد أكاديمياً 🎓' : 'Academically Approved')
                         : isRejected
                           ? (isRtl ? 'مرفوض / بحاجة لتعديل' : 'Rejected / Revision Needed')
                           : (isRtl ? 'قيد المراجعة والاعتماد' : 'Pending Approval')}
                     </span>
 
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-mono">
-                      <Users className="w-3.5 h-3.5 text-[#2499F2]" />
-                      <span>{project.currentMembers || 1} / {project.maxMembers || 4} {isRtl ? 'أعضاء' : 'members'}</span>
-                    </span>
+                    {isSeatsFull ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/40 animate-pulse font-mono">
+                        {isRtl ? 'المقاعد مكتملة (Seats Full)' : 'Seats Full'}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-mono">
+                        <Users className="w-3.5 h-3.5 text-[#2499F2]" />
+                        <span>{acceptedCount} / {totalSeats} {isRtl ? 'مقاعد مشغولة' : 'seats filled'}</span>
+                      </span>
+                    )}
                   </div>
 
                   {/* عنوان ووصف المشروع */}
-                  <h3 className="font-bold text-base text-slate-900 dark:text-white mb-2 leading-snug">
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white leading-snug">
                     {project.title}
                   </h3>
                   <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-3 leading-relaxed">
                     {project.description || (isRtl ? 'مشروع تخرج نوعي يهدف إلى ربط أبحاث الطلبة باحتياجات السوق الحقيقية.' : 'Academic graduation project designed to bridge student research with market needs.')}
                   </p>
 
+                  {/* تفاصيل إحصاءات المقاعد والطلبات */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-[#152550]/40 border border-slate-200/80 dark:border-white/5 text-[11px]">
+                    <div>
+                      <span className="text-slate-500 dark:text-slate-400 block">{isRtl ? 'إجمالي المقاعد:' : 'Total Seats:'}</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{totalSeats}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 dark:text-slate-400 block">{isRtl ? 'المقبولون:' : 'Accepted:'}</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">{acceptedCount}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 dark:text-slate-400 block">{isRtl ? 'المتبقي:' : 'Remaining:'}</span>
+                      <span className={`font-bold font-mono ${isSeatsFull ? 'text-rose-600 dark:text-rose-400' : 'text-[#2499F2]'}`}>
+                        {isSeatsFull ? (isRtl ? 'مكتملة' : 'Full') : remainingSeats}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 dark:text-slate-400 block">{isRtl ? 'الطلبات:' : 'Applied:'}</span>
+                      <span className="font-bold text-amber-600 dark:text-amber-400 font-mono">{submittedCount}</span>
+                    </div>
+                  </div>
+
+                  {/* سبب الرفض إن وجد */}
+                  {isRejected && project.supervisor_feedback && (
+                    <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-xs text-rose-800 dark:text-rose-300">
+                      <span className="font-bold block mb-0.5">{isRtl ? 'سبب الرفض والملاحظات الأكاديمية:' : 'Rejection Reason & Academic Notes:'}</span>
+                      <span>{project.supervisor_feedback}</span>
+                    </div>
+                  )}
+
                   {/* المهارات المطلوبة */}
                   {project.skills && project.skills.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-100 dark:border-white/5">
+                    <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-100 dark:border-white/5">
                       {project.skills.map((skill, sIdx) => (
                         <span
                           key={sIdx}
@@ -890,75 +998,106 @@ export default function SupervisorPage() {
                 </div>
 
                 {/* أزرار الإجراءات والاعتماد الفوري للمشرف */}
-                <div className="pt-4 border-t border-slate-100 dark:border-[#2499F2]/15 flex items-center justify-between gap-2 flex-wrap">
+                <div className="pt-4 border-t border-slate-100 dark:border-[#2499F2]/15 space-y-2">
                   {manageable ? (
-                  <div className="flex items-center gap-1.5">
-                    {/* زر الاعتماد */}
-                    <button
-                      type="button"
-                      onClick={() => handleApprove(project.id)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 shadow-sm ${
-                        isApproved
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white border border-emerald-200 dark:border-emerald-800'
-                      }`}
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>{isRtl ? 'اعتماد' : 'Approve'}</span>
-                    </button>
+                    <div>
+                      {isPending && (
+                        <div className="space-y-2 mb-3">
+                          <div className="flex items-center gap-2">
+                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 shrink-0">
+                              {isRtl ? 'عدد المقاعد:' : 'Seats:'}
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="20"
+                              value={projectSeatsMap[project.id] ?? totalSeats}
+                              onChange={(e) => setProjectSeatsMap((prev) => ({ ...prev, [project.id]: e.target.value }))}
+                              className="w-20 bg-slate-50 dark:bg-[#0B152E] border border-slate-300 dark:border-white/10 rounded-lg px-2 py-1 text-xs text-slate-800 dark:text-white font-mono font-bold focus:outline-none focus:border-[#2499F2]"
+                            />
+                          </div>
 
-                    {/* زر الرفض */}
-                    <button
-                      type="button"
-                      onClick={() => handleReject(project.id)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 shadow-sm ${
-                        isRejected
-                          ? 'bg-rose-600 text-white'
-                          : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 hover:bg-rose-600 hover:text-white border border-rose-200 dark:border-rose-800'
-                      }`}
-                    >
-                      <X className="w-3.5 h-3.5" />
-                      <span>{isRtl ? 'رفض' : 'Reject'}</span>
-                    </button>
+                          <input
+                            type="text"
+                            value={projectFeedbackMap[project.id] || ''}
+                            onChange={(e) => setProjectFeedbackMap((prev) => ({ ...prev, [project.id]: e.target.value }))}
+                            placeholder={isRtl ? 'ملاحظات وتوجيهات المشرف...' : 'Academic notes...'}
+                            className="w-full bg-slate-50 dark:bg-[#0B152E] border border-slate-300 dark:border-white/10 rounded-lg px-2.5 py-1 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#2499F2]"
+                          />
 
-                    {/* زر إعادة المراجعة في حال كان معتمداً أو مرفوضاً */}
-                    {!isPending && (
-                      <button
-                        type="button"
-                        onClick={() => handleResetPending(project.id)}
-                        className="p-1.5 rounded-xl bg-slate-100 dark:bg-[#152550] hover:bg-slate-200 dark:hover:bg-[#182b5c] text-slate-600 dark:text-slate-300 transition cursor-pointer"
-                        title={isRtl ? 'إعادة لقيد المراجعة' : 'Reset to pending'}
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleApprove(project.id)}
+                              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 shadow-sm bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>{isRtl ? 'اعتماد المشروع' : 'Approve'}</span>
+                            </button>
 
-                    {/* زر الحذف النهائي للمشروع للمشرف */}
-                    <button
-                      type="button"
-                      onClick={() => setProjectToDelete(project)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 dark:hover:text-white border border-rose-200 dark:border-rose-800 transition cursor-pointer active:scale-95 shadow-sm"
-                      title={t('delete_project.tooltip', 'حذف المشروع نهائياً')}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>{t('delete_project.button', 'حذف المشروع')}</span>
-                    </button>
-                  </div>
+                            <button
+                              type="button"
+                              onClick={() => handleReject(project.id)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 shadow-sm bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 hover:bg-rose-600 hover:text-white border border-rose-200 dark:border-rose-800"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              <span>{isRtl ? 'رفض' : 'Reject'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {isApproved && (
+                        <div className="flex items-center justify-between gap-2 mb-2 p-2 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/30">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                              {isRtl ? 'تعديل المقاعد:' : 'Edit Seats:'}
+                            </span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="20"
+                              value={projectSeatsMap[project.id] ?? totalSeats}
+                              onChange={(e) => setProjectSeatsMap((prev) => ({ ...prev, [project.id]: e.target.value }))}
+                              className="w-16 bg-white dark:bg-[#0B152E] border border-slate-300 dark:border-white/10 rounded-lg px-2 py-1 text-xs text-slate-800 dark:text-white font-mono font-bold"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateSeats(project.id)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#2499F2] hover:bg-[#1d7bc3] text-white transition cursor-pointer shadow-sm"
+                            >
+                              {isRtl ? 'حفظ' : 'Save'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between gap-2">
+                        {/* زر الحذف النهائي للمشروع للمشرف */}
+                        <button
+                          type="button"
+                          onClick={() => setProjectToDelete(project)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 dark:hover:text-white border border-rose-200 dark:border-rose-800 transition cursor-pointer active:scale-95 shadow-sm"
+                          title={t('delete_project.tooltip', 'حذف المشروع نهائياً')}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>{t('delete_project.button', 'حذف المشروع')}</span>
+                        </button>
+
+                        {/* زر نقاش المشروع */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (setActiveChatProject) setActiveChatProject(project);
+                          }}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#152550] hover:bg-slate-200 dark:hover:bg-[#182b5c] text-slate-700 dark:text-slate-200 text-xs font-bold transition cursor-pointer border border-slate-200 dark:border-white/10"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 text-[#2499F2]" />
+                          <span>{isRtl ? 'نقاش الفريق' : 'Chat'}</span>
+                        </button>
+                      </div>
+                    </div>
                   ) : assignedElsewhereNote}
-
-                  {/* زر نقاش المشروع */}
-                  {manageable && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (setActiveChatProject) setActiveChatProject(project);
-                    }}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#152550] hover:bg-slate-200 dark:hover:bg-[#182b5c] text-slate-700 dark:text-slate-200 text-xs font-bold transition cursor-pointer border border-slate-200 dark:border-white/10"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5 text-[#2499F2]" />
-                    <span>{isRtl ? 'نقاش الفريق' : 'Chat'}</span>
-                  </button>
-                  )}
                 </div>
               </div>
             );

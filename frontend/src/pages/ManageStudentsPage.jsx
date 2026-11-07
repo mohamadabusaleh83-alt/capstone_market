@@ -9,13 +9,12 @@ import {
   Search,
   ChevronRight,
   UserCheck,
-  UserX,
-  Filter
+  UserX
 } from 'lucide-react';
 
 export default function ManageStudentsPage() {
   const { t } = useTranslation();
-  const { isRtl, studentsList, showToast } = useApp();
+  const { isRtl, studentsList } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all' | 'linked' | 'free'

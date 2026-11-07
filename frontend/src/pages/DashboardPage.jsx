@@ -36,7 +36,6 @@ export default function DashboardPage() {
     fetchProjects,
     applications = [],
     setIsCreateModalOpen,
-    openApplicationsModal,
     setShowSkillsModal,
     setIsOnboardingModalOpen,
     setActiveChatProject,
@@ -71,10 +70,6 @@ export default function DashboardPage() {
     return myCompanyProjects.filter((p) => p.status === 'approved').length;
   }, [myCompanyProjects]);
 
-  const myCompanyPendingCount = useMemo(() => {
-    return myCompanyProjects.filter((p) => p.status === 'pending').length;
-  }, [myCompanyProjects]);
-
   // طلبات التقديم الخاصة بمشاريع هذه الشركة فقط
   const companyProjectIds = useMemo(() => new Set(myCompanyProjects.map((p) => p.id)), [myCompanyProjects]);
   const companyApplications = useMemo(() => {
@@ -97,7 +92,6 @@ export default function DashboardPage() {
   const companyOccupancyPercentage = companyMaxSeats > 0
     ? Math.round((companyOccupiedSeats / companyMaxSeats) * 100)
     : 0;
-  const companyVacantPercentage = Math.max(0, 100 - companyOccupancyPercentage);
 
   // ==========================================
   // الحسابات الإحصائية الحية للوحة التحكم (Live Metrics)
@@ -119,10 +113,10 @@ export default function DashboardPage() {
     return applications.filter((a) => String(a.student_id) === String(currentUser?.id));
   }, [applications, currentUser]);
   const myPendingApplicationsCount = useMemo(() => {
-    return myApplications.filter((a) => a.status === 'pending').length;
+    return myApplications.filter((a) => ['pending', 'applied', 'pending_academic_approval'].includes(a.status)).length;
   }, [myApplications]);
   const myAcceptedCount = useMemo(() => {
-    return myApplications.filter((a) => a.status === 'accepted').length;
+    return myApplications.filter((a) => ['accepted', 'academically_approved'].includes(a.status)).length;
   }, [myApplications]);
 
   // مشروع الطالب المعتمد أو المقترح (عزل ديناميكي صارم دون أي بيانات وهمية)
@@ -253,7 +247,6 @@ export default function DashboardPage() {
   const displayOccupiedSeats = isCompanyUser ? companyOccupiedSeats : totalOccupiedSeats;
   const displayAvailableSeats = isCompanyUser ? companyAvailableSeats : totalAvailableSeats;
   const displayMaxSeats = isCompanyUser ? companyMaxSeats : totalMaxSeats;
-  const displayVacantPercentage = isCompanyUser ? companyVacantPercentage : vacantPercentage;
 
   const circleRadius = 54;
   const circleCircumference = 2 * Math.PI * circleRadius;
@@ -999,8 +992,8 @@ export default function DashboardPage() {
               </p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-md mx-auto">
                 {isRtl
-                  ? 'ستظهر هنا طلبات فرق الطلاب وسيرهم الذاتية فور تقدمهم على التحديات والفرص المنشورة لشركتكم.'
-                  : 'Student applications and team resumes will appear here once they apply to your challenges.'}
+                  ? 'يتم استقبال ومراجعة طلبات انضمام الطلاب الأكاديمية واعتماد الفرق رسمياً من قبل المشرفين الأكاديميين.'
+                  : 'Student applications are received and academically evaluated exclusively by faculty supervisors.'}
               </p>
             </div>
           ) : (
@@ -1016,14 +1009,14 @@ export default function DashboardPage() {
                         </span>
                         <span
                           className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
-                            app.status === 'accepted'
+                            app.status === 'accepted' || app.status === 'academically_approved'
                               ? 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-500/10 dark:text-[#77DCC1]'
                               : app.status === 'rejected'
                               ? 'bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-500/10 dark:text-rose-400'
                               : 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/10 dark:text-amber-400'
                           }`}
                         >
-                          {app.status === 'accepted'
+                          {app.status === 'accepted' || app.status === 'academically_approved'
                             ? (isRtl ? 'مقبول' : 'Accepted')
                             : app.status === 'rejected'
                             ? (isRtl ? 'مرفوض' : 'Rejected')
@@ -1041,13 +1034,9 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => openApplicationsModal(app.project_id)}
-                        className="bg-slate-100 hover:bg-slate-200 dark:bg-[#152550] dark:hover:bg-[#182b5c] text-xs font-bold px-3 py-1.5 rounded-lg text-slate-800 dark:text-white transition cursor-pointer"
-                      >
-                        {isRtl ? 'مراجعة الطلب' : 'Review'}
-                      </button>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+                        {isRtl ? 'مراجعة أكاديمية' : 'Under Academic Review'}
+                      </span>
                     </div>
                   </div>
                 );
@@ -1281,7 +1270,6 @@ export default function DashboardPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {myCompanyProjects.map((p) => {
-                const projectApps = applications.filter((a) => a.project_id === p.id);
                 const curM = p.currentMembers || 0;
                 const maxM = p.maxMembers || 4;
                 const isProjectFull = curM >= maxM;
@@ -1333,16 +1321,10 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="pt-3 border-t border-slate-300/80 dark:border-white/5 flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openApplicationsModal(p.id)}
-                        className="bg-slate-100 hover:bg-slate-200 dark:bg-[#152550] dark:hover:bg-[#182b5c] text-slate-800 dark:text-white text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer active:scale-95 border border-slate-300/80 dark:border-[#2499F2]/20 font-bold"
-                      >
+                      <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#152550]/40 border border-slate-200/80 dark:border-white/5">
                         <Users className="w-3.5 h-3.5 text-[#2499F2] dark:text-[#28C8C0]" />
-                        {t('company.applicants_requests', {
-                          count: projectApps.length
-                        })}
-                      </button>
+                        <span>{curM} / {maxM} {isRtl ? 'أعضاء معتمدون' : 'Approved Members'}</span>
+                      </div>
 
                       <button
                         type="button"
@@ -1493,27 +1475,61 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  {myApplications.map((app) => (
-                    <div
-                      key={app.id}
-                      className="p-3 bg-slate-50 dark:bg-[#152550]/60 rounded-xl flex items-center justify-between text-xs border border-slate-300/80 dark:border-[#2499F2]/20"
-                    >
-                      <span className="text-slate-800 dark:text-slate-300 font-semibold">
-                        {isRtl ? `طلب رقم #${app.id}` : `Application #${app.id}`}
-                      </span>
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                          app.status === 'accepted'
-                            ? 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-500/10 dark:text-[#77DCC1] dark:border-[#28C8C0]/30'
-                            : app.status === 'rejected'
-                              ? 'bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/30'
-                              : 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30'
-                        }`}
+                  {myApplications.map((app) => {
+                    const targetProj = rawProjects.find((p) => p.id === app.project_id);
+                    const isAccepted = ['accepted', 'academically_approved'].includes(app.status);
+                    const isRejected = app.status === 'rejected';
+                    return (
+                      <div
+                        key={app.id}
+                        className="p-3.5 bg-slate-50 dark:bg-[#152550]/60 rounded-xl space-y-2 text-xs border border-slate-300/80 dark:border-[#2499F2]/20"
                       >
-                        {app.status === 'accepted' ? (isRtl ? 'مقبول' : 'Accepted') : app.status === 'rejected' ? (isRtl ? 'مرفوض' : 'Rejected') : (isRtl ? 'قيد المراجعة' : 'Pending')}
-                      </span>
-                    </div>
-                  ))}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-900 dark:text-white font-bold truncate max-w-[220px]" title={app.project_title || targetProj?.title}>
+                            {app.project_title || targetProj?.title || (isRtl ? `مشروع #${app.project_id}` : `Project #${app.project_id}`)}
+                          </span>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
+                              isAccepted
+                                ? 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-500/10 dark:text-[#77DCC1] dark:border-[#28C8C0]/30'
+                                : isRejected
+                                  ? 'bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/30'
+                                  : 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30'
+                            }`}
+                          >
+                            {isAccepted
+                              ? (isRtl ? 'معتمد أكاديمياً' : 'Academically Approved')
+                              : isRejected
+                                ? (isRtl ? 'مرفوض' : 'Rejected')
+                                : (isRtl ? 'قيد المراجعة الأكاديمية' : 'Pending Academic Review')}
+                          </span>
+                        </div>
+
+                        {targetProj && (
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/50 dark:border-white/5">
+                            <span>
+                              {isRtl ? 'حالة المشروع:' : 'Project Status:'}{' '}
+                              <strong className="text-slate-700 dark:text-slate-200">
+                                {targetProj.status === 'approved' ? (isRtl ? 'معتمد' : 'Approved') : targetProj.status === 'rejected' ? (isRtl ? 'مرفوض' : 'Rejected') : (isRtl ? 'قيد الاعتماد' : 'Pending')}
+                              </strong>
+                            </span>
+                            <span>
+                              {isRtl ? 'المقاعد المتبقية:' : 'Remaining Seats:'}{' '}
+                              <strong className="font-mono text-slate-700 dark:text-slate-200">
+                                {targetProj.remaining_seats ?? targetProj.availableSeats ?? 0} / {targetProj.total_seats ?? targetProj.seats ?? targetProj.maxMembers ?? 4}
+                              </strong>
+                            </span>
+                          </div>
+                        )}
+
+                        {isRejected && app.feedback && (
+                          <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-[11px] text-rose-700 dark:text-rose-300">
+                            <strong>{isRtl ? 'ملاحظات المشرف الأكاديمي:' : 'Supervisor Feedback:'}</strong> {app.feedback}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

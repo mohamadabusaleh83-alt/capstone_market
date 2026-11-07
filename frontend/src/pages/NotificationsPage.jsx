@@ -8,7 +8,8 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from 'lucide-react';
 
 export default function NotificationsPage() {
@@ -20,7 +21,8 @@ export default function NotificationsPage() {
     notificationsTotal,
     loadMoreNotifications,
     handleMarkNotificationRead,
-    handleMarkAllNotificationsRead
+    handleMarkAllNotificationsRead,
+    handleDeleteNotification
   } = useApp();
 
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'unread' | 'academic' | 'collab'
@@ -179,14 +181,28 @@ export default function NotificationsPage() {
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
                     {notif.title}
                   </h4>
-                  <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1 shrink-0">
-                    <Clock className="w-3 h-3" />
-                    <span>
-                      {notif.created_at
-                        ? new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        : t('common.just_now')}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      <span>
+                        {notif.created_at
+                          ? new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                          : t('common.just_now')}
+                      </span>
                     </span>
-                  </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteNotification(notif.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 rounded-lg transition cursor-pointer"
+                      title={isRtl ? 'حذف الإشعار' : 'Delete notification'}
+                      aria-label={isRtl ? 'حذف الإشعار' : 'Delete notification'}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-2">
                   {notif.message}

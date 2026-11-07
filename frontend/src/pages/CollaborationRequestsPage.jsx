@@ -18,9 +18,10 @@ import {
 export default function CollaborationRequestsPage() {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
-  const { isRtl, applications, rawProjects, updateApplicationStatus, showToast } = useApp();
+  const { isRtl, applications, rawProjects, updateApplicationStatus } = useApp();
 
   const [activeTab, setActiveTab] = useState('received'); // 'received' | 'sent'
+  const isSupervisor = ['supervisor', 'admin'].includes(currentUser?.role);
 
   // استخراج كافة طلبات التعاون الحقيقية من قاعدة البيانات
   const requestsList = useMemo(() => {
@@ -31,6 +32,8 @@ export default function CollaborationRequestsPage() {
         currentUser?.role === 'supervisor' ||
         (proj && String(proj.created_by) === String(currentUser?.id));
 
+      const isApproved = app.status === 'accepted' || app.status === 'academically_approved';
+
       return {
         id: app.id,
         senderName: app.student_name || (isRtl ? `طالب متقدم #${app.student_id}` : `Applicant #${app.student_id}`),
@@ -39,7 +42,7 @@ export default function CollaborationRequestsPage() {
         roleOffered: app.message?.includes('Role:') ? app.message.split('Role:')[1]?.split(']')[0]?.trim() : (isRtl ? 'طلب انضمام ورعاية' : 'Join & Sponsorship'),
         message: app.message || '',
         createdAt: app.created_at || null,
-        status: app.status === 'accepted' ? 'approved' : app.status,
+        status: isApproved ? 'approved' : app.status,
         isReceived
       };
     });
@@ -47,7 +50,7 @@ export default function CollaborationRequestsPage() {
 
   const handleUpdateStatus = async (id, newStatus) => {
     try {
-      const targetStatus = newStatus === 'approved' ? 'accepted' : 'rejected';
+      const targetStatus = newStatus === 'approved' ? 'academically_approved' : 'rejected';
       if (updateApplicationStatus) {
         await updateApplicationStatus(id, targetStatus);
       }
@@ -215,24 +218,30 @@ export default function CollaborationRequestsPage() {
               </div>
 
               {req.status === 'pending' && (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateStatus(req.id, 'approved')}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-xs shadow-md transition cursor-pointer active:scale-95 flex items-center gap-1.5"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>{isRtl ? 'قبول الشراكة' : 'Accept Request'}</span>
-                  </button>
+                isSupervisor ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateStatus(req.id, 'approved')}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-xs shadow-md transition cursor-pointer active:scale-95 flex items-center gap-1.5"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{isRtl ? 'اعتماد أكاديمي' : 'Academic Approval'}</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateStatus(req.id, 'rejected')}
-                    className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-[#0B152E] hover:bg-rose-500/10 text-rose-600 font-bold text-xs border border-slate-200 dark:border-white/10 transition cursor-pointer"
-                  >
-                    {isRtl ? 'اعتذار' : 'Decline'}
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateStatus(req.id, 'rejected')}
+                      className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-[#0B152E] hover:bg-rose-500/10 text-rose-600 font-bold text-xs border border-slate-200 dark:border-white/10 transition cursor-pointer"
+                    >
+                      {isRtl ? 'اعتذار / رفض' : 'Decline'}
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+                    {isRtl ? 'بانتظار قرار المشرف الأكاديمي' : 'Awaiting Faculty Supervisor Decision'}
+                  </span>
+                )
               )}
             </div>
           </div>

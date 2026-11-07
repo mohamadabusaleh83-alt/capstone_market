@@ -31,32 +31,54 @@ models.Base.metadata.create_all(bind=engine)
 
 # التحقق من وجود الأعمدة والقيود الحديثة في قاعدة البيانات (PostgreSQL/SQLite) دون تعطيل التشغيل
 with engine.connect() as conn:
+    from sqlalchemy import inspect as sa_inspect
+    inspector = sa_inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+
+    def add_col_if_missing(table: str, col: str, ddl_type: str):
+        if table in existing_tables:
+            cols = {c["name"] for c in inspector.get_columns(table)}
+            if col not in cols:
+                try:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {ddl_type}"))
+                    conn.commit()
+                except Exception as e:
+                    logger.debug(f"Could not add {col} to {table}: {e}")
+
+    add_col_if_missing("projects", "status", "VARCHAR DEFAULT 'pending'")
+    add_col_if_missing("projects", "max_members", "INTEGER DEFAULT 4")
+    add_col_if_missing("projects", "category", "VARCHAR(100)")
+    add_col_if_missing("projects", "stipend", "VARCHAR(100)")
+    add_col_if_missing("projects", "company_name", "VARCHAR(150)")
+    add_col_if_missing("projects", "supervisor_id", "INTEGER")
+    add_col_if_missing("projects", "supervisor_feedback", "TEXT")
+    add_col_if_missing("projects", "decided_at", "TIMESTAMP")
+    add_col_if_missing("projects", "rejected_at", "TIMESTAMP")
+    add_col_if_missing("users", "phone", "VARCHAR(50)")
+    add_col_if_missing("users", "skills", "TEXT DEFAULT ''")
+    add_col_if_missing("users", "token_version", "INTEGER NOT NULL DEFAULT 0")
+    add_col_if_missing("users", "website", "VARCHAR(255)")
+    add_col_if_missing("users", "industry", "VARCHAR(150)")
+    add_col_if_missing("users", "is_active", "BOOLEAN NOT NULL DEFAULT 1" if engine.dialect.name == "sqlite" else "BOOLEAN NOT NULL DEFAULT TRUE")
+    add_col_if_missing("users", "settings", "TEXT")
+    add_col_if_missing("student_profiles", "bio", "TEXT")
+    add_col_if_missing("student_profiles", "portfolio_url", "VARCHAR(255)")
+    add_col_if_missing("student_profiles", "course", "VARCHAR(100)")
+    add_col_if_missing("student_profiles", "university", "VARCHAR(150)")
+    add_col_if_missing("student_profiles", "cv_key", "VARCHAR(255)")
+    add_col_if_missing("applications", "created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    add_col_if_missing("applications", "feedback", "TEXT")
+    add_col_if_missing("reports", "file_key", "VARCHAR(255)")
+    add_col_if_missing("notifications", "title_en", "VARCHAR(200)")
+    add_col_if_missing("notifications", "message_en", "TEXT")
+    add_col_if_missing("notifications", "project_id", "INTEGER")
+    add_col_if_missing("notifications", "related_project_id", "INTEGER")
+    add_col_if_missing("notifications", "related_application_id", "INTEGER")
+    add_col_if_missing("notifications", "notification_type", "VARCHAR(50) DEFAULT 'general'")
+    add_col_if_missing("messages", "conversation_type", "VARCHAR(50) DEFAULT 'company_student'")
+    add_col_if_missing("messages", "recipient_id", "INTEGER")
+
     for stmt in [
-        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS status VARCHAR DEFAULT 'pending'",
-        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS max_members INTEGER DEFAULT 4",
-        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS category VARCHAR(100)",
-        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS stipend VARCHAR(100)",
-        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS company_name VARCHAR(150)",
-        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS supervisor_id INTEGER",
-        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS supervisor_feedback TEXT",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS skills TEXT DEFAULT ''",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS website VARCHAR(255)",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS industry VARCHAR(150)",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS settings TEXT",
-        "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS bio TEXT",
-        "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS portfolio_url VARCHAR(255)",
-        "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS course VARCHAR(100)",
-        "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS university VARCHAR(150)",
-        "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS cv_key VARCHAR(255)",
-        "ALTER TABLE applications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-        "ALTER TABLE applications ADD COLUMN IF NOT EXISTS feedback TEXT",
-        "ALTER TABLE reports ADD COLUMN IF NOT EXISTS file_key VARCHAR(255)",
-        "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS title_en VARCHAR(200)",
-        "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS message_en TEXT",
-        "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS project_id INTEGER",
         "CREATE INDEX IF NOT EXISTS ix_notifications_project_id ON notifications (project_id)",
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_student_app ON applications (project_id, student_id)",
         "CREATE TABLE IF NOT EXISTS reports (id SERIAL PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE, student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, title VARCHAR(200) NOT NULL, description TEXT, file_url VARCHAR(255), status VARCHAR(30) DEFAULT 'pending', supervisor_feedback TEXT, grade VARCHAR(50), deadline_date VARCHAR(50), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
@@ -289,10 +311,10 @@ def home_link(user_id: Optional[int], db: Session) -> str:
 
 
 def get_project_accepted_members(project_id: int, db: Session) -> int:
-    """حساب عدد المقاعد المشغولة حالياً (الطلبات المقبولة أو المرشحة) لمشروع محدد"""
+    """حساب عدد المقاعد المشغولة حالياً (الطلبات المقبولة والمعتمدة أكاديمياً فقط) لمشروع محدد"""
     return db.query(models.Application).filter(
         models.Application.project_id == project_id,
-        models.Application.status.in_(["accepted", "academically_approved", "company_accepted"])
+        models.Application.status.in_(["accepted", "academically_approved"])
     ).count()
 
 
@@ -304,10 +326,34 @@ def create_notification(
     link: Optional[str] = None,
     title_en: Optional[str] = None,
     message_en: Optional[str] = None,
-    project_id: Optional[int] = None
+    project_id: Optional[int] = None,
+    notification_type: Optional[str] = "general",
+    related_application_id: Optional[int] = None
 ):
-    """إنشاء وحفظ إشعار جديد لمستخدم محدد (بالعربية والإنجليزية) مرتبط بالمشروع إن وُجد"""
+    """إنشاء وحفظ إشعار جديد لمستخدم محدد مع منع التكرار والتحقق الصارم من صلاحيات المستلم"""
     try:
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if not user or not user.is_active:
+            return None
+
+        user_role = (user.role or "").lower()
+        # منع إرسال إشعارات الإشراف الأكاديمي أو طلبات وسير الطلاب الذاتية للشركات
+        if user_role in COMPANY_ROLES and notification_type in (
+            "academic_supervision", "student_application", "student_cv", "report_submitted", "application_approved", "application_rejected"
+        ):
+            logger.warning(f"Blocked sending {notification_type} notification to company user {user_id}")
+            return None
+
+        # منع تكرار الإشعارات المتطابقة غير المقروءة للحدث نفسه
+        existing = db.query(models.Notification).filter(
+            models.Notification.user_id == user_id,
+            models.Notification.title == title,
+            models.Notification.project_id == project_id,
+            models.Notification.is_read == False
+        ).order_by(models.Notification.id.desc()).first()
+        if existing:
+            return existing
+
         notif = models.Notification(
             user_id=user_id,
             title=title,
@@ -316,10 +362,14 @@ def create_notification(
             message_en=message_en,
             link=link,
             project_id=project_id,
+            related_project_id=project_id,
+            related_application_id=related_application_id,
+            notification_type=notification_type or "general",
             is_read=False
         )
         db.add(notif)
         db.commit()
+        db.refresh(notif)
         return notif
     except Exception as e:
         logger.error(f"Error creating notification for user {user_id}: {e}")
@@ -665,18 +715,9 @@ async def upload_student_cv(
 
 
 def can_view_student_cv(viewer: models.User, student_id: int, db: Session) -> bool:
-    """السيرة الذاتية: صاحبها، المشرف/الأدمن، أو شركة تقدّم الطالب لأحد مشاريعها"""
+    """السيرة الذاتية: صاحبها، المشرف/الأدمن فقط. لا يمكن للشركات الاطلاع على السير الذاتية للطلاب"""
     role = (viewer.role or "").lower()
-    if viewer.id == student_id or role in ("supervisor", "admin"):
-        return True
-    if role in COMPANY_ROLES:
-        return db.query(models.Application).join(
-            models.Project, models.Application.project_id == models.Project.id
-        ).filter(
-            models.Application.student_id == student_id,
-            models.Project.created_by == viewer.id
-        ).first() is not None
-    return False
+    return viewer.id == student_id or role in ("supervisor", "admin")
 
 
 @app.get("/users/{user_id}/cv")
@@ -800,19 +841,32 @@ PAGE_MAX_LIMIT = 200
 
 
 def format_projects(projects: List[models.Project], db: Session) -> List[models.Project]:
-    """تنسيق قائمة مشاريع باستعلامين مجمّعين للمقاعد وأسماء المشرفين بدلاً من استعلامات لكل مشروع"""
+    """تنسيق قائمة مشاريع باستعلامين مجمّعين للمقاعد وإحصائيات الطلبات وأسماء المشرفين"""
     ids = [p.id for p in projects]
     counts = dict(
         db.query(models.Application.project_id, sa_func.count(models.Application.id)).filter(
             models.Application.project_id.in_(ids),
-            models.Application.status.in_(["accepted", "academically_approved", "company_accepted"])
+            models.Application.status.in_(["accepted", "academically_approved"])
+        ).group_by(models.Application.project_id).all()
+    ) if ids else {}
+    submitted_counts = dict(
+        db.query(models.Application.project_id, sa_func.count(models.Application.id)).filter(
+            models.Application.project_id.in_(ids)
         ).group_by(models.Application.project_id).all()
     ) if ids else {}
     people_ids = {p.supervisor_id for p in projects if p.supervisor_id} | {p.created_by for p in projects if p.created_by}
     people = {u.id: u for u in db.query(models.User).filter(models.User.id.in_(people_ids)).all()} if people_ids else {}
     for p in projects:
-        p.current_members = counts.get(p.id, 0)
-        p.available_seats = max(0, (p.max_members or 4) - p.current_members)
+        accepted_cnt = counts.get(p.id, 0)
+        total_s = p.max_members or 4
+        rem_s = max(0, total_s - accepted_cnt)
+        p.current_members = accepted_cnt
+        p.available_seats = rem_s
+        p.seats = total_s
+        p.total_seats = total_s
+        p.remaining_seats = rem_s
+        p.accepted_students_count = accepted_cnt
+        p.submitted_applications_count = submitted_counts.get(p.id, 0)
         sup = people.get(p.supervisor_id)
         p.supervisor_name = sup.full_name if sup else None
         creator = people.get(p.created_by)
@@ -822,8 +876,16 @@ def format_projects(projects: List[models.Project], db: Session) -> List[models.
 
 
 def format_project_item(p: models.Project, db: Session):
-    p.current_members = get_project_accepted_members(p.id, db)
-    p.available_seats = max(0, (p.max_members or 4) - p.current_members)
+    accepted_cnt = get_project_accepted_members(p.id, db)
+    total_s = p.max_members or 4
+    rem_s = max(0, total_s - accepted_cnt)
+    p.current_members = accepted_cnt
+    p.available_seats = rem_s
+    p.seats = total_s
+    p.total_seats = total_s
+    p.remaining_seats = rem_s
+    p.accepted_students_count = accepted_cnt
+    p.submitted_applications_count = db.query(models.Application).filter(models.Application.project_id == p.id).count()
     if p.supervisor_id:
         sup = db.query(models.User).filter(models.User.id == p.supervisor_id).first()
         p.supervisor_name = sup.full_name if sup else None
@@ -993,7 +1055,12 @@ def update_project(
 
     update_data = updated_project.model_dump(exclude_unset=True)
     if not is_supervisor_or_admin:
-        # المالك يُقيَّد بمخطط المالك: أي حقل خاص بالمشرف يُرفض
+        # المالك يُقيَّد بمخطط المالك: أي حقل خاص بالمشرف أو المقاعد يُرفض
+        if "max_members" in update_data or "seats" in update_data:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="تحديد عدد المقاعد مخصص للمشرف الأكاديمي فقط"
+            )
         try:
             update_data = schemas.ProjectOwnerUpdate(**update_data).model_dump(exclude_unset=True)
         except ValidationError as e:
@@ -1004,15 +1071,25 @@ def update_project(
 
     update_data = {k: v for k, v in update_data.items() if v is not None}
 
+    if "seats" in update_data and "max_members" not in update_data:
+        update_data["max_members"] = update_data.pop("seats")
+    else:
+        update_data.pop("seats", None)
+
     if "required_skills" in update_data:
         update_data["required_skills"] = clean_skills(update_data["required_skills"])
 
     if "max_members" in update_data:
+        if update_data["max_members"] < 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="عدد المقاعد يجب أن يكون رقماً صحيحاً موجباً (1 على الأقل)"
+            )
         current_members = get_project_accepted_members(project.id, db)
         if update_data["max_members"] < current_members:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"لا يمكن تقليل عدد المقاعد إلى أقل من عدد الأعضاء الحاليين ({current_members})"
+                detail=f"لا يمكن تقليل عدد المقاعد إلى أقل من عدد الطلاب المقبولين حالياً ({current_members})"
             )
 
     if "supervisor_id" in update_data:
@@ -1039,6 +1116,44 @@ def update_project(
     return format_project_item(project, db)
 
 
+@app.put("/projects/{id}/seats", response_model=schemas.ProjectResponse)
+@app.put("/api/projects/{id}/seats", response_model=schemas.ProjectResponse)
+def update_project_seats(
+    id: int,
+    seats_in: schemas.ProjectSeatsUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """تحديد عدد مقاعد المشروع بواسطة المشرف الأكاديمي أو الأدمن فقط مع حماية المقاعد الحالية"""
+    project = db.query(models.Project).filter(models.Project.id == id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"المشروع برقم {id} غير موجود"
+        )
+    user_role = (current_user.role or "").lower()
+    if user_role not in ("supervisor", "admin") or not supervisor_can_manage(project, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ليس لديك الصلاحية لتحديد مقاعد هذا المشروع، فقط المشرف الأكاديمي أو الأدمن"
+        )
+    if seats_in.seats < 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="عدد المقاعد يجب أن يكون رقماً صحيحاً موجباً (1 على الأقل)"
+        )
+    current_members = get_project_accepted_members(project.id, db)
+    if seats_in.seats < current_members:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"لا يمكن تقليل عدد المقاعد إلى أقل من عدد الطلاب المقبولين حالياً ({current_members})"
+        )
+    project.max_members = seats_in.seats
+    db.commit()
+    db.refresh(project)
+    return format_project_item(project, db)
+
+
 @app.put("/projects/{project_id}/status", response_model=schemas.ProjectResponse)
 @app.put("/projects/{project_id}/approve", response_model=schemas.ProjectResponse)
 @app.put("/api/projects/{project_id}/status", response_model=schemas.ProjectResponse)
@@ -1049,7 +1164,7 @@ def update_project_status(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """اعتماد أو رفض أو تعليق مشروع بواسطة المشرف الأكاديمي أو مالك المشروع (PUT /projects/{project_id}/status)"""
+    """اعتماد أو رفض مشروع بواسطة المشرف الأكاديمي أو الأدمن فقط، مع منع تكرار القرار وحفظ التاريخ والسبب"""
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project:
         raise HTTPException(
@@ -1057,38 +1172,51 @@ def update_project_status(
             detail=f"المشروع برقم {project_id} غير موجود"
         )
 
-    is_supervisor_or_admin = supervisor_can_manage(project, current_user)
-
-    if not is_supervisor_or_admin:
+    user_role = (current_user.role or "").lower()
+    if user_role not in ("supervisor", "admin") or not supervisor_can_manage(project, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="ليس لديك الصلاحية لتعديل حالة هذا المشروع، فقط المشرف الأكاديمي أو الأدمن يمكنه ذلك"
         )
 
-    # الحالة مطلوبة صراحةً (في الجسم أو كمعامل status) - لا اعتماد افتراضي عند غيابها
     raw_status = (status_update.status if status_update and status_update.status else status_query) or ""
     new_status = raw_status.strip().lower()
-    if not new_status:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="يرجى تحديد حالة المشروع الجديدة: approved, rejected, pending"
-        )
-
-    if new_status not in ["approved", "academically_approved", "rejected", "pending"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="الحالة غير صالحة. الحالات المسموحة: approved, rejected, pending"
-        )
-
     if new_status == "academically_approved":
         new_status = "approved"
 
+    if new_status not in ["approved", "rejected"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="يرجى تحديد قرار صالح للمشروع: approved أو rejected"
+        )
+
+    # منع تكرار الاعتماد أو الرفض من خلال Backend API
+    if project.status == "approved":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="المشروع معتمد بالفعل ولا يمكن إعادة اتخاذ القرار بشأنه أو تغييره"
+        )
+    if project.status == "rejected":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="المشروع مرفوض بالفعل ولا يمكن تغيير حالته مجدداً"
+        )
+
     previous_status = project.status
     project.status = new_status
-    if status_update and status_update.feedback is not None:
-        project.supervisor_feedback = status_update.feedback.strip()
-    if is_supervisor_or_admin:
-        project.supervisor_id = current_user.id
+    project.supervisor_id = current_user.id
+    now_ts = sa_func.now()
+    project.decided_at = now_ts
+
+    if new_status == "rejected":
+        project.rejected_at = now_ts
+        if status_update and status_update.feedback:
+            project.supervisor_feedback = status_update.feedback.strip()
+    elif new_status == "approved":
+        if status_update and status_update.seats:
+            project.max_members = status_update.seats
+        if status_update and status_update.feedback:
+            project.supervisor_feedback = status_update.feedback.strip()
 
     db.commit()
     db.refresh(project)
@@ -1097,13 +1225,11 @@ def update_project_status(
     if new_status != previous_status and project.created_by and project.created_by != current_user.id:
         status_titles = {
             "approved": "تم اعتماد مشروعك ✅",
-            "rejected": "تم رفض مشروعك",
-            "pending": "أُعيد مشروعك إلى قيد المراجعة",
+            "rejected": "تم رفض مشروعك ❌",
         }
         status_titles_en = {
             "approved": "Your project was approved ✅",
-            "rejected": "Your project was rejected",
-            "pending": "Your project is back under review",
+            "rejected": "Your project was rejected ❌",
         }
         feedback_note = f" ملاحظات المشرف: {project.supervisor_feedback}" if project.supervisor_feedback else ""
         feedback_note_en = f" Supervisor feedback: {project.supervisor_feedback}" if project.supervisor_feedback else ""
@@ -1298,18 +1424,30 @@ def apply_to_project(
     db.commit()
     db.refresh(new_app)
 
-    # توليد إشعار فوري لصاحب المشروع (الشركة أو المشرف)
-    if project.created_by:
+    # توليد إشعار فوري للمشرف الأكاديمي فقط (لا إشعار للشركة)
+    if project.supervisor_id:
         create_notification(
             db=db,
-            user_id=project.created_by,
-            title="طلب انضمام جديد",
-            message=f"قام الطالب {current_user.full_name} بتقديم طلب انضمام لمشروعك: {project.title}",
-            link=home_link(project.created_by, db),
-            title_en="New application",
-            message_en=f"{current_user.full_name} applied to your project: {project.title}",
+            user_id=project.supervisor_id,
+            title="طلب انضمام جديد لمشروعك 📋",
+            message=f"قام الطالب {current_user.full_name} بتقديم طلب انضمام لمشروع: {project.title}",
+            link="/supervisor",
+            title_en="New project application 📋",
+            message_en=f"Student {current_user.full_name} applied to project: {project.title}",
             project_id=project.id
         )
+    else:
+        for sup in db.query(models.User).filter(models.User.role.in_(["supervisor", "admin"])).all():
+            create_notification(
+                db=db,
+                user_id=sup.id,
+                title="طلب انضمام جديد بانتظار المراجعة 📋",
+                message=f"قام الطالب {current_user.full_name} بتقديم طلب انضمام لمشروع: {project.title}",
+                link="/supervisor",
+                title_en="New application awaiting review 📋",
+                message_en=f"Student {current_user.full_name} applied to project: {project.title}",
+                project_id=project.id
+            )
 
     return format_application_item(new_app, db)
 
@@ -1320,15 +1458,15 @@ def get_all_applications(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """جلب الطلبات حسب الصلاحية: المشرف والأدمن يريان كل الطلبات، الشركة ترى طلبات مشاريعها، والطالب يرى طلباته الخاصة"""
+    """جلب الطلبات حسب الصلاحية: المشرف والأدمن يريان كل الطلبات، الطالب يرى طلباته الخاصة فقط.
+    الشركات لا تملك أي صلاحية للاطلاع على طلبات الطلاب لحماية خصوصيتهم."""
     user_role = (current_user.role or "").lower()
 
     if user_role in ["supervisor", "admin"]:
         apps = db.query(models.Application).order_by(models.Application.id.desc()).all()
-    elif user_role in ["partner", "company", "business"]:
-        user_projects = db.query(models.Project.id).filter(models.Project.created_by == current_user.id).all()
-        project_ids = [p[0] for p in user_projects]
-        apps = db.query(models.Application).filter(models.Application.project_id.in_(project_ids)).order_by(models.Application.id.desc()).all()
+    elif user_role in COMPANY_ROLES:
+        # لا تظهر طلبات الطلاب للشركة
+        return []
     else:
         apps = db.query(models.Application).filter(models.Application.student_id == current_user.id).order_by(models.Application.id.desc()).all()
 
@@ -1342,7 +1480,7 @@ def get_project_applications(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """عرض طلبات مشروع محدد - متاح فقط لصاحب المشروع أو المشرف الأكاديمي أو الأدمن"""
+    """عرض طلبات مشروع محدد - متاح فقط للمشرف الأكاديمي أو الأدمن أو الطالب صاحب الطلب. الشركات ممنوعة تماماً."""
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project:
         raise HTTPException(
@@ -1350,10 +1488,21 @@ def get_project_applications(
             detail=f"المشروع برقم {project_id} غير موجود"
         )
 
-    is_owner = project.created_by == current_user.id
-    is_supervisor_or_admin = supervisor_can_manage(project, current_user)
+    user_role = (current_user.role or "").lower()
+    if user_role in COMPANY_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="الشركات لا تملك صلاحية الاطلاع على طلبات الطلاب أو بياناتهم"
+        )
 
-    if not (is_owner or is_supervisor_or_admin):
+    is_supervisor_or_admin = supervisor_can_manage(project, current_user)
+    if not is_supervisor_or_admin:
+        if user_role == "student":
+            apps = db.query(models.Application).filter(
+                models.Application.project_id == project_id,
+                models.Application.student_id == current_user.id
+            ).all()
+            return [format_application_item(a, db) for a in apps]
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="ليس لديك الصلاحية لعرض طلبات هذا المشروع"
@@ -1423,11 +1572,7 @@ def update_application_status(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """تحديث حالة الطلب عبر آلة حالات صريحة:
-    - الشركة المالكة: ترشيح (company_accepted) أو رفض فقط، وعلى مشاريعها فقط
-    - المشرف/الأدمن: اعتماد أكاديمي (academically_approved) أو رفض، مع فحص سعة المقاعد
-    - الطالب: لا يغيّر حالة أي طلب
-    """
+    """تحديث حالة الطلب بواسطة المشرف الأكاديمي أو الأدمن فقط مع فحص السعة وحماية التنافس المتزامن"""
     application = db.query(models.Application).filter(models.Application.id == id).first()
     if not application:
         raise HTTPException(
@@ -1436,11 +1581,17 @@ def update_application_status(
         )
 
     project = db.query(models.Project).filter(models.Project.id == application.project_id).first()
-    actor = get_application_actor(project, current_user)
-    if actor is None:
+    user_role = (current_user.role or "").lower()
+    if user_role in COMPANY_ROLES:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="ليس لديك الصلاحية لتغيير حالة هذا الطلب، فقط الشركة المالكة للمشروع أو المشرف الأكاديمي"
+            detail="الشركات لا تملك صلاحية إدارة أو اعتماد طلبات الطلاب، القرار مخصص للمشرف الأكاديمي فقط"
+        )
+
+    if user_role not in ("supervisor", "admin") or not supervisor_can_manage(project, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ليس لديك الصلاحية لتغيير حالة هذا الطلب، فقط المشرف الأكاديمي المسؤول أو الأدمن"
         )
 
     requested = (status_update.status if status_update and status_update.status else status_query) or ""
@@ -1451,28 +1602,15 @@ def update_application_status(
             detail="يرجى إرسال الحالة الجديدة للطلب"
         )
 
-    # "accepted" يعني ترشيحاً عند الشركة واعتماداً أكاديمياً عند المشرف (للتوافق مع الواجهة الحالية)
-    if actor == "owner" and requested.strip().lower() == "accepted":
-        new_status = "company_accepted"
-    else:
-        new_status = normalize_application_status(requested)
+    new_status = normalize_application_status(requested)
     current_status = normalize_application_status(application.status)
 
-    transitions = OWNER_TRANSITIONS if actor == "owner" else SUPERVISOR_TRANSITIONS
     if new_status == current_status:
         return format_application_item(application, db)
-    if new_status not in transitions.get(current_status, set()):
+    if new_status not in SUPERVISOR_TRANSITIONS.get(current_status, set()):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"انتقال غير مسموح من الحالة '{current_status}' إلى '{new_status}'"
-        )
-
-    # مشاريع الشركات: الاعتماد الأكاديمي يتطلب ترشيح الشركة أولاً (company_accepted)
-    if (new_status == "academically_approved" and current_status == "applied"
-            and project_has_company_owner(project, db)):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="مشاريع الشركات تتطلب ترشيح الشركة للطالب قبل الاعتماد الأكاديمي"
         )
 
     if new_status == "academically_approved" and (not project or project.status != "approved"):
@@ -1481,10 +1619,11 @@ def update_application_status(
             detail="لا يمكن اعتماد الطلب أكاديمياً قبل اعتماد المشروع نفسه"
         )
 
-    # فحص السعة عند أي انتقال يحجز مقعداً جديداً (للشركة والمشرف على حد سواء)
-    if new_status in SEAT_STATUSES and current_status not in SEAT_STATUSES:
+    # فحص السعة عند أي انتقال يحجز مقعداً جديداً مع قفل التنافس المتزامن
+    if new_status in ("academically_approved", "accepted") and current_status not in ("academically_approved", "accepted"):
+        locked_proj = db.query(models.Project).filter(models.Project.id == application.project_id).with_for_update().first()
         current_accepted = get_project_accepted_members(application.project_id, db)
-        max_cap = project.max_members if (project and project.max_members) else 4
+        max_cap = (locked_proj.max_members if locked_proj else (project.max_members if project else 4)) or 4
         if current_accepted >= max_cap:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -1506,83 +1645,28 @@ def update_application_status(
     feedback_note = f"ملاحظات: {feedback_text}" if feedback_text else ""
     feedback_note_en = f"Feedback: {feedback_text}" if feedback_text else ""
 
-    if new_status == "company_accepted":
-        create_notification(
-            db=db,
-            user_id=application.student_id,
-            title="ترشيح صناعي من الشركة! 🌟",
-            message=f"قامت الشركة باختيارك وترشيحك لمشروع: {proj_title}. الطلب الآن بانتظار الاعتماد الأكاديمي النهائي من المشرف.",
-            link="/my-projects",
-            title_en="Nominated by the company! 🌟",
-            message_en=f"The company nominated you for project: {proj_title}. Your application now awaits final academic approval.",
-            project_id=application.project_id
-        )
-        for sup in db.query(models.User).filter(models.User.role.in_(["supervisor", "admin"])).all():
-            create_notification(
-                db=db,
-                user_id=sup.id,
-                title="طلب اعتماد أكاديمي معلق ⏳",
-                message=f"قامت الشركة بترشيح الطالب {student_name} لمشروع: {proj_title}. يرجى المراجعة والاعتماد الأكاديمي.",
-                link="/supervisor",
-                title_en="Academic approval pending ⏳",
-                message_en=f"The company nominated {student_name} for project: {proj_title}. Please review and approve.",
-                project_id=application.project_id
-            )
-    elif new_status == "academically_approved":
+    if new_status == "academically_approved":
         create_notification(
             db=db,
             user_id=application.student_id,
             title="تم الاعتماد الأكاديمي رسمياً! 🎓",
-            message=f"اعتمد المشرف الأكاديمي {current_user.full_name} انضمامك لمشروع: {proj_title}. تم تفعيل مساحة العمل ومتابعة التقارير رسمياً!",
+            message=f"اعتمد المشرف الأكاديمي {current_user.full_name} انضمامك لمشروع: {proj_title}. تم تفعيل مساحة العمل ومتابعة التقارير رسمياً! {feedback_note}",
             link="/my-projects",
             title_en="Academically approved! 🎓",
-            message_en=f"Academic supervisor {current_user.full_name} approved your membership in: {proj_title}. Your workspace and reports are now active!",
-            project_id=application.project_id
-        )
-        if project and project.created_by and project.created_by != current_user.id:
-            create_notification(
-                db=db,
-                user_id=project.created_by,
-                title="تم الاعتماد الأكاديمي للمشروع",
-                message=f"اعتمد المشرف الأكاديمي {current_user.full_name} مشروع: {proj_title} والطالب {student_name} رسمياً.",
-                link=home_link(project.created_by, db),
-                title_en="Project academically approved",
-                message_en=f"Academic supervisor {current_user.full_name} approved project {proj_title} and student {student_name}.",
-                project_id=application.project_id
-            )
-    elif new_status == "rejected" and actor == "owner":
-        create_notification(
-            db=db,
-            user_id=application.student_id,
-            title="تحديث حالة طلب الانضمام",
-            message=f"نعتذر، لم يتم اختيار طلبك لمشروع: {proj_title}. {feedback_note}",
-            link="/projects",
-            title_en="Application update",
-            message_en=f"Sorry, your application for {proj_title} was not selected. {feedback_note_en}",
+            message_en=f"Academic supervisor {current_user.full_name} approved your membership in: {proj_title}. Your workspace and reports are now active! {feedback_note_en}",
             project_id=application.project_id
         )
     elif new_status == "rejected":
         create_notification(
             db=db,
             user_id=application.student_id,
-            title="قرار المشرف الأكاديمي بخصوص المشروع",
-            message=f"لم يتم الاعتماد الأكاديمي لطلبك في مشروع: {proj_title}. {feedback_note}",
-            link="/projects",
-            title_en="Academic supervisor decision",
-            message_en=f"Your application for {proj_title} was not academically approved. {feedback_note_en}",
+            title="تحديث بخصوص طلب الانضمام",
+            message=f"تم رفض طلب انضمامك لمشروع: {proj_title}. {feedback_note}",
+            link="/my-projects",
+            title_en="Application update",
+            message_en=f"Your application to project: {proj_title} was rejected. {feedback_note_en}",
             project_id=application.project_id
         )
-        if project and project.created_by and project.created_by != current_user.id:
-            create_notification(
-                db=db,
-                user_id=project.created_by,
-                title="قرار الاعتماد الأكاديمي",
-                message=f"رفض المشرف الأكاديمي الاعتماد لمشروع: {proj_title}. {feedback_note}",
-                link=home_link(project.created_by, db),
-                title_en="Academic approval decision",
-                message_en=f"The academic supervisor declined approval for project: {proj_title}. {feedback_note_en}",
-                project_id=application.project_id
-            )
 
     return format_application_item(application, db)
 
@@ -1591,23 +1675,47 @@ def update_application_status(
 # مسارات الرسائل والشات التفاعلي (Project Messages)
 # ==========================================
 
-def project_chat_participants(project: models.Project, db: Session) -> set:
-    """معرّفات كل من يحق له المشاركة في شات المشروع (دون الأدمن غير المشارك)"""
-    ids = {
-        a.student_id for a in db.query(models.Application.student_id).filter(
-            models.Application.project_id == project.id,
-            models.Application.status.in_(APPROVED_MEMBER_STATUSES)
-        ).all()
-    }
-    if project.created_by:
-        ids.add(project.created_by)
-    if project.supervisor_id:
-        ids.add(project.supervisor_id)
-    return ids
+def is_project_student_member(project: models.Project, user: models.User, db: Session) -> bool:
+    """التحقق مما إذا كان الطالب عضواً معتمداً في فريق المشروع"""
+    role = (user.role or "").lower()
+    if role != "student":
+        return False
+    if project.created_by == user.id:
+        return True
+    return is_approved_member(project.id, user.id, db)
+
+
+def check_channel_access(project: models.Project, conversation_type: str, user: models.User, db: Session) -> bool:
+    """التحقق الصارم من صلاحيات الوصول لقناة المحادثة المحددة"""
+    role = (user.role or "").lower()
+    conv = (conversation_type or "company_student").lower()
+
+    if role == "admin":
+        return True
+
+    # 1. قناة الإشراف والمتابعة الأكاديمية (supervisor_student)
+    if conv in ("supervisor_student", "supervisor"):
+        # الشركات محظورة تماماً ومطلقاً من الوصول لهذه القناة
+        if role in ("company", "partner", "business"):
+            return False
+        if role == "supervisor":
+            return bool(project.supervisor_id and project.supervisor_id == user.id)
+        if role == "student":
+            return is_project_student_member(project, user, db)
+        return False
+
+    # 2. قناة نقاش الشركة والطلاب الفني (company_student)
+    if role in ("company", "partner", "business"):
+        return project.created_by == user.id
+    if role == "supervisor":
+        return bool(project.supervisor_id and project.supervisor_id == user.id)
+    if role == "student":
+        return is_project_student_member(project, user, db)
+    return False
 
 
 def check_project_access(project: models.Project, user: models.User, db: Session) -> bool:
-    """الوصول لشات المشروع: الأدمن، مالك المشروع، المشرف المسند إليه، والأعضاء المعتمدون أكاديمياً فقط"""
+    """الوصول العام لشات المشروع"""
     if (user.role or "").lower() == "admin":
         return True
     if project.created_by == user.id:
@@ -1625,7 +1733,7 @@ def create_project_message(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """إرسال رسالة جديدة في شات المشروع مع حماية الخصوصية ومنع الوصول غير المصرح به"""
+    """إرسال رسالة جديدة في شات المشروع مع حماية الخصوصية وفصل القنوات"""
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project:
         raise HTTPException(
@@ -1633,10 +1741,22 @@ def create_project_message(
             detail=f"المشروع برقم {project_id} غير موجود"
         )
 
-    if not check_project_access(project, current_user, db):
+    # تحديد وتوحيد نوع القناة
+    conv_type = (msg_in.conversation_type or "company_student").strip().lower()
+    if conv_type in ("supervisor", "supervisor_student"):
+        conv_type = "supervisor_student"
+    else:
+        conv_type = "company_student"
+
+    if not check_channel_access(project, conv_type, current_user, db):
+        if conv_type == "supervisor_student" and (current_user.role or "").lower() in ("company", "partner", "business"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="لا يمكن للشركات الوصول إلى قناة الإشراف الأكاديمي أو إرسال رسائل فيها"
+            )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="ليس لديك الصلاحية للدخول أو المشاركة في شات هذا المشروع"
+            detail="ليس لديك الصلاحية للدخول أو المشاركة في قناة هذه المحادثة"
         )
 
     text_content = msg_in.text.strip()
@@ -1646,32 +1766,100 @@ def create_project_message(
             detail="لا يمكن إرسال رسالة فارغة"
         )
 
+    recipient_id = msg_in.recipient_id
+    if recipient_id:
+        if recipient_id == current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="لا يمكن إرسال رسالة خاصة إلى نفسك"
+            )
+        recipient_user = db.query(models.User).filter(models.User.id == recipient_id).first()
+        if not recipient_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="المستلم المحدد غير موجود"
+            )
+        if not check_channel_access(project, conv_type, recipient_user, db):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="المستلم المحدد ليس مصرحاً له بالمشاركة في هذه القناة"
+            )
+
     new_msg = models.Message(
         project_id=project_id,
         sender_id=current_user.id,
+        recipient_id=recipient_id,
+        conversation_type=conv_type,
         text=text_content
     )
     db.add(new_msg)
     db.commit()
     db.refresh(new_msg)
 
-    # إشعار جميع المشاركين في الشات (الأعضاء المعتمدون، المالك، المشرف المسند) باستثناء المرسل
-    for user_id in project_chat_participants(project, db) - {current_user.id}:
-        create_notification(
-            db=db,
-            user_id=user_id,
-            title="رسالة جديدة في شات المشروع",
-            message=f"أرسل {current_user.full_name} رسالة في مشروع {project.title}: '{text_content[:60]}'",
-            link=home_link(user_id, db),
-            title_en="New message in project chat",
-            message_en=f"{current_user.full_name} sent a message in {project.title}: '{text_content[:60]}'",
-            project_id=project.id
-        )
+    # إرسال الإشعارات للمستهدفين في القناة فقط
+    notify_user_ids = set()
+    approved_students = {
+        a.student_id for a in db.query(models.Application.student_id).filter(
+            models.Application.project_id == project.id,
+            models.Application.status.in_(APPROVED_MEMBER_STATUSES)
+        ).all()
+    }
+    if project.created_by and (current_user.role or "").lower() == "student" and project.created_by == current_user.id:
+        approved_students.add(project.created_by)
+
+    if conv_type == "supervisor_student":
+        # في قناة الإشراف: المشرف والطلاب المعنيون فقط (الشركة مستبعدة تماماً)
+        if recipient_id:
+            notify_user_ids.add(recipient_id)
+            if current_user.id != project.supervisor_id and project.supervisor_id:
+                notify_user_ids.add(project.supervisor_id)
+        else:
+            if project.supervisor_id:
+                notify_user_ids.add(project.supervisor_id)
+            notify_user_ids.update(approved_students)
+        notify_user_ids.discard(current_user.id)
+
+        for u_id in notify_user_ids:
+            create_notification(
+                db=db,
+                user_id=u_id,
+                title="رسالة جديدة في الإشراف الأكاديمي",
+                message=f"أرسل {current_user.full_name} في إشراف مشروع {project.title}: '{text_content[:60]}'",
+                link=home_link(u_id, db),
+                title_en="New academic supervision message",
+                message_en=f"{current_user.full_name} sent a message in supervision for {project.title}: '{text_content[:60]}'",
+                project_id=project.id
+            )
+    else:
+        # قناة الشركة والطلاب: إشعار المستلم المحدد فقط في الرسائل الخاصة، أو إشعار الفريق في الرسائل العامة
+        if recipient_id:
+            notify_user_ids.add(recipient_id)
+        else:
+            if project.created_by:
+                notify_user_ids.add(project.created_by)
+            notify_user_ids.update(approved_students)
+            if project.supervisor_id:
+                notify_user_ids.add(project.supervisor_id)
+        notify_user_ids.discard(current_user.id)
+
+        for u_id in notify_user_ids:
+            create_notification(
+                db=db,
+                user_id=u_id,
+                title="رسالة جديدة في شات المشروع الفني",
+                message=f"أرسل {current_user.full_name} رسالة في مشروع {project.title}: '{text_content[:60]}'",
+                link=home_link(u_id, db),
+                title_en="New message in technical project chat",
+                message_en=f"{current_user.full_name} sent a message in {project.title}: '{text_content[:60]}'",
+                project_id=project.id
+            )
 
     return schemas.MessageResponse(
         id=new_msg.id,
         project_id=new_msg.project_id,
         sender_id=new_msg.sender_id,
+        recipient_id=new_msg.recipient_id,
+        conversation_type=new_msg.conversation_type,
         sender_name=current_user.full_name,
         sender_role=current_user.role,
         text=new_msg.text,
@@ -1683,10 +1871,12 @@ def create_project_message(
 @app.get("/api/projects/{project_id}/messages", response_model=List[schemas.MessageResponse])
 def get_project_messages(
     project_id: int,
+    conversation_type: str = Query("company_student"),
+    student_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """جلب سجل رسائل شات مشروع محدد بالترتيب الزمني مع حماية الخصوصية"""
+    """جلب سجل رسائل قناة محددة بالترتيب الزمني مع الحماية الصارمة من تسريب البيانات والرسائل الخاصة"""
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project:
         raise HTTPException(
@@ -1694,15 +1884,71 @@ def get_project_messages(
             detail=f"المشروع برقم {project_id} غير موجود"
         )
 
-    if not check_project_access(project, current_user, db):
+    conv_type = (conversation_type or "company_student").strip().lower()
+    if conv_type in ("supervisor", "supervisor_student"):
+        conv_type = "supervisor_student"
+    else:
+        conv_type = "company_student"
+
+    if not check_channel_access(project, conv_type, current_user, db):
+        if conv_type == "supervisor_student" and (current_user.role or "").lower() in ("company", "partner", "business"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="لا يمكن للشركات الوصول إلى قناة الإشراف الأكاديمي"
+            )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="ليس لديك الصلاحية لعرض شات هذا المشروع"
+            detail="ليس لديك الصلاحية لعرض رسائل هذه القناة"
         )
 
-    messages = db.query(models.Message).filter(
-        models.Message.project_id == project_id
-    ).order_by(models.Message.created_at.asc()).all()
+    query = db.query(models.Message).filter(models.Message.project_id == project_id)
+    role = (current_user.role or "").lower()
+    is_admin = role == "admin"
+    is_supervisor = role == "supervisor" and bool(project.supervisor_id and project.supervisor_id == current_user.id)
+
+    if conv_type == "supervisor_student":
+        query = query.filter(models.Message.conversation_type == "supervisor_student")
+        if role == "student":
+            query = query.filter(
+                (models.Message.recipient_id == None) |
+                (models.Message.recipient_id == current_user.id) |
+                (models.Message.sender_id == current_user.id)
+            )
+        elif (is_supervisor or is_admin) and student_id:
+            query = query.filter(
+                (models.Message.recipient_id == None) |
+                (models.Message.recipient_id == student_id) |
+                (models.Message.sender_id == student_id)
+            )
+    else:
+        # قناة نقاش الشركة والطلاب (company_student)
+        query = query.filter(
+            (models.Message.conversation_type == "company_student") |
+            (models.Message.conversation_type == None)
+        )
+        if role == "student":
+            # الطالب يرى الرسائل العامة لمشروعه أو الرسائل الخاصة التي هو مرسلها أو مستلمها
+            query = query.filter(
+                (models.Message.recipient_id == None) |
+                (models.Message.recipient_id == current_user.id) |
+                (models.Message.sender_id == current_user.id)
+            )
+        elif role in COMPANY_ROLES:
+            # الشركة ترى الرسائل العامة لمشروعها أو الرسائل الخاصة الموجهة إليها أو الصادرة منها
+            # ولا يمكنها رؤية الرسائل الخاصة بين الطلاب أو بين الطالب والمشرف
+            query = query.filter(
+                (models.Message.recipient_id == None) |
+                (models.Message.recipient_id == current_user.id) |
+                (models.Message.sender_id == current_user.id)
+            )
+        elif (is_supervisor or is_admin) and student_id:
+            query = query.filter(
+                (models.Message.recipient_id == None) |
+                (models.Message.recipient_id == student_id) |
+                (models.Message.sender_id == student_id)
+            )
+
+    messages = query.order_by(models.Message.created_at.asc()).all()
 
     results = []
     for m in messages:
@@ -1712,12 +1958,49 @@ def get_project_messages(
             id=m.id,
             project_id=m.project_id,
             sender_id=m.sender_id,
+            recipient_id=m.recipient_id,
+            conversation_type=m.conversation_type or "company_student",
             sender_name=sender_name,
             sender_role=sender_role,
             text=m.text,
             created_at=m.created_at
         ))
     return results
+
+
+@app.delete("/projects/{project_id}/messages/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/api/projects/{project_id}/messages/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_project_message(
+    project_id: int,
+    message_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """حذف رسالة محددة مع التحقق الصارم من ملكية الرسالة أو الصلاحية الإشرافية"""
+    msg = db.query(models.Message).filter(
+        models.Message.id == message_id,
+        models.Message.project_id == project_id
+    ).first()
+    if not msg:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="الرسالة غير موجودة في هذا المشروع"
+        )
+
+    user_role = (current_user.role or "").lower()
+    is_author = msg.sender_id == current_user.id
+    is_admin = user_role == "admin"
+    is_supervisor = user_role == "supervisor" and bool(msg.project and msg.project.supervisor_id == current_user.id)
+
+    if not (is_author or is_admin or is_supervisor):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ليس لديك الصلاحية لحذف هذه الرسالة"
+        )
+
+    db.delete(msg)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # ==========================================
@@ -1731,11 +2014,14 @@ def get_user_notifications(
     response: Response,
     limit: int = Query(50, ge=1, le=PAGE_MAX_LIMIT),
     offset: int = Query(0, ge=0),
+    is_read: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """جلب إشعارات المستخدم الحالي (الأحدث أولاً) بلغة الطلب، مع التقسيم limit/offset و X-Total-Count"""
+    """جلب إشعارات المستخدم الحالي (الأحدث أولاً) بلغة الطلب، مع التقسيم limit/offset و X-Total-Count وإمكانية الفلترة بحالة القراءة"""
     query = db.query(models.Notification).filter(models.Notification.user_id == current_user.id)
+    if is_read is not None:
+        query = query.filter(models.Notification.is_read == is_read)
     response.headers["X-Total-Count"] = str(query.count())
     rows = query.order_by(models.Notification.created_at.desc(), models.Notification.id.desc()).offset(offset).limit(limit).all()
     return [localize_notification(n) for n in rows]
@@ -1743,18 +2029,38 @@ def get_user_notifications(
 
 def localize_notification(n: models.Notification) -> schemas.NotificationResponse:
     english = i18n.current_lang.get() == "en"
+    proj_id = n.project_id or getattr(n, "related_project_id", None)
     return schemas.NotificationResponse(
         id=n.id,
         user_id=n.user_id,
         title=(n.title_en if english and n.title_en else n.title),
         message=(n.message_en if english and n.message_en else n.message),
         link=n.link,
-        project_id=n.project_id,
+        project_id=proj_id,
+        related_project_id=getattr(n, "related_project_id", None) or proj_id,
+        related_application_id=getattr(n, "related_application_id", None),
+        notification_type=getattr(n, "notification_type", None) or "general",
         is_read=bool(n.is_read),
         created_at=n.created_at,
     )
 
 
+@app.get("/notifications/unread-count", response_model=schemas.UnreadCountResponse)
+@app.get("/api/notifications/unread-count", response_model=schemas.UnreadCountResponse)
+def get_unread_notifications_count(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """عدد الإشعارات غير المقروءة للمستخدم الحالي"""
+    count = db.query(models.Notification).filter(
+        models.Notification.user_id == current_user.id,
+        models.Notification.is_read == False
+    ).count()
+    return schemas.UnreadCountResponse(unread_count=count)
+
+
+@app.patch("/notifications/{id}/read", response_model=schemas.NotificationResponse)
+@app.patch("/api/notifications/{id}/read", response_model=schemas.NotificationResponse)
 @app.put("/notifications/{id}/read", response_model=schemas.NotificationResponse)
 @app.put("/api/notifications/{id}/read", response_model=schemas.NotificationResponse)
 def mark_notification_as_read(
@@ -1762,15 +2068,17 @@ def mark_notification_as_read(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """تحديد الإشعار كمقروء للمستخدم الحالي"""
-    notif = db.query(models.Notification).filter(
-        models.Notification.id == id,
-        models.Notification.user_id == current_user.id
-    ).first()
+    """تحديد الإشعار كمقروء للمستخدم الحالي مع منع التعديل على إشعارات الآخرين"""
+    notif = db.query(models.Notification).filter(models.Notification.id == id).first()
     if not notif:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="الإشعار غير موجود"
+        )
+    if notif.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ليس لديك الصلاحية لتعديل إشعار مستخدم آخر"
         )
     notif.is_read = True
     db.commit()
@@ -1778,19 +2086,45 @@ def mark_notification_as_read(
     return localize_notification(notif)
 
 
+@app.patch("/notifications/read-all", status_code=status.HTTP_200_OK)
+@app.patch("/api/notifications/read-all", status_code=status.HTTP_200_OK)
 @app.put("/notifications/read-all", status_code=status.HTTP_200_OK)
 @app.put("/api/notifications/read-all", status_code=status.HTTP_200_OK)
 def mark_all_notifications_as_read(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """تحديد كافة إشعارات المستخدم كمقروءة"""
+    """تحديد كافة إشعارات المستخدم الحالي فقط كمقروءة"""
     db.query(models.Notification).filter(
         models.Notification.user_id == current_user.id,
         models.Notification.is_read == False
     ).update({"is_read": True}, synchronize_session=False)
     db.commit()
     return {"message": i18n.tr("تم تحديد جميع الإشعارات كمقروءة")}
+
+
+@app.delete("/notifications/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/api/notifications/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_notification(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """حذف إشعار محدد للمستخدم الحالي مع حظر حذف إشعارات المستخدمين الآخرين"""
+    notif = db.query(models.Notification).filter(models.Notification.id == id).first()
+    if not notif:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="الإشعار غير موجود"
+        )
+    if notif.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ليس لديك الصلاحية لحذف إشعار مستخدم آخر"
+        )
+    db.delete(notif)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # ==========================================

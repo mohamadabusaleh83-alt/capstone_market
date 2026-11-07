@@ -159,26 +159,33 @@ class ProjectCreate(BaseModel):
 
 
 class ProjectOwnerUpdate(BaseModel):
-    """ما يمكن لمالك المشروع تعديله. أي حقل آخر (supervisor_id، company_name، status...) يُرفض بـ 422"""
+    """ما يمكن لمالك المشروع تعديله. لا يمكن للمالك تعديل المقاعد أو المشرف أو الحالة"""
     model_config = ConfigDict(extra="forbid")
 
     title: Optional[str] = Field(default=None, min_length=1, max_length=150)
     description: Optional[str] = Field(default=None, max_length=10000)
     required_skills: Optional[str] = Field(default=None, max_length=1000)
-    max_members: Optional[int] = Field(default=None, ge=1, le=MAX_MEMBERS_LIMIT)
     category: Optional[str] = Field(default=None, max_length=100)
     stipend: Optional[str] = Field(default=None, max_length=100)
 
 
 class ProjectSupervisorUpdate(ProjectOwnerUpdate):
-    """المشرف والأدمن: حقول المالك + إسناد المشرف والملاحظات الأكاديمية"""
+    """المشرف والأدمن: حقول المالك + تحديد المقاعد وإسناد المشرف والملاحظات الأكاديمية"""
+    max_members: Optional[int] = Field(default=None, ge=1, le=MAX_MEMBERS_LIMIT)
+    seats: Optional[int] = Field(default=None, ge=1, le=MAX_MEMBERS_LIMIT)
     supervisor_id: Optional[int] = None
     supervisor_feedback: Optional[str] = Field(default=None, max_length=5000)
 
 
+class ProjectSeatsUpdate(BaseModel):
+    """تحديد عدد مقاعد المشروع بواسطة المشرف الأكاديمي أو الأدمن فقط"""
+    seats: int = Field(ge=1, le=MAX_MEMBERS_LIMIT)
+
+
 class ProjectStatusUpdate(BaseModel):
-    status: str = Field(max_length=30)  # approved, rejected, pending
+    status: str = Field(max_length=30)  # approved, rejected
     feedback: Optional[str] = Field(default=None, max_length=5000)
+    seats: Optional[int] = Field(default=None, ge=1, le=MAX_MEMBERS_LIMIT)
 
 
 class ProjectResponse(BaseModel):
@@ -190,10 +197,17 @@ class ProjectResponse(BaseModel):
     required_skills: Optional[str] = None
     status: Optional[str] = "pending"
     max_members: Optional[int] = 4
+    seats: Optional[int] = 4
+    total_seats: Optional[int] = 4
+    remaining_seats: Optional[int] = 4
     current_members: Optional[int] = 0
     available_seats: Optional[int] = 4
+    accepted_students_count: Optional[int] = 0
+    submitted_applications_count: Optional[int] = 0
     created_by: Optional[int] = None
     created_at: Optional[datetime] = None
+    decided_at: Optional[datetime] = None
+    rejected_at: Optional[datetime] = None
     category: Optional[str] = None
     stipend: Optional[str] = None
     company_name: Optional[str] = None
@@ -347,6 +361,8 @@ class AnalyticsOverviewResponse(BaseModel):
 
 class MessageCreate(BaseModel):
     text: str = Field(max_length=5000)
+    conversation_type: Optional[str] = Field(default="company_student", max_length=50)
+    recipient_id: Optional[int] = None
 
 
 class MessageResponse(BaseModel):
@@ -355,6 +371,8 @@ class MessageResponse(BaseModel):
     id: int
     project_id: int
     sender_id: int
+    recipient_id: Optional[int] = None
+    conversation_type: Optional[str] = "company_student"
     sender_name: Optional[str] = None
     sender_role: Optional[str] = None
     text: str
@@ -389,5 +407,12 @@ class NotificationResponse(BaseModel):
     message: str
     link: Optional[str] = None
     project_id: Optional[int] = None
+    related_project_id: Optional[int] = None
+    related_application_id: Optional[int] = None
+    notification_type: Optional[str] = "general"
     is_read: bool = False
     created_at: Optional[datetime] = None
+
+
+class UnreadCountResponse(BaseModel):
+    unread_count: int

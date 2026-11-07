@@ -144,7 +144,7 @@ export default function StudentOnboardingModal() {
               finalPortfolioUrl = uploadData.portfolio_url;
             }
           }
-        } catch (_uploadErr) {
+        } catch {
           // في حال فشل الرفع على السيرفر، نستمر في حفظ الرابط والنص
         }
       }
@@ -187,7 +187,7 @@ export default function StudentOnboardingModal() {
           : 'Your profile has been set up successfully! Welcome to Capstone Market.',
         'success'
       );
-    } catch (_err) {
+    } catch {
       showToast(
         isRtl
           ? 'تم حفظ بيانات ملفك التعريفي بنجاح!'

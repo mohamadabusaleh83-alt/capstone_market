@@ -121,7 +121,7 @@ export function AppProvider({ children }) {
             return parsed;
           }
         }
-      } catch (_err) {
+      } catch {
         // Ignore cache parsing error
       }
     }
@@ -279,7 +279,7 @@ export function AppProvider({ children }) {
           bio: ''
         });
       }
-    } catch (_err) {
+    } catch {
       // Ignore student CV reload error
     }
   }, [currentUser?.id]);
@@ -328,7 +328,7 @@ export function AppProvider({ children }) {
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [currentUser?.role, currentUser?.id, studentCv?.bio, userSkills]);
+  }, [currentUser, studentCv?.bio, userSkills]);
 
   // ==========================================
   // الإشعارات الحية (Live Notifications)
@@ -395,6 +395,10 @@ export function AppProvider({ children }) {
               : [];
             const projectSkills = Array.from(new Set(rawSkillList));
 
+            const totalSeats = p.total_seats ?? p.seats ?? p.max_members ?? 4;
+            const acceptedStudents = p.accepted_students_count ?? p.current_members ?? 0;
+            const remainingSeats = p.remaining_seats ?? p.available_seats ?? Math.max(0, totalSeats - acceptedStudents);
+
             return {
               id: p.id,
               title: p.title || (isRtl ? 'مشروع تخرج' : 'Capstone Project'),
@@ -410,9 +414,19 @@ export function AppProvider({ children }) {
               supervisor_id: p.supervisor_id || null,
               supervisor_name: p.supervisor_name || null,
               supervisor_feedback: p.supervisor_feedback || null,
-              maxMembers: p.max_members || 4,
-              currentMembers: p.current_members !== undefined ? p.current_members : 0,
-              availableSeats: p.available_seats !== undefined ? p.available_seats : Math.max(0, (p.max_members || 4) - (p.current_members || 0))
+              seats: totalSeats,
+              total_seats: totalSeats,
+              maxMembers: totalSeats,
+              max_members: totalSeats,
+              currentMembers: acceptedStudents,
+              current_members: acceptedStudents,
+              accepted_students_count: acceptedStudents,
+              availableSeats: remainingSeats,
+              available_seats: remainingSeats,
+              remaining_seats: remainingSeats,
+              submitted_applications_count: p.submitted_applications_count ?? 0,
+              decided_at: p.decided_at || null,
+              rejected_at: p.rejected_at || null
             };
           });
 
@@ -421,7 +435,7 @@ export function AppProvider({ children }) {
           if (typeof window !== 'undefined') {
             try {
               sessionStorage.setItem(cacheKey, JSON.stringify(formatted));
-            } catch (_err) {
+            } catch {
               // Ignore session storage error
             }
           }
@@ -485,7 +499,7 @@ export function AppProvider({ children }) {
           })));
         }
       }
-    } catch (_err) {
+    } catch {
       // Ignored
     }
   }, [apiFetch, isRtl]);
@@ -520,7 +534,7 @@ export function AppProvider({ children }) {
           })));
         }
       }
-    } catch (_err) {
+    } catch {
       // Ignored
     }
   }, [apiFetch, currentUser?.role, t]);
@@ -604,7 +618,7 @@ export function AppProvider({ children }) {
           }
         }
       }
-    } catch (_err) {
+    } catch {
       // Ignored
     }
   }, [apiFetch, currentUserId]);
@@ -645,6 +659,24 @@ export function AppProvider({ children }) {
       showToast(isRtl ? 'تعذر تحديث الإشعارات، يرجى المحاولة لاحقاً' : 'Failed to update notifications', 'error');
     }
   }, [apiFetch, showToast, isRtl]);
+
+  const handleDeleteNotification = useCallback(async (notificationId) => {
+    try {
+      const res = await apiFetch(`/notifications/${notificationId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+        setNotificationsTotal((t) => Math.max(0, t - 1));
+        showToast(isRtl ? 'تم حذف الإشعار' : 'Notification deleted', 'success');
+        return true;
+      }
+      return false;
+    } catch {
+      showToast(isRtl ? 'تعذر حذف الإشعار' : 'Failed to delete notification', 'error');
+      return false;
+    }
+  }, [apiFetch, showToast, isRtl]);
+
+  const unreadNotificationsCount = notifications.filter((n) => !n.is_read).length;
 
   // تحديث البيانات المتوازي عند بدء التشغيل وتغيير الحساب
   useEffect(() => {
@@ -769,11 +801,16 @@ export function AppProvider({ children }) {
   const [isFetchingChat, setIsFetchingChat] = useState(false);
   const [isSendingChat, setIsSendingChat] = useState(false);
 
-  const fetchProjectMessages = useCallback(async (projectId) => {
+  const fetchProjectMessages = useCallback(async (projectId, conversationType = 'company_student', studentId = null) => {
     if (!projectId) return;
     setIsFetchingChat(true);
     try {
-      const res = await apiFetch(`/projects/${projectId}/messages`);
+      const convParam = encodeURIComponent(conversationType || 'company_student');
+      let url = `/projects/${projectId}/messages?conversation_type=${convParam}`;
+      if (studentId) {
+        url += `&student_id=${encodeURIComponent(studentId)}`;
+      }
+      const res = await apiFetch(url);
       if (res.ok) {
         const data = await res.json();
         setChatMessages(Array.isArray(data) ? data : []);
@@ -793,13 +830,20 @@ export function AppProvider({ children }) {
     }
   }, [activeChatProject, fetchProjectMessages]);
 
-  const sendProjectMessage = useCallback(async (projectId, text) => {
+  const sendProjectMessage = useCallback(async (projectId, text, conversationType = 'company_student', recipientId = null) => {
     if (!text?.trim() || !projectId) return;
     setIsSendingChat(true);
     try {
+      const payload = {
+        text: text.trim(),
+        conversation_type: conversationType || 'company_student'
+      };
+      if (recipientId) {
+        payload.recipient_id = Number(recipientId);
+      }
       const res = await apiFetch(`/projects/${projectId}/messages`, {
         method: 'POST',
-        body: JSON.stringify({ text: text.trim() })
+        body: JSON.stringify(payload)
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -816,6 +860,25 @@ export function AppProvider({ children }) {
       setIsSendingChat(false);
     }
   }, [apiFetch, translateErrorMessage, isRtl, fetchNotifications, showToast]);
+
+  const deleteProjectMessage = useCallback(async (projectId, messageId) => {
+    if (!projectId || !messageId) return false;
+    try {
+      const res = await apiFetch(`/projects/${projectId}/messages/${messageId}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(translateErrorMessage(errData.detail || (isRtl ? 'تعذر حذف الرسالة.' : 'Could not delete message.')));
+      }
+      setChatMessages((prev) => prev.filter((m) => m.id !== messageId));
+      showToast(isRtl ? 'تم حذف الرسالة بنجاح' : 'Message deleted successfully', 'success');
+      return true;
+    } catch (err) {
+      showToast(`${isRtl ? 'خطأ في حذف الرسالة' : 'Error deleting message'}: ${err.message}`, 'error');
+      return false;
+    }
+  }, [apiFetch, translateErrorMessage, isRtl, showToast]);
 
   // ==========================================
   // إضافة مشروع جديد
@@ -855,15 +918,33 @@ export function AppProvider({ children }) {
   // ==========================================
   // اعتماد أو رفض مشروع من المشرف (مع التحديث الفوري المباشر Optimistic Update)
   // ==========================================
-  const approveProject = useCallback(async (projectId, targetStatus, feedback = null) => {
+  const approveProject = useCallback(async (projectId, targetStatus, feedback = null, seats = null) => {
     // تحديث فوري مباشر للواجهة قبل انتظار الشبكة
     setRawProjects((prev) =>
-      prev.map((p) => (p.id === projectId ? { ...p, status: targetStatus, supervisor_feedback: feedback } : p))
+      prev.map((p) => {
+        if (p.id !== projectId) return p;
+        const updatedSeats = seats ? Number(seats) : (p.total_seats || p.maxMembers || 4);
+        return {
+          ...p,
+          status: targetStatus,
+          supervisor_feedback: feedback,
+          total_seats: updatedSeats,
+          seats: updatedSeats,
+          maxMembers: updatedSeats,
+          max_members: updatedSeats,
+          remaining_seats: Math.max(0, updatedSeats - (p.accepted_students_count ?? p.currentMembers ?? 0)),
+          availableSeats: Math.max(0, updatedSeats - (p.accepted_students_count ?? p.currentMembers ?? 0))
+        };
+      })
     );
     try {
+      const payload = { status: targetStatus, feedback };
+      if (seats !== null && seats !== undefined && Number(seats) > 0) {
+        payload.seats = Number(seats);
+      }
       const res = await apiFetch(`/projects/${projectId}/status`, {
         method: 'PUT',
-        body: JSON.stringify({ status: targetStatus, feedback })
+        body: JSON.stringify(payload)
       });
       if (!res.ok) {
         // تراجع فوري في حال حدوث خطأ
@@ -871,6 +952,7 @@ export function AppProvider({ children }) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(translateErrorMessage(errData.detail || (isRtl ? 'تعذر تحديث حالة المشروع.' : 'Could not update project status.')));
       }
+      await fetchProjects();
       fetchNotifications();
       showToast(t('toasts.project_status_updated', {
         status: targetStatus === 'approved' ? (isRtl ? 'معتمد' : 'Approved') : targetStatus === 'rejected' ? (isRtl ? 'مرفوض' : 'Rejected') : (isRtl ? 'قيد المراجعة' : 'Pending')
@@ -881,6 +963,49 @@ export function AppProvider({ children }) {
       throw err;
     }
   }, [apiFetch, fetchProjects, fetchNotifications, translateErrorMessage, isRtl, showToast, t]);
+
+  // ==========================================
+  // تحديد وتعديل عدد مقاعد المشروع من المشرف
+  // ==========================================
+  const updateProjectSeats = useCallback(async (projectId, seats) => {
+    const seatsNum = parseInt(seats, 10);
+    if (!seatsNum || seatsNum < 1) {
+      showToast(isRtl ? 'عدد المقاعد يجب أن يكون رقماً صحيحاً موجباً' : 'Seats must be a positive integer', 'error');
+      return false;
+    }
+    setRawProjects((prev) =>
+      prev.map((p) => {
+        if (p.id !== projectId) return p;
+        const curAccepted = p.accepted_students_count ?? p.currentMembers ?? 0;
+        return {
+          ...p,
+          seats: seatsNum,
+          total_seats: seatsNum,
+          maxMembers: seatsNum,
+          max_members: seatsNum,
+          remaining_seats: Math.max(0, seatsNum - curAccepted),
+          availableSeats: Math.max(0, seatsNum - curAccepted)
+        };
+      })
+    );
+    try {
+      const res = await apiFetch(`/projects/${projectId}/seats`, {
+        method: 'PUT',
+        body: JSON.stringify({ seats: seatsNum })
+      });
+      if (!res.ok) {
+        await fetchProjects();
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(translateErrorMessage(errData.detail || (isRtl ? 'تعذر تحديث عدد المقاعد.' : 'Could not update seats.')));
+      }
+      await fetchProjects();
+      showToast(isRtl ? 'تم تحديث عدد المقاعد بنجاح' : 'Seats updated successfully', 'success');
+      return true;
+    } catch (err) {
+      showToast(`${isRtl ? 'خطأ' : 'Error'}: ${err.message}`, 'error');
+      throw err;
+    }
+  }, [apiFetch, fetchProjects, translateErrorMessage, isRtl, showToast]);
 
   // ==========================================
   // حذف مشروع نهائياً (متاح للمشرف والأدمن والمالك)
@@ -902,7 +1027,7 @@ export function AppProvider({ children }) {
       showToast(errData.detail || t('delete_project.failed', 'فشل حذف المشروع، يرجى المحاولة لاحقاً.'), 'error');
       return false;
     } catch (err) {
-      showToast(formatFriendlyError(err), 'error');
+      showToast(err.message || t('delete_project.failed', 'فشل حذف المشروع، يرجى المحاولة لاحقاً.'), 'error');
       return false;
     }
   }, [apiFetch, fetchProjects, fetchApplications, showToast, t]);
@@ -1152,12 +1277,14 @@ export function AppProvider({ children }) {
         isSendingChat,
         fetchProjectMessages,
         sendProjectMessage,
+        deleteProjectMessage,
         isCreateModalOpen,
         setIsCreateModalOpen,
         isSubmittingProject,
         createProject,
         approveProject,
         updateProjectStatus: approveProject,
+        updateProjectSeats,
         deleteProject,
         refreshAllData,
         isApplyModalOpen,
@@ -1188,6 +1315,8 @@ export function AppProvider({ children }) {
         loadMoreNotifications,
         handleMarkNotificationRead,
         handleMarkAllNotificationsRead,
+        handleDeleteNotification,
+        unreadNotificationsCount,
         reportsTimeline,
         setReportsTimeline,
         fetchReports,

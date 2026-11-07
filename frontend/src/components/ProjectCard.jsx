@@ -57,12 +57,10 @@ export default function ProjectCard({ project }) {
     (a) => a.project_id === project.id && a.student_id === currentUser?.id
   );
   
-  const currentMembers = project.currentMembers || 0;
-  const maxMembers = project.maxMembers || 4;
-  const isFull =
-    (project.availableSeats !== undefined && project.availableSeats <= 0) ||
-    currentMembers >= maxMembers;
-  const remainingSeats = Math.max(0, maxMembers - currentMembers);
+  const currentMembers = project.accepted_students_count ?? project.currentMembers ?? project.current_members ?? 0;
+  const maxMembers = project.total_seats ?? project.seats ?? project.maxMembers ?? project.max_members ?? 4;
+  const remainingSeats = project.remaining_seats ?? project.availableSeats ?? project.available_seats ?? Math.max(0, maxMembers - currentMembers);
+  const isFull = remainingSeats <= 0 || currentMembers >= maxMembers;
   const isRejected = project.status === 'rejected';
 
   // حساب نسبة التطابق والتوهج
@@ -235,7 +233,7 @@ export default function ProjectCard({ project }) {
                   : t('projects.apply_button')}
             {!isFull && !isAlreadyApplied && !isRejected && <ArrowUpRight className="w-3.5 h-3.5" />}
           </button>
-        ) : (
+        ) : ['supervisor', 'admin'].includes(currentUser?.role) ? (
           <button
             type="button"
             onClick={() => openApplicationsModal(project.id)}
@@ -244,6 +242,10 @@ export default function ProjectCard({ project }) {
             <Users className="w-3.5 h-3.5 text-[#2499F2] dark:text-[#28C8C0]" />
             {t('projects.view_applications')}
           </button>
+        ) : (
+          <div className="flex-1 py-2 px-3 text-center text-xs text-slate-600 dark:text-slate-400 font-semibold bg-slate-50 dark:bg-[#152550]/50 rounded-xl border border-slate-200/60 dark:border-white/5">
+            {project.status === 'approved' ? (isRtl ? 'مشروع معتمد' : 'Approved') : (isRtl ? 'قيد المراجعة الأكاديمية' : 'Pending Review')}
+          </div>
         )}
 
         {canChat && (

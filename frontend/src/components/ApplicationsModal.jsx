@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
@@ -15,12 +15,6 @@ const STATUS_META = {
   accepted: { key: 'status_approved', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30' },
   rejected: { key: 'status_rejected', cls: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/30' }
 };
-
-// ما يسمح به الخادم للشركة المالكة (آلة الحالات)
-const CAN_ACCEPT = new Set(['applied', 'pending']);
-const CAN_REJECT = new Set(['applied', 'pending', 'company_accepted']);
-
-const disabledCls = 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed border border-slate-200 dark:border-slate-700';
 
 export default function ApplicationsModal() {
   const { t } = useTranslation();
@@ -41,7 +35,7 @@ export default function ApplicationsModal() {
 
   const [majorFilter, setMajorFilter] = useState('all');
 
-  if (!showApplicationsModal) return null;
+  if (!showApplicationsModal || ['company', 'partner', 'business'].includes(currentUser?.role)) return null;
 
   const modalProject = applicationsModalProjectId ? rawProjects.find((p) => p.id === applicationsModalProjectId) : null;
   const baseList = applicationsModalProjectId
@@ -123,9 +117,8 @@ export default function ApplicationsModal() {
             {visible.map((app) => {
               const targetProject = rawProjects.find((p) => p.id === app.project_id);
               const meta = STATUS_META[app.status] || STATUS_META.applied;
-              const isOwner = Boolean(targetProject && currentUser && targetProject.created_by === currentUser.id && currentUser.role === 'company');
-              const canAccept = isOwner && CAN_ACCEPT.has(app.status);
-              const canReject = isOwner && CAN_REJECT.has(app.status);
+              const isSupervisor = ['supervisor', 'admin'].includes(currentUser?.role);
+              const isPending = ['applied', 'pending', 'company_accepted', 'pending_academic_approval'].includes(app.status);
               return (
                 <div
                   key={app.id}
@@ -154,25 +147,24 @@ export default function ApplicationsModal() {
                       {t(`applications_management.${meta.key}`)}
                     </span>
 
-                    {app.student_has_cv && (isOwner || ['supervisor', 'admin'].includes(currentUser?.role)) && (
+                    {app.student_has_cv && isSupervisor && (
                       <button
                         type="button"
                         onClick={() => openUserCv(app.student_id)}
-                        className="p-1.5 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1 cursor-pointer"
+                        className="p-1.5 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 flex items-center gap-1 cursor-pointer transition shadow-sm"
                         title={t('applications_management.cv_btn')}
                       >
-                        <FileText className="w-3.5 h-3.5" />
+                        <FileText className="w-3.5 h-3.5 text-[#2499F2]" />
                         <span className="text-[10px]">{t('applications_management.cv_btn')}</span>
                       </button>
                     )}
 
-                    {isOwner && (
+                    {isSupervisor && isPending && (
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => updateApplicationStatus(app.id, 'company_accepted')}
-                          disabled={!canAccept}
-                          className={`p-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 ${canAccept ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-sm' : disabledCls}`}
+                          onClick={() => updateApplicationStatus(app.id, 'academically_approved')}
+                          className="p-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-sm active:scale-95"
                           title={t('applications_management.accept_btn')}
                         >
                           <Check className="w-3.5 h-3.5" />
@@ -182,28 +174,27 @@ export default function ApplicationsModal() {
                         <button
                           type="button"
                           onClick={() => updateApplicationStatus(app.id, 'rejected')}
-                          disabled={!canReject}
-                          className={`p-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 ${canReject ? 'bg-rose-600 hover:bg-rose-500 text-white cursor-pointer shadow-sm' : disabledCls}`}
+                          className="p-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-rose-600 hover:bg-rose-500 text-white cursor-pointer shadow-sm active:scale-95"
                           title={t('applications_management.reject_btn')}
                         >
                           <X className="w-3.5 h-3.5" />
                           <span className="text-[10px] hidden sm:inline">{t('applications_management.reject_btn')}</span>
                         </button>
-
-                        {targetProject && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setActiveChatProject(targetProject);
-                              closeApplicationsModal();
-                            }}
-                            className="p-1.5 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-700 hover:bg-cyan-600 dark:hover:bg-cyan-600 text-slate-700 dark:text-slate-200 hover:text-white transition cursor-pointer"
-                            title={t('applications_management.open_chat_title')}
-                          >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                          </button>
-                        )}
                       </div>
+                    )}
+
+                    {targetProject && isSupervisor && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveChatProject(targetProject);
+                          closeApplicationsModal();
+                        }}
+                        className="p-1.5 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-700 hover:bg-cyan-600 dark:hover:bg-cyan-600 text-slate-700 dark:text-slate-200 hover:text-white transition cursor-pointer"
+                        title={t('applications_management.open_chat_title')}
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                      </button>
                     )}
                   </div>
                 </div>

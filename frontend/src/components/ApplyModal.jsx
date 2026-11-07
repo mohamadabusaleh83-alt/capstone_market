@@ -20,8 +20,13 @@ export default function ApplyModal() {
 
   if (!isApplyModalOpen || !selectedProject) return null;
 
+  const totalSeats = selectedProject.total_seats ?? selectedProject.seats ?? selectedProject.maxMembers ?? 4;
+  const remainingSeats = selectedProject.remaining_seats ?? selectedProject.availableSeats ?? 0;
+  const isSeatsFull = remainingSeats <= 0;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSeatsFull) return;
     try {
       await applyToProject({
         projectId: selectedProject.id,
@@ -48,9 +53,25 @@ export default function ApplyModal() {
         <h2 className="text-base font-bold mb-1 text-slate-900 dark:text-white">
           {t('apply_project.modal_title', { title: selectedProject.title })}
         </h2>
-        <p className="text-[11px] text-slate-600 dark:text-slate-400 mb-4">
+        <p className="text-[11px] text-slate-600 dark:text-slate-400 mb-3">
           {t('apply_project.modal_desc', { name: currentUser?.name })}
         </p>
+
+        {/* مؤشر المقاعد المتاحة */}
+        <div className="flex items-center justify-between p-2.5 mb-3 bg-slate-50 dark:bg-[#152550]/60 rounded-xl border border-slate-200 dark:border-white/10 text-xs">
+          <span className="text-slate-600 dark:text-slate-300 font-medium">
+            {t('projects.available_seats', 'المقاعد المتاحة في المشروع:')}
+          </span>
+          <span className={`font-bold font-mono ${isSeatsFull ? 'text-rose-600 dark:text-rose-400' : 'text-[#2499F2]'}`}>
+            {isSeatsFull ? (t('projects.seats_full', 'المقاعد مكتملة')) : `${remainingSeats} / ${totalSeats}`}
+          </span>
+        </div>
+
+        {isSeatsFull && (
+          <div className="p-3 mb-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 rounded-xl text-xs text-rose-800 dark:text-rose-300 font-bold text-center">
+            ⚠️ {t('projects.seats_full_notice', 'المقاعد مكتملة لهذا المشروع حالياً ولا يمكن تقديم طلبات جديدة.')}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
@@ -99,14 +120,20 @@ export default function ApplyModal() {
 
           <button
             type="submit"
-            disabled={isSubmittingApply}
-            className="w-full bg-gradient-to-r from-[#2499F2] to-[#28C8C0] hover:opacity-95 py-2.5 rounded-xl font-bold text-xs text-white transition cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-[#2499F2]/20 active:scale-95"
+            disabled={isSubmittingApply || isSeatsFull}
+            className={`w-full py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 shadow-md ${
+              isSeatsFull
+                ? 'bg-slate-200 dark:bg-[#152550] text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-white/5'
+                : 'bg-gradient-to-r from-[#2499F2] to-[#28C8C0] hover:opacity-95 text-white cursor-pointer shadow-[#2499F2]/20 active:scale-95'
+            }`}
           >
             {isSubmittingApply ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
                 {t('apply_project.submitting')}
               </>
+            ) : isSeatsFull ? (
+              t('projects.seats_full', 'المقاعد مكتملة')
             ) : (
               <>
                 <Send className="w-4 h-4" />

@@ -20,7 +20,7 @@ export default function ManageCollaborationsPage() {
   // استخراج كافة اتفاقيات وشراكات التعاون الفعلية من قاعدة البيانات
   const collabList = useMemo(() => {
     return (applications || [])
-      .filter((a) => a.status === 'accepted')
+      .filter((a) => a.status === 'accepted' || a.status === 'academically_approved')
       .map((app) => {
         const proj = (rawProjects || []).find((p) => p.id === app.project_id);
         return {
@@ -29,13 +29,13 @@ export default function ManageCollaborationsPage() {
           project: app.project_title || proj?.title || (isRtl ? `مشروع #${app.project_id}` : `Project #${app.project_id}`),
           students: app.student_name || (isRtl ? `طالب #${app.student_id}` : `Student #${app.student_id}`),
           scope: app.message?.includes('Role:') ? app.message.split('Role:')[1]?.split(']')[0]?.trim() : (isRtl ? 'تنفيذ وتطوير تكنولوجي' : 'Tech Execution'),
-          supervisorEndorsement: proj?.status === 'approved' ? 'approved' : 'pending',
+          supervisorEndorsement: (proj?.status === 'approved' || app.status === 'academically_approved') ? 'approved' : 'pending',
           date: app.created_at ? new Date(app.created_at).toISOString().split('T')[0] : '—'
         };
       });
   }, [applications, rawProjects, isRtl]);
 
-  const handleEndorse = (id) => {
+  const handleEndorse = (_id) => {
     showToast(isRtl ? 'تمت المصادقة الأكاديمية على اتفاقية التعاون بنجاح!' : 'Collaboration officially endorsed!', 'success');
   };
 

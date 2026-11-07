@@ -92,7 +92,7 @@ export default function MyProjectsPage() {
 
     // جلب أعضاء الفريق المقبولين فعلياً بالمشروع
     const acceptedTeam = (applications || [])
-      .filter((a) => a.project_id === baseProject.id && a.status === 'accepted')
+      .filter((a) => a.project_id === baseProject.id && (a.status === 'accepted' || a.status === 'academically_approved'))
       .map((a) => ({
         name: a.student_name || (isRtl ? `طالب #${a.student_id}` : `Student #${a.student_id}`),
         role: a.message?.includes('Role:') ? a.message.split('Role:')[1]?.split(']')[0]?.trim() : (isRtl ? 'عضو فريق ومطور' : 'Team Developer'),
@@ -129,13 +129,14 @@ export default function MyProjectsPage() {
     };
   }, [currentUser, myProject, applications, rawProjects, reportsTimeline, isRtl]);
 
+  const studentProjectId = studentProject?.id;
   // مراحل التسليم والتقارير الأكاديمية الحقيقية الخاصة بمشروع الطالب
   const milestones = useMemo(() => {
-    if (!studentProject?.id) return [];
+    if (!studentProjectId) return [];
     return (reportsTimeline || []).filter(
-      (r) => !r.project_id || r.project_id === studentProject.id
+      (r) => !r.project_id || r.project_id === studentProjectId
     );
-  }, [reportsTimeline, studentProject?.id]);
+  }, [reportsTimeline, studentProjectId]);
 
   // شاشة التحميل (Loading State)
   if (isLoadingProjects && (!rawProjects || rawProjects.length === 0)) {

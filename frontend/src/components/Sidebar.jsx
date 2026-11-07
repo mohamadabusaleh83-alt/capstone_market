@@ -88,7 +88,7 @@ export default function Sidebar() {
     }`;
 
   // محتوى القائمة المشترك بين الديسكتوب وشاشات الموبايل
-  const renderSidebarBody = (isMobile = false) => (
+  const renderSidebarBody = (_isMobile = false) => (
     <>
       <div className="space-y-2">
         {/* بطاقة الحساب النشط الشخصية الموجزة والمرتبة */}
@@ -399,7 +399,7 @@ export default function Sidebar() {
       {/* 2. القائمة المنبثقة على الهواتف والأجهزة اللوحية الصغيرة (Mobile Drawer via Portal) */}
       {isSidebarOpen && typeof document !== 'undefined' && createPortal(
         <div 
-          className={`fixed inset-0 z-50 flex ${isRtl ? 'justify-end' : 'justify-start'} md:hidden`}
+          className="fixed inset-0 z-50 flex justify-start md:hidden"
           dir={isRtl ? 'rtl' : 'ltr'}
         >
           {/* خلفية معتمة تغلق القائمة عند النقر خارجها */}

@@ -8,7 +8,8 @@ import {
   Search,
   CheckCircle2,
   ChevronRight,
-  Plus
+  Plus,
+  RefreshCw
 } from 'lucide-react';
 
 export default function ManageCompaniesPage() {
@@ -126,36 +127,53 @@ export default function ManageCompaniesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-              {filtered.map((company) => (
-                <tr
-                  key={company.id}
-                  className="hover:bg-slate-50/80 dark:hover:bg-[#152550]/40 transition-colors"
-                >
-                  <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-[#2499F2]" />
-                    <span>{company.name}</span>
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">
-                    {company.industry}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200">
-                    <div className="font-semibold">{company.contactPerson}</div>
-                    <div className="text-[10px] text-slate-400 font-mono">{company.email}</div>
-                  </td>
-                  <td className="py-3.5 px-4 text-center font-bold text-[#2499F2]">
-                    {company.opportunitiesCount}
-                  </td>
-                  <td className="py-3.5 px-4 text-center font-bold text-emerald-600 dark:text-emerald-400">
-                    {company.sponsoredProjectsCount}
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
-                      <CheckCircle2 className="w-3 h-3" />
-                      <span>{isRtl ? 'معتمد أكاديمياً' : 'Accredited'}</span>
-                    </span>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-xs text-slate-400">
+                    <div className="flex items-center justify-center gap-2">
+                      <RefreshCw className="w-5 h-5 animate-spin text-[#2499F2]" />
+                      <span>{isRtl ? 'جاري تحميل قائمة الشركات...' : 'Loading companies...'}</span>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-10 text-center text-xs text-slate-500 dark:text-slate-400">
+                    {isRtl ? 'لا توجد شركات مطابقة للبحث' : 'No matching companies found'}
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((company) => (
+                  <tr
+                    key={company.id}
+                    className="hover:bg-slate-50/80 dark:hover:bg-[#152550]/40 transition-colors"
+                  >
+                    <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-[#2499F2]" />
+                      <span>{company.name}</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">
+                      {company.industry}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200">
+                      <div className="font-semibold">{company.contactPerson}</div>
+                      <div className="text-[10px] text-slate-400 font-mono">{company.email}</div>
+                    </td>
+                    <td className="py-3.5 px-4 text-center font-bold text-[#2499F2]">
+                      {company.opportunitiesCount}
+                    </td>
+                    <td className="py-3.5 px-4 text-center font-bold text-emerald-600 dark:text-emerald-400">
+                      {company.sponsoredProjectsCount}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>{isRtl ? 'معتمد أكاديمياً' : 'Accredited'}</span>
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

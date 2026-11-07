@@ -39,11 +39,11 @@ export default function ActivityLogsPage() {
     (applications || []).forEach((a, idx) => {
       list.push({
         id: `app-${a.id || idx}`,
-        action: a.status === 'accepted' ? (isRtl ? 'قبول طلب انضمام رسمي' : 'Application Accepted') : (isRtl ? 'تقديم طلب انضمام لمشروع' : 'Application Submitted'),
+        action: (a.status === 'accepted' || a.status === 'academically_approved') ? (isRtl ? 'قبول طلب انضمام رسمي' : 'Application Accepted') : (isRtl ? 'تقديم طلب انضمام لمشروع' : 'Application Submitted'),
         user: a.student_name || (isRtl ? `طالب #${a.student_id}` : `Student #${a.student_id}`),
         role: 'student',
         details: isRtl ? `طلب انضمام لمشروع: ${a.project_title || `#${a.project_id}`}` : `Applied to project #${a.project_id}`,
-        status: a.status === 'accepted' ? 'success' : 'info',
+        status: (a.status === 'accepted' || a.status === 'academically_approved') ? 'success' : 'info',
         timestamp: a.created_at ? new Date(a.created_at).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US') : (isRtl ? 'مؤخراً' : 'Recently')
       });
     });

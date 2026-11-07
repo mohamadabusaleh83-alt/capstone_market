@@ -7,7 +7,7 @@ export default function MajorBadge({
   showIcon = true,
   size = 'sm'
 }) {
-  const { translateMajor, isRtl } = useApp() || {};
+  const { translateMajor } = useApp() || {};
 
   if (!major || !String(major).trim()) {
     return null;

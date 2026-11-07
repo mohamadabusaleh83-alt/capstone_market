@@ -26,7 +26,7 @@ class User(Base):
 
     profile = relationship("StudentProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     projects = relationship("Project", back_populates="creator", foreign_keys="Project.created_by")
-    messages = relationship("Message", back_populates="sender")
+    messages = relationship("Message", back_populates="sender", foreign_keys="Message.sender_id")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     reports = relationship("Report", back_populates="student", cascade="all, delete-orphan")
 
@@ -91,6 +91,8 @@ class Project(Base):
     company_name = Column(String(150), nullable=True)
     supervisor_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     supervisor_feedback = Column(Text, nullable=True)
+    decided_at = Column(TIMESTAMP, nullable=True)
+    rejected_at = Column(TIMESTAMP, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
     created_at = Column(TIMESTAMP, server_default=func.now())
 
@@ -147,11 +149,14 @@ class Message(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     sender_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    recipient_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    conversation_type = Column(String(50), default="company_student", nullable=False)
     text = Column(Text, nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     project = relationship("Project", back_populates="messages")
-    sender = relationship("User", back_populates="messages")
+    sender = relationship("User", back_populates="messages", foreign_keys=[sender_id])
+    recipient = relationship("User", foreign_keys=[recipient_id])
 
 
 class Notification(Base):
@@ -166,6 +171,9 @@ class Notification(Base):
     title_en = Column(String(200), nullable=True)
     message_en = Column(Text, nullable=True)
     project_id = Column(Integer, nullable=True, index=True)
+    related_project_id = Column(Integer, nullable=True, index=True)
+    related_application_id = Column(Integer, nullable=True, index=True)
+    notification_type = Column(String(50), default="general", nullable=True)
     is_read = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 

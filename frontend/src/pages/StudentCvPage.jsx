@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
-import { ACADEMIC_MAJORS } from '../api/client';
 import MajorSelect from '../components/MajorSelect';
 import { FileText, Award, CheckCircle, Sparkles, Upload, Download } from 'lucide-react';
 
@@ -18,8 +17,7 @@ export default function StudentCvPage() {
     openUserCv,
     userSkills,
     setShowSkillsModal,
-    setIsOnboardingModalOpen,
-    translateMajor
+    setIsOnboardingModalOpen
   } = useApp();
 
   const [cvUpdateMessage, setCvUpdateMessage] = useState('');

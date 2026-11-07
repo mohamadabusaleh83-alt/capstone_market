@@ -23,7 +23,6 @@ import {
   Eye,
   EyeOff,
   ShieldCheck,
-  School,
   Briefcase
 } from 'lucide-react';
 

@@ -9,7 +9,8 @@ import {
   Menu,
   Bell,
   RefreshCw,
-  UserCheck
+  UserCheck,
+  Trash2
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -23,6 +24,7 @@ export default function Navbar() {
     isLoadingNotifications,
     handleMarkNotificationRead,
     handleMarkAllNotificationsRead,
+    handleDeleteNotification,
     getRoleLabel
   } = useApp();
 
@@ -149,7 +151,7 @@ export default function Navbar() {
                       <div
                         key={n.id}
                         onClick={() => openNotification(n)}
-                        className={`p-3 text-xs transition cursor-pointer flex items-start gap-2.5 ${
+                        className={`group p-3 text-xs transition cursor-pointer flex items-start gap-2.5 ${
                           n.is_read
                             ? 'bg-white/60 dark:bg-[#101E42]/60 hover:bg-slate-50 dark:hover:bg-[#152550]/60 opacity-75'
                             : 'bg-slate-50/90 dark:bg-[#152550]/90 hover:bg-slate-100/90 dark:hover:bg-[#182b5c] border-s-2 border-[#2499F2]'
@@ -163,12 +165,26 @@ export default function Navbar() {
                         <div className="flex-1 space-y-1">
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-slate-900 dark:text-white">{n.title}</span>
-                            <span className="text-[10px] text-slate-400 dark:text-slate-400">
-                              {new Date(n.created_at).toLocaleTimeString(isRtl ? 'ar-EG' : 'en-US', {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[10px] text-slate-400 dark:text-slate-400 font-mono">
+                                {new Date(n.created_at).toLocaleTimeString(isRtl ? 'ar-EG' : 'en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteNotification(n.id);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-rose-500 rounded transition cursor-pointer"
+                                title={isRtl ? 'حذف الإشعار' : 'Delete notification'}
+                                aria-label={isRtl ? 'حذف الإشعار' : 'Delete notification'}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
                           <p className="text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed">{n.message}</p>
                         </div>
