@@ -304,6 +304,9 @@ export function AppProvider({ children }) {
   }, []);
   const [showSkillsModal, setShowSkillsModal] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
+  const [isInteractiveGuideOpen, setIsInteractiveGuideOpen] = useState(false);
+  const openInteractiveGuide = useCallback(() => setIsInteractiveGuideOpen(true), []);
+  const closeInteractiveGuide = useCallback(() => setIsInteractiveGuideOpen(false), []);
 
   // السايد بار في الموبايل
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -314,6 +317,11 @@ export function AppProvider({ children }) {
       setIsOnboardingModalOpen(false);
       return;
     }
+
+    if (isInteractiveGuideOpen) return;
+
+    const isGuidePending = typeof window !== 'undefined' && !localStorage.getItem(`has_seen_onboarding_guide_${currentUser.id || currentUser.email || 'user'}`);
+    if (isGuidePending) return;
 
     const isSkipped = typeof window !== 'undefined' && sessionStorage.getItem('skip_student_onboarding') === 'true';
     if (isSkipped) return;
@@ -328,7 +336,7 @@ export function AppProvider({ children }) {
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [currentUser, studentCv?.bio, userSkills]);
+  }, [currentUser, studentCv?.bio, userSkills, isInteractiveGuideOpen]);
 
   // ==========================================
   // الإشعارات الحية (Live Notifications)
@@ -1304,6 +1312,10 @@ export function AppProvider({ children }) {
         isOnboardingModalOpen,
         setIsOnboardingModalOpen,
         openStudentOnboarding: () => setIsOnboardingModalOpen(true),
+        isInteractiveGuideOpen,
+        setIsInteractiveGuideOpen,
+        openInteractiveGuide,
+        closeInteractiveGuide,
         isSidebarOpen,
         setIsSidebarOpen,
         notifications,

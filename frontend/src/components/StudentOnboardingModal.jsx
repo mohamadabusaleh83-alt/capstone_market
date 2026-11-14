@@ -36,6 +36,7 @@ export default function StudentOnboardingModal() {
     isRtl,
     isOnboardingModalOpen,
     setIsOnboardingModalOpen,
+    isInteractiveGuideOpen,
     userSkills,
     setUserSkills,
     studentCv,
@@ -61,7 +62,7 @@ export default function StudentOnboardingModal() {
     }
   }, [isOnboardingModalOpen, studentCv, userSkills]);
 
-  if (!isOnboardingModalOpen || currentUser?.role !== 'student') {
+  if (!isOnboardingModalOpen || isInteractiveGuideOpen || currentUser?.role !== 'student') {
     return null;
   }
 

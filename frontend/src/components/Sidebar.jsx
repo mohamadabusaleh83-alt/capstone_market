@@ -26,6 +26,7 @@ import {
   Sparkles,
   FileText,
   Info,
+  BookOpen,
   X
 } from 'lucide-react';
 
@@ -43,7 +44,8 @@ export default function Sidebar() {
     savedProjects: appSavedProjects = [],
     setIsCreateModalOpen,
     unreadNotificationsCount,
-    getRoleLabel
+    getRoleLabel,
+    openInteractiveGuide
   } = useApp() || {};
 
   const favorites = Array.isArray(appFavorites)
@@ -365,6 +367,22 @@ export default function Sidebar() {
             <span>{t('nav.about', isRtl ? 'عن المنصة' : 'About Platform')}</span>
           </div>
         </NavLink>
+
+        {/* زر دليل المنصة التفاعلي داخل القائمة الجانبية */}
+        <button
+          type="button"
+          onClick={() => {
+            closeSidebarOnMobile();
+            if (openInteractiveGuide) openInteractiveGuide();
+          }}
+          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#152550]/70 hover:text-slate-950 dark:hover:text-white font-semibold transition-all duration-200 cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5">
+            <BookOpen className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0]" />
+            <span>{isRtl ? 'دليل المنصة التفاعلي' : 'Interactive Guide'}</span>
+          </div>
+          <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
+        </button>
 
         {/* حالة الاتصال وزر تسجيل الخروج */}
         <div className="pt-2 border-t border-slate-200/80 dark:border-white/10 space-y-1.5 mt-1.5">

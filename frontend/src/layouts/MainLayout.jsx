@@ -10,6 +10,7 @@ import CreateProjectModal from '../components/CreateProjectModal';
 import ApplyModal from '../components/ApplyModal';
 import ApplicationsModal from '../components/ApplicationsModal';
 import StudentOnboardingModal from '../components/StudentOnboardingModal';
+import InteractiveOnboardingGuide from '../components/InteractiveOnboardingGuide';
 
 export default function MainLayout() {
   const { t } = useTranslation();
@@ -70,6 +71,7 @@ export default function MainLayout() {
       <ApplyModal />
       <ApplicationsModal />
       <StudentOnboardingModal />
+      <InteractiveOnboardingGuide />
     </div>
   );
 }

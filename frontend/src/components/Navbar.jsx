@@ -8,6 +8,7 @@ import ThemeToggle from './ThemeToggle';
 import {
   Menu,
   Bell,
+  BookOpen,
   RefreshCw,
   UserCheck,
   Trash2
@@ -25,7 +26,8 @@ export default function Navbar() {
     handleMarkNotificationRead,
     handleMarkAllNotificationsRead,
     handleDeleteNotification,
-    getRoleLabel
+    getRoleLabel,
+    openInteractiveGuide
   } = useApp();
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -82,6 +84,17 @@ export default function Navbar() {
 
         {/* زر تبديل اللغة (Language Switcher) المثبت بجانب الإشعارات وتسجيل الخروج */}
         <LanguageSwitcher />
+
+        {/* زر دليل المنصة التفاعلي الدائم (Interactive Onboarding Guide Button) */}
+        <button
+          type="button"
+          onClick={openInteractiveGuide}
+          className="relative p-2 rounded-xl bg-slate-100 dark:bg-[#152550] hover:bg-slate-200 dark:hover:bg-[#182b5c] text-slate-700 dark:text-slate-200 hover:text-[#2499F2] dark:hover:text-[#28C8C0] transition cursor-pointer border border-slate-200 dark:border-[#2499F2]/20 shadow-sm active:scale-95 flex items-center justify-center group"
+          title={isRtl ? 'دليل المنصة التفاعلي' : 'Interactive Platform Guide'}
+          aria-label={isRtl ? 'دليل المنصة التفاعلي' : 'Interactive Platform Guide'}
+        >
+          <BookOpen className="w-4 h-4 text-[#2499F2] dark:text-[#28C8C0] group-hover:scale-110 transition-transform" />
+        </button>
 
         {/* أيقونة الإشعارات والتنبيهات التفاعلية (للمستخدم المسجل فقط) */}
         {currentUser && (
