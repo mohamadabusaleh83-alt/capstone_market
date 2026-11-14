@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
+import AIProjectAdvisor from '../components/AIProjectAdvisor';
 import {
   Store,
   PlusCircle,
@@ -844,6 +845,9 @@ export default function DashboardPage() {
           </div>
         )
       )}
+
+      {/* مستشار مشاريع التخرج بالذكاء الاصطناعي (AI Project Advisor للطلاب) */}
+      {currentUser.role === 'student' && <AIProjectAdvisor />}
 
       {/* 3. قسم مشاريع قد تناسب شركتك (خاص بدور الشركة) */}
       {currentUser.role === 'company' && (

@@ -23,4 +23,15 @@ services:
         sync: false
       - key: SUPABASE_STORAGE_BUCKET
         value: capstone-files
+      # AI Project Analyzer (Phase 2 - Gemini Flash)
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL_ID
+        value: "gemini-3.8-flash"
+      - key: AI_PROVIDER
+        value: "gemini"
+      - key: AI_ANALYSIS_TIMEOUT_SEC
+        value: "12"
+      - key: AI_ANALYSIS_MAX_RPM
+        value: "10"
 

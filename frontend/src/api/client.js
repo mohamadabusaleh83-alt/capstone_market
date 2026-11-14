@@ -121,3 +121,25 @@ export async function apiFetch(endpoint, options = {}, onUnauthorized = null) {
     throw err;
   }
 }
+
+export async function getRecommendedProjects(options = {}) {
+  const res = await apiFetch('/projects/recommended', options);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch recommendations: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function analyzeProjectDescription({ description, language = 'ar' }) {
+  const res = await apiFetch('/projects/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ description, language }),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Analysis failed: ${res.status}`);
+  }
+  return res.json();
+}

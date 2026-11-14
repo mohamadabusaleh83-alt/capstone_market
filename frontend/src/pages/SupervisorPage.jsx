@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import MajorBadge from '../components/MajorBadge';
 import DeleteProjectModal from '../components/DeleteProjectModal';
+import SupervisorAIAnalysisView from '../components/SupervisorAIAnalysisView';
 import { STANDARDIZED_IT_MAJORS, matchStandardMajor } from '../api/majors';
 
 export default function SupervisorPage() {
@@ -724,6 +725,9 @@ export default function SupervisorPage() {
                       <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-3 leading-relaxed">
                         {project.description || (isRtl ? 'مشروع تخرج مقترح يربط بين الجانب الأكاديمي وسوق العمل.' : 'Proposed graduation project.')}
                       </p>
+
+                      {/* تحليل الذكاء الاصطناعي للمشروع إن وجد (Phase 2) */}
+                      <SupervisorAIAnalysisView project={project} isRtl={isRtl} />
 
                       {/* تحديد المقاعد والملاحظات */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

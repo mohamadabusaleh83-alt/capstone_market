@@ -356,6 +356,10 @@ export function AppProvider({ children }) {
   // مشروع المستخدم الحالي (للطالب أو الشركة أو المشرف من /api/projects/my)
   const [myProject, setMyProject] = useState(null);
 
+  // ترشيحات المشاريع بالذكاء الاصطناعي للطالب (AI Smart Match Recommendations)
+  const [recommendedProjects, setRecommendedProjects] = useState([]);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+
   // مؤقت أمان يمنع بقاء حالة تحميل المشاريع معلقة لأكثر من 1.5 ثانية
   useEffect(() => {
     let timer;
@@ -478,6 +482,34 @@ export function AppProvider({ children }) {
       setMyProject(null);
     }
   }, [apiFetch]);
+
+  const fetchRecommendedProjects = useCallback(async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token || !currentUser || currentUser.role !== 'student') {
+      setRecommendedProjects([]);
+      return;
+    }
+    setIsLoadingRecommendations(true);
+    try {
+      const res = await apiFetch('/projects/recommended');
+      if (res && res.ok) {
+        const data = await res.json();
+        setRecommendedProjects(Array.isArray(data) ? data : []);
+      } else {
+        setRecommendedProjects([]);
+      }
+    } catch {
+      setRecommendedProjects([]);
+    } finally {
+      setIsLoadingRecommendations(false);
+    }
+  }, [apiFetch, currentUser]);
+
+  useEffect(() => {
+    if (currentUser?.role === 'student') {
+      fetchRecommendedProjects();
+    }
+  }, [currentUser?.role, currentUser?.id, userSkills, studentCv?.major, studentCv?.bio, fetchRecommendedProjects]);
 
   const fetchReports = useCallback(async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -643,9 +675,12 @@ export function AppProvider({ children }) {
         fetchStudents(),
         fetchMyProject()
       );
+      if (currentUser.role === 'student') {
+        promises.push(fetchRecommendedProjects());
+      }
     }
     await Promise.allSettled(promises);
-  }, [currentUser, fetchProjects, fetchApplications, fetchNotifications, fetchUserProfile, fetchReports, fetchStudents, fetchMyProject]);
+  }, [currentUser, fetchProjects, fetchApplications, fetchNotifications, fetchUserProfile, fetchReports, fetchStudents, fetchMyProject, fetchRecommendedProjects]);
 
   const handleMarkNotificationRead = useCallback(async (notificationId) => {
     try {
@@ -713,16 +748,45 @@ export function AppProvider({ children }) {
     isFree: !applications.some((a) => a.student_id === st.id && ['academically_approved', 'accepted'].includes(a.status))
   })), [studentsList, applications]);
 
-  // حساب نسبة التطابق الذكية
+  // حساب نسبة التطابق الذكية ودمج تقييمات الذكاء الاصطناعي الصادرة من الباك إند
   const matchedProjects = useMemo(() => {
     const list = rawProjects.length > 0 ? rawProjects : INITIAL_FALLBACK_PROJECTS;
+    const aiRecsMap = new Map();
+    if (Array.isArray(recommendedProjects) && recommendedProjects.length > 0) {
+      recommendedProjects.forEach((rec) => {
+        if (rec && rec.id) {
+          aiRecsMap.set(rec.id, rec);
+        }
+      });
+    }
+
     return list.map((p) => {
+      const aiRec = aiRecsMap.get(p.id);
+
       const projectSkills = Array.isArray(p.skills) && p.skills.length > 0
         ? p.skills
         : (typeof p.required_skills === 'string' && p.required_skills
             ? p.required_skills.split(',').map((s) => s.trim()).filter(Boolean)
             : []);
 
+      if (aiRec) {
+        const aiScore = Math.round(aiRec.match_score || 0);
+        return {
+          ...p,
+          ...aiRec,
+          skills: projectSkills,
+          matchRate: aiScore,
+          match: `${aiScore}% ${isRtl ? 'تطابق ذكي (AI)' : 'AI Match'}`,
+          matchedSkills: aiRec.matched_skills || [],
+          missingSkills: aiRec.missing_skills || [],
+          isAiScored: true,
+          scoreBreakdown: aiRec.score_breakdown,
+          aiExplanation: aiRec.ai_explanation,
+          majorCompatible: aiRec.major_compatible
+        };
+      }
+
+      // في حال عدم توفر التوصية من الخادم، استخدام الحساب الأولي كاحتياط
       const matchedSkills = projectSkills.filter((s) =>
         userSkills.map((u) => u.toLowerCase()).includes(s.toLowerCase())
       );
@@ -731,7 +795,6 @@ export function AppProvider({ children }) {
         !userSkills.map((u) => u.toLowerCase()).includes(s.toLowerCase())
       );
 
-      // بدون مهارات مطلوبة لا توجد نسبة تطابق حقيقية
       const matchPercent = projectSkills.length > 0
         ? Math.round((matchedSkills.length / projectSkills.length) * 100)
         : 0;
@@ -742,10 +805,11 @@ export function AppProvider({ children }) {
         matchRate: matchPercent,
         match: `${matchPercent}% ${isRtl ? 'تطابق' : 'Match'}`,
         matchedSkills,
-        missingSkills
+        missingSkills,
+        isAiScored: false
       };
     });
-  }, [rawProjects, userSkills, isRtl]);
+  }, [rawProjects, recommendedProjects, userSkills, isRtl]);
 
   // مساعد لترجمة مسميات التخصصات
   const translateMajor = useCallback((major) => {
@@ -893,18 +957,28 @@ export function AppProvider({ children }) {
   // ==========================================
   const [isSubmittingProject, setIsSubmittingProject] = useState(false);
 
-  const createProject = useCallback(async ({ title, description, required_skills, max_members }) => {
-    if (!title?.trim()) return;
+  const createProject = useCallback(async ({ title, description, required_skills, max_members, category, stipend, ai_analysis }) => {
+    if (!title?.trim()) return false;
     setIsSubmittingProject(true);
     try {
+      const payload = {
+        title: title.trim(),
+        description: description?.trim() || '',
+        required_skills: required_skills?.trim() || '',
+        max_members: Number(max_members) || 4
+      };
+      if (category) {
+        payload.category = String(category).trim();
+      }
+      if (stipend) {
+        payload.stipend = String(stipend).trim();
+      }
+      if (ai_analysis) {
+        payload.ai_analysis = ai_analysis;
+      }
       const res = await apiFetch('/projects/', {
         method: 'POST',
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description?.trim() || '',
-          required_skills: required_skills?.trim() || '',
-          max_members: Number(max_members) || 4
-        })
+        body: JSON.stringify(payload)
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -1341,6 +1415,9 @@ export function AppProvider({ children }) {
         setStudentsList,
         fetchStudents,
         matchedProjects,
+        recommendedProjects,
+        isLoadingRecommendations,
+        fetchRecommendedProjects,
         translateMajor,
         translateDifficulty,
         getRoleLabel,

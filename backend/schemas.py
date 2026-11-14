@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict
 from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 
 
@@ -151,6 +151,7 @@ class ProjectCreate(BaseModel):
     stipend: Optional[str] = Field(default=None, max_length=100)
     # مقبول للتوافق مع الواجهة لكنه يُتجاهل: اسم الشركة يُشتق دائماً من حساب منشئ المشروع
     company_name: Optional[str] = Field(default=None, max_length=150)
+    ai_analysis: Optional[dict] = None
 
     @field_validator("title", mode="before")
     @classmethod
@@ -214,6 +215,77 @@ class ProjectResponse(BaseModel):
     supervisor_id: Optional[int] = None
     supervisor_name: Optional[str] = None
     supervisor_feedback: Optional[str] = None
+    ai_analysis: Optional[str] = None
+
+
+class ScoreWeights(BaseModel):
+    explicit_skills: int = 50
+    semantic_similarity: int = 30
+    major_compatibility: int = 10
+    profile_completeness: int = 10
+
+
+class ScoreBreakdown(BaseModel):
+    explicit_skill_score: float
+    semantic_similarity_score: float
+    major_compatibility_score: float
+    profile_completeness_score: float
+    weights: ScoreWeights = Field(default_factory=ScoreWeights)
+
+
+class ProjectRecommendationResponse(ProjectResponse):
+    match_score: float
+    matched_skills: List[str] = Field(default_factory=list)
+    missing_skills: List[str] = Field(default_factory=list)
+    major_compatible: bool = True
+    score_breakdown: ScoreBreakdown
+    ai_explanation: str
+
+
+# ==========================================
+# نماذج تحليل المشروع بالذكاء الاصطناعي (Phase 2)
+# ==========================================
+
+class ProjectAnalysisRequest(BaseModel):
+    description: str = Field(min_length=50, max_length=5000)
+    language: Optional[str] = Field(default="ar", pattern="^(ar|en)$")
+
+
+class SkillExplanationItem(BaseModel):
+    skill: str
+    reason_ar: str
+    reason_en: str
+
+
+class ProjectAnalysisResponse(BaseModel):
+    # النتائج الأساسية
+    suggested_skills: List[str]
+    suggested_category: Optional[str] = None
+    complexity_level: str  # simple | medium | complex | advanced
+    complexity_explanation_ar: str
+    complexity_explanation_en: str
+    expected_deliverables: List[str]
+    technical_summary_ar: str
+    technical_summary_en: str
+    skill_explanations: List[SkillExplanationItem]
+
+    # البيانات الوصفية
+    suggested_seat_range: str
+    analysis_confidence: float
+    provider_used: str
+    model_id: str
+    analyzed_at: str
+    is_fallback: bool = False
+
+    # تحذير واضح وثابت
+    disclaimer_ar: str = (
+        "هذا تحليل اقتراحي للمساعدة فقط. "
+        "المشرف الأكاديمي هو المسؤول الوحيد عن تحديد المتطلبات النهائية وعدد المقاعد."
+    )
+    disclaimer_en: str = (
+        "This is a suggestive analysis only. "
+        "The academic supervisor has sole authority over final requirements and seat allocation."
+    )
 
 
 # ==========================================

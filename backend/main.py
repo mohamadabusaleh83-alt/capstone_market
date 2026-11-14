@@ -22,9 +22,17 @@ import ratelimit
 import storage
 import schemas
 import utils
+import ai_matcher
+import httpx
+from project_analyzer import get_analyzer
 from database import engine, get_db
 
 logger = logging.getLogger("capstone_api")
+
+# تسجيل عمود ai_analysis على نموذج Project قبل تهيئة الجداول (Phase 2)
+if not hasattr(models.Project, "ai_analysis"):
+    from sqlalchemy import Column, Text
+    models.Project.ai_analysis = Column("ai_analysis", Text, nullable=True)
 
 # إنشاء الجداول تلقائياً إن لم تكن موجودة مسبقاً
 models.Base.metadata.create_all(bind=engine)
@@ -77,6 +85,7 @@ with engine.connect() as conn:
     add_col_if_missing("notifications", "notification_type", "VARCHAR(50) DEFAULT 'general'")
     add_col_if_missing("messages", "conversation_type", "VARCHAR(50) DEFAULT 'company_student'")
     add_col_if_missing("messages", "recipient_id", "INTEGER")
+    add_col_if_missing("projects", "ai_analysis", "TEXT")
 
     for stmt in [
         "CREATE INDEX IF NOT EXISTS ix_notifications_project_id ON notifications (project_id)",
@@ -913,6 +922,14 @@ def create_project(
 
     sup_id = current_user.id if user_role == "supervisor" else None
 
+    ai_analysis_str = None
+    if getattr(project, "ai_analysis", None):
+        ai_analysis_str = (
+            json.dumps(project.ai_analysis, ensure_ascii=False)
+            if isinstance(project.ai_analysis, dict)
+            else str(project.ai_analysis)
+        )
+
     db_project = models.Project(
         title=project.title,
         description=project.description,
@@ -923,7 +940,8 @@ def create_project(
         stipend=project.stipend,
         company_name=comp_name,
         supervisor_id=sup_id,
-        created_by=current_user.id
+        created_by=current_user.id,
+        ai_analysis=ai_analysis_str
     )
     db.add(db_project)
     db.commit()
@@ -981,6 +999,142 @@ def get_my_assigned_project(
     if proj:
         return format_project_item(proj, db)
     return None
+
+
+@app.get("/projects/recommended", response_model=List[schemas.ProjectRecommendationResponse], summary="ترشيحات المشاريع بالذكاء الاصطناعي")
+@app.get("/api/projects/recommended", response_model=List[schemas.ProjectRecommendationResponse], summary="ترشيحات المشاريع بالذكاء الاصطناعي")
+def get_recommended_projects(
+    limit: Optional[int] = Query(None, ge=1, le=PAGE_MAX_LIMIT),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+    نظام التوصيات والترشيح الذكي المدعوم بالذكاء الاصطناعي لمشاريع التخرج (AI Smart Match).
+    - متاح للمستخدمين المسجلين فقط (مع التحقق الصارم من التوكن JWT).
+    - يقيّم فقط المشاريع المعتمدة أكاديمياً (status == 'approved' أو 'academically_approved').
+    - يعتمد على 4 معايير معلنة: المهارات المباشرة والمترادفة (50%)، التشابه الدلالي TF-IDF (30%)، توافق التخصص الأكاديمي (10%)، اكتمال الملف الشخصي وخبرة الطالب (10%).
+    - يُرجع النتائج مرتبة تنازلياً حسب نسبة التطابق match_score مع الشرح الذكي وتفاصيل النقاط.
+    """
+    # 1. استرجاع المشاريع المعتمدة فقط
+    approved_projects = (
+        db.query(models.Project)
+        .filter(models.Project.status.in_(["approved", "academically_approved"]))
+        .order_by(models.Project.id.desc())
+        .all()
+    )
+
+    if not approved_projects:
+        return []
+
+    # 2. تنسيق المشاريع لإضافة أعداد المقاعد وأسماء المشرفين والشركات
+    formatted_projects = format_projects(approved_projects, db)
+
+    # 3. جلب الملف الشخصي للطالب
+    student_profile = (
+        db.query(models.StudentProfile)
+        .filter(models.StudentProfile.user_id == current_user.id)
+        .first()
+    )
+
+    # 4. تشغيل محرك الذكاء الاصطناعي للتقييم والترتيب
+    recommendations = ai_matcher.default_matcher.recommend_projects_for_student(
+        student_user=current_user,
+        student_profile=student_profile,
+        projects=formatted_projects,
+        limit=limit
+    )
+
+    # 5. بناء كائنات الرد المتوافقة تماماً مع المخطط schemas.ProjectRecommendationResponse
+    result = []
+    for item in recommendations:
+        proj = item["project"]
+        result.append(
+            schemas.ProjectRecommendationResponse(
+                id=proj.id,
+                title=proj.title,
+                description=proj.description,
+                required_skills=proj.required_skills,
+                status=proj.status,
+                max_members=proj.max_members or 4,
+                seats=getattr(proj, "seats", 4),
+                total_seats=getattr(proj, "total_seats", 4),
+                remaining_seats=getattr(proj, "remaining_seats", 4),
+                current_members=getattr(proj, "current_members", 0),
+                available_seats=getattr(proj, "available_seats", 4),
+                accepted_students_count=getattr(proj, "accepted_students_count", 0),
+                submitted_applications_count=getattr(proj, "submitted_applications_count", 0),
+                created_by=proj.created_by,
+                created_at=proj.created_at,
+                decided_at=proj.decided_at,
+                rejected_at=proj.rejected_at,
+                category=proj.category,
+                stipend=proj.stipend,
+                company_name=proj.company_name,
+                supervisor_id=proj.supervisor_id,
+                supervisor_name=getattr(proj, "supervisor_name", None),
+                supervisor_feedback=proj.supervisor_feedback,
+                match_score=item["match_score"],
+                matched_skills=item["matched_skills"],
+                missing_skills=item["missing_skills"],
+                major_compatible=item["major_compatible"],
+                score_breakdown=item["score_breakdown"],
+                ai_explanation=item["ai_explanation"]
+            )
+        )
+
+    return result
+
+
+# مصفوفة حدود معدل الطلبات (In-memory rate limit) لمسار تحليل المشاريع بالذكاء الاصطناعي (10 طلبات/دقيقة/مستخدم)
+_analyzer_rate_limit: dict = {}
+
+
+@app.post("/projects/analyze", response_model=schemas.ProjectAnalysisResponse, summary="تحليل وصف مشروع الشركة بالذكاء الاصطناعي")
+@app.post("/api/projects/analyze", response_model=schemas.ProjectAnalysisResponse, summary="تحليل وصف مشروع الشركة بالذكاء الاصطناعي")
+def analyze_project_description(
+    request: schemas.ProjectAnalysisRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(
+        require_role(["partner", "company", "business"])
+    )
+):
+    """
+    تحليل وصف مشكلة أو فكرة المشروع للشريك الصناعي (Company/Partner/Business) عبر الذكاء الاصطناعي (Phase 2).
+    - محمي بالصلاحيات: متاح للشركات فقط (يُرجع 403 للطلاب والمشرفين).
+    - يحدد المهارات التقنية المقترحة الموحدة دلالياً، مستوى التعقيد، المخرجات، والملخص التقني.
+    - لا يكتب في قاعدة البيانات مباشرة؛ يُعاد التحليل إلى الواجهة للمراجعة ثم يُرسل كـ snapshot اختياري مع إنشاء المشروع.
+    - معدل الطلبات: 10 طلبات في الدقيقة كحد أقصى لكل مستخدم.
+    """
+    import time
+    now = time.time()
+    user_requests = _analyzer_rate_limit.get(current_user.id, [])
+    user_requests = [t for t in user_requests if now - t < 60.0]
+    if len(user_requests) >= 10:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="تجاوزت الحد المسموح به لتحليل المشاريع (10 طلبات في الدقيقة). يرجى الانتظار دقيقة قبل المحاولة مجدداً."
+        )
+    user_requests.append(now)
+    _analyzer_rate_limit[current_user.id] = user_requests
+
+    analyzer = get_analyzer()
+    try:
+        result = analyzer.analyze(
+            description=request.description,
+            language=request.language or "ar"
+        )
+        return result
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="انتهت مدة الاتصال بخدمة التحليل. يرجى المحاولة مرة أخرى أو المتابعة يدوياً."
+        )
+    except Exception as e:
+        logger.error(f"Project analysis error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="تعذّر التحليل حالياً. يمكنك إضافة المتطلبات يدوياً وإرسال المشروع للمشرف."
+        )
 
 
 @app.get("/projects/", response_model=List[schemas.ProjectResponse])

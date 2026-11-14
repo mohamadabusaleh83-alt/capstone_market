@@ -93,7 +93,7 @@ export default function ProjectCard({ project }) {
               <Sparkles className="w-3.5 h-3.5 animate-pulse shrink-0 text-cyan-700 dark:text-amber-400" />
               <span>{matchRate}%</span>
               <span className="text-[9px] font-bold opacity-80 uppercase tracking-wider">
-                {isRtl ? 'تطابق' : 'Match'}
+                {project.isAiScored ? (isRtl ? 'تطابق AI' : 'AI Match') : (isRtl ? 'تطابق' : 'Match')}
               </span>
             </div>
 
