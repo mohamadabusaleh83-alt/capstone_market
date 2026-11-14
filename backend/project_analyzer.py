@@ -10,7 +10,7 @@ import logging
 from typing import Optional, Tuple
 from datetime import datetime, timezone
 
-import httpx  # موجود أصلاً كـ fastapi transitive dependency
+import httpx  # مُعرّف صراحة في backend/requirements.txt
 
 from ai_matcher import canonicalize_skill, parse_skills_list  # Phase 1 reuse — read-only
 
